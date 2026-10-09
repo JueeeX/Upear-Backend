@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Security self-test for HugAgentOS.
+Security self-test for SUMC.
 
 Tests security features including:
 - Authentication and authorization

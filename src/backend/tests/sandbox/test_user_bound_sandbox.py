@@ -39,7 +39,7 @@ def test_all_private_mounts_disabled_allow_general_pool(monkeypatch):
 
 
 def test_dingtalk_mount_uses_user_pool_when_myspace_mount_is_disabled(monkeypatch):
-    """HugAgentOS regression: dws=true + myspace=false must still mount user credentials."""
+    """SUMC regression: dws=true + myspace=false must still mount user credentials."""
     monkeypatch.setattr(
         internals,
         "settings",

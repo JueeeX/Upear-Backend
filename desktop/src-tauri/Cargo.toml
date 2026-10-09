@@ -1,12 +1,12 @@
 [package]
-name = "hugagent-desktop"
+name = "sumc-desktop"
 version = "0.2.16"
-description = "HugAgentOS桌面客户端"
+description = "SUMC桌面客户端"
 edition = "2021"
 rust-version = "1.77"
 
 [lib]
-name = "hugagent_agent_desktop_lib"
+name = "sumc_agent_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -1,7 +1,7 @@
 """Ticket #06: local folder grants + danger-command policy store.
 
 Filesystem-backed, edition-agnostic shared service; tested in the main tree with
-a temp HUGAGENT_HOME so it never touches the real data dir.
+a temp SUMC_HOME so it never touches the real data dir.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import os
 
 
 def _fresh_service(tmp_path, monkeypatch):
-    monkeypatch.setenv("HUGAGENT_HOME", str(tmp_path))
+    monkeypatch.setenv("SUMC_HOME", str(tmp_path))
     import core.services.local_grant_service as svc
 
     return importlib.reload(svc)

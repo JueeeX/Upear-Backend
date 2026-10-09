@@ -2,7 +2,7 @@
 
 > Last updated: 2026-06-11
 
-The capability catalog is the **single source of truth** for "what is available" in HugAgentOS: skills, sub-agents (agents), MCP tools (mcp), and knowledge bases (kb) are all registered in the catalog, which gates everything from MCP tool loading and system-prompt assembly to the frontend Capability Center. On top of the system-level defaults, every user has a personal override layer (catalog_overrides) and self-added private capabilities (owner-isolated).
+The capability catalog is the **single source of truth** for "what is available" in SUMC: skills, sub-agents (agents), MCP tools (mcp), and knowledge bases (kb) are all registered in the catalog, which gates everything from MCP tool loading and system-prompt assembly to the frontend Capability Center. On top of the system-level defaults, every user has a personal override layer (catalog_overrides) and self-added private capabilities (owner-isolated).
 
 ## Architecture
 

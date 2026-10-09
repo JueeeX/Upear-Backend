@@ -2,7 +2,7 @@
 
 > 最后更新：2026-08-03
 
-HugAgentOS 内置一套**分层持久记忆系统**：L2 向量层使用 [mem0](https://github.com/mem0ai/mem0) + Milvus，L3 图谱层由本地适配器直连 Neo4j。开启后，智能体能跨会话记住用户的身份背景、偏好习惯、**这里做事的方式**（口径、顺序、红线），以及稳定的实体关系。记忆按信息稳定性分为三层（L1 档案 / L2 做法沉淀 / L3 知识图谱），三层均属社区版能力；只有**记忆审计**（合规留痕）属于商业版（商业版 EE）。
+SUMC 内置一套**分层持久记忆系统**：L2 向量层使用 [mem0](https://github.com/mem0ai/mem0) + Milvus，L3 图谱层由本地适配器直连 Neo4j。开启后，智能体能跨会话记住用户的身份背景、偏好习惯、**这里做事的方式**（口径、顺序、红线），以及稳定的实体关系。记忆按信息稳定性分为三层（L1 档案 / L2 做法沉淀 / L3 知识图谱），三层均属社区版能力；只有**记忆审计**（合规留痕）属于商业版（商业版 EE）。
 
 整套系统遵循一条核心承诺：**所有记忆 I/O 绝不在 SSE 主链路上同步等待**——检索走带预算超时的后台任务，写入走 SSE 关闭后的有界后置流水线（见 `src/backend/core/memory/__init__.py` 模块文档）。
 
@@ -11,7 +11,7 @@ HugAgentOS 内置一套**分层持久记忆系统**：L2 向量层使用 [mem0](
 | 层 | 名称 | 存储 | 注入时机 | 实现 |
 |---|---|---|---|---|
 | L1 | Profile 用户档案 | DB（bounded markdown，默认上限 1500 字符） | 会话启动时冻结注入 | `core/memory/profile.py` |
-| L2 | Procedural 做法沉淀 | Milvus 向量库（collection `hugagent_memories`） | 会话启动时按相似度检索 Top-K 注入 | `core/memory/service.py`（mem0 封装） |
+| L2 | Procedural 做法沉淀 | Milvus 向量库（collection `sumc_memories`） | 会话启动时按相似度检索 Top-K 注入 | `core/memory/service.py`（mem0 封装） |
 | L3 | Graph 图谱记忆 | Neo4j（可选，`MEM0_GRAPH_ENABLED=true`） | 按实体按需检索 | `core/memory/graph.py`（本地 Neo4j 适配器） |
 | — | Session 辅助层 | `chats.metadata.session_memory` | 单会话内 | 会话任务工作集 |
 | — | Audit 审计旁路（商业版 EE） | DB 表 `memory_audit` | 所有读写旁路记录 | `core/memory/audit.py` |

@@ -1672,7 +1672,7 @@ async def create_agent_executor(
     # ── Resolve agent name and max_iters ──
     _DEFAULT_MAIN_ITERS = 50
     _DEFAULT_SUBAGENT_ITERS = 10
-    _agent_name = "hugagent_agent"
+    _agent_name = "sumc_agent"
     # The active profile's turn budget governs the main agent. The built-in
     # profile carries the same 50 this used, so resolution is a no-op until a
     # profile is published.

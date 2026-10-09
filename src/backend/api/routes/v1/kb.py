@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import os
+from dataclasses import dataclass
 from typing import Optional
 
 from api.routes.v1.kb_models import (
@@ -18,9 +19,14 @@ from api.routes.v1.kb_models import (
     UpdateKBSpaceRequest,
 )
 from core.auth.backend import UserContext, get_current_user
+from core.auth.kb_permissions import resolve_user_kb_context
 from core.config.settings import settings
 from core.content.file_validation import validate_kb_file
-from core.content.kb_processing import update_document_status, vectorise_document_background
+from core.content.kb_processing import (
+    document_security_summary,
+    update_document_status,
+    vectorise_document_background,
+)
 from core.db.engine import get_db
 from core.infra.exceptions import (
     AccessDeniedError,
@@ -39,11 +45,56 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/v1/catalog/kb", tags=["Knowledge Base"])
-
 # Constants
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 MAX_PREVIEW_SIZE = 20 * 1024 * 1024  # 20MB
+
+
+@dataclass(frozen=True)
+class KBPrincipal:
+    user_id: str
+    tenant_id: str
+    role: str
+
+
+def _require_kb_context(
+    user: UserContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> KBPrincipal:
+    context = resolve_user_kb_context(db, str(user.user_id))
+    if context is None:
+        raise AccessDeniedError(
+            message="Access denied",
+            reason="Authoritative KB tenant and role context is unavailable",
+        )
+    return KBPrincipal(user_id=str(user.user_id), tenant_id=context[0], role=context[1])
+
+
+router = APIRouter(
+    prefix="/v1/catalog/kb",
+    tags=["Knowledge Base"],
+    dependencies=[Depends(_require_kb_context)],
+)
+
+
+def _bind_indexing_identity(document, principal: KBPrincipal) -> None:
+    metadata = dict(document.extra_data) if isinstance(document.extra_data, dict) else {}
+    provenance = dict(metadata.get("provenance") or {})
+    provenance["last_indexed_by"] = principal.user_id
+    metadata.update(
+        {
+            "tenant_id": principal.tenant_id,
+            "provenance": provenance,
+            "indexing_identity": {
+                "version": 1,
+                "tenant_id": principal.tenant_id,
+                "principal_id": principal.user_id,
+                "kb_id": document.kb_id,
+                "document_id": document.document_id,
+            },
+        }
+    )
+    document.extra_data = metadata
 
 
 def _can_read_space(db, space, user_id: str) -> bool:
@@ -210,6 +261,7 @@ async def create_kb_space(
     request: CreateKBSpaceRequest,
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
+    principal: KBPrincipal = Depends(_require_kb_context),
 ):
     """创建归属当前登录用户的知识库空间；可见性规则由当前版本决定。"""
     visibility = (request.visibility or "private").strip()
@@ -241,16 +293,20 @@ async def create_kb_space(
 
     initial_grants = initial_visibility_grants(db, user.user_id, visibility)
 
-    space = kb_service.create_space(
-        user_id=user.user_id,
-        name=request.name,
-        description=request.description,
-        chunk_method=request.chunk_method or "semantic",
-        metadata=metadata,
-        visibility=visibility,
-        initial_grants=initial_grants,
-        granted_by=user.user_id,
-    )
+    try:
+        space = kb_service.create_space(
+            user_id=user.user_id,
+            name=request.name,
+            description=request.description,
+            chunk_method=request.chunk_method or "semantic",
+            metadata=metadata,
+            visibility=visibility,
+            initial_grants=initial_grants,
+            granted_by=user.user_id,
+            tenant_id=principal.tenant_id,
+        )
+    except PermissionError as exc:
+        raise AccessDeniedError(message="Access denied", reason=str(exc))
     return created_response(data=space, message="Knowledge base space created successfully")
 
 
@@ -303,6 +359,7 @@ async def upload_document(
     background_tasks: BackgroundTasks = BackgroundTasks(),
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
+    principal: KBPrincipal = Depends(_require_kb_context),
 ):
     """上传文档到指定知识库空间并异步建立索引。仅空间所有者可上传；文件大小受 MAX_FILE_SIZE（100MB）限制，可选传入标题、元数据、索引配置及分块方法覆盖。上传成功后通过后台任务完成解析、分块与向量化，立即返回 indexing_status=processing。"""
     kb_service = KBService(db)
@@ -330,6 +387,18 @@ async def upload_document(
     _, mime_type = validate_kb_file(file.filename, content)
 
     checksum = hashlib.sha256(content).hexdigest()
+    user_metadata = {}
+    if metadata:
+        try:
+            parsed_metadata = json.loads(metadata)
+        except json.JSONDecodeError:
+            raise BadRequestError(message="Invalid metadata JSON", data={"field": "metadata"})
+        if not isinstance(parsed_metadata, dict):
+            raise BadRequestError(
+                message="metadata must be a JSON object", data={"field": "metadata"}
+            )
+        user_metadata = parsed_metadata
+
     env = os.getenv("ENVIRONMENT", "dev")
     storage_key = generate_storage_key(
         env=env, user_id=user.user_id, category="kb_documents", filename=file.filename
@@ -347,12 +416,6 @@ async def upload_document(
 
     doc_title = title or file.filename
 
-    if metadata:
-        try:
-            json.loads(metadata)
-        except json.JSONDecodeError:
-            raise BadRequestError(message="Invalid metadata JSON", data={"field": "metadata"})
-
     try:
         document = kb_service.upload_document(
             kb_id=kb_id,
@@ -363,6 +426,14 @@ async def upload_document(
             mime_type=mime_type,
             storage_key=storage_key,
             checksum=checksum,
+            tenant_id=principal.tenant_id,
+            user_metadata=user_metadata,
+            content_check={
+                "status": "partial",
+                "file_type_validation": "passed",
+                "malware_scan": "not_run",
+                "prompt_injection_scan": "not_run",
+            },
         )
     except PermissionError as e:
         raise AccessDeniedError(message="Access denied", reason=str(e))
@@ -384,6 +455,7 @@ async def upload_document(
         document_id=document["document_id"],
         kb_id=kb_id,
         user_id=user.user_id,
+        tenant_id=principal.tenant_id,
         title=doc_title,
         file_bytes=content,
         mime_type=mime_type,
@@ -444,6 +516,7 @@ async def list_documents(
             "storage_key": d.storage_key,
             "uploaded_at": d.uploaded_at.isoformat(),
             "indexing_status": getattr(d, "indexing_status", "processing"),
+            "security": document_security_summary(d),
         }
         for d in documents
     ]
@@ -506,6 +579,7 @@ async def get_document_detail(
             "mime_type": document.mime_type,
             "uploaded_at": document.uploaded_at.isoformat(),
             "content": content,
+            "security": document_security_summary(document),
         },
         message="Document detail retrieved successfully",
     )
@@ -548,6 +622,7 @@ async def reindex_document(
     background_tasks: BackgroundTasks = BackgroundTasks(),
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
+    principal: KBPrincipal = Depends(_require_kb_context),
 ):
     """对指定文档重新建立索引。会先清除该文档的旧分块及向量数据，再从存储重新下载原文，按可选的索引配置与分块方法异步重新解析、分块、向量化。仅空间所有者可操作，立即返回 indexing_status=processing。"""
     from core.db.models import KBChunk
@@ -563,6 +638,16 @@ async def reindex_document(
     if not document or document.kb_id != kb_id:
         raise ResourceNotFoundError(resource_type="kb_document", resource_id=document_id)
 
+    prior_metadata = document.extra_data if isinstance(document.extra_data, dict) else {}
+    prior_identity = (
+        prior_metadata.get("indexing_identity")
+        if isinstance(prior_metadata.get("indexing_identity"), dict)
+        else {}
+    )
+    prior_index_principal = prior_identity.get("principal_id")
+    if not isinstance(prior_index_principal, str):
+        prior_index_principal = kb_space.user_id
+    _bind_indexing_identity(document, principal)
     db.query(KBChunk).filter(KBChunk.document_id == document_id, KBChunk.kb_id == kb_id).delete()
     document.indexing_status = "processing"
     db.commit()
@@ -570,7 +655,7 @@ async def reindex_document(
     try:
         from core.kb.kb_vector import delete_by_document
 
-        delete_by_document(document_id, user.user_id)
+        delete_by_document(document_id, prior_index_principal)
     except Exception as exc:
         logger.warning("Milvus cleanup failed for reindex of %s: %s", document_id, exc)
 
@@ -602,6 +687,7 @@ async def reindex_document(
         document_id=document_id,
         kb_id=kb_id,
         user_id=user.user_id,
+        tenant_id=principal.tenant_id,
         title=document.title,
         file_bytes=file_bytes,
         mime_type=document.mime_type,
@@ -697,6 +783,7 @@ async def update_chunk(
     request: UpdateChunkRequest = ...,
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
+    principal: KBPrincipal = Depends(_require_kb_context),
 ):
     """更新指定分块的正文内容、标签和问题列表，并同步刷新其在向量库中的向量与索引。
 
@@ -731,12 +818,14 @@ async def update_chunk(
         chunk.tags = request.tags
     if request.questions is not None:
         chunk.questions = request.questions
+    document = db.query(KBDocument).filter_by(document_id=chunk.document_id).first()
+    if document:
+        _bind_indexing_identity(document, principal)
     db.commit()
     db.refresh(chunk)
 
     try:
-        doc = db.query(KBDocument).filter_by(document_id=chunk.document_id).first()
-        doc_title = doc.title if doc else ""
+        doc_title = document.title if document else ""
 
         if content_changed:
             # Content changed: re-vectorize the whole chunk (current tags already included)

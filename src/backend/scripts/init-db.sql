@@ -12,16 +12,16 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- 对外模型网关（LiteLLM Proxy）专用独立逻辑库，与主库 hugagent 隔离（避免 alembic 互相污染）。
--- 仅首次初始化（空数据卷）时建；存量部署需手动 `CREATE DATABASE litellm OWNER hugagent_user;`。
+-- 对外模型网关（LiteLLM Proxy）专用独立逻辑库，与主库 sumc 隔离（避免 alembic 互相污染）。
+-- 仅首次初始化（空数据卷）时建；存量部署需手动 `CREATE DATABASE litellm OWNER sumc_user;`。
 -- LiteLLM 镜像启动时用 prisma 在该库内建自己的表。
-SELECT 'CREATE DATABASE litellm OWNER hugagent_user'
+SELECT 'CREATE DATABASE litellm OWNER sumc_user'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'litellm')\gexec
 
 -- Grant necessary permissions
-GRANT ALL PRIVILEGES ON DATABASE hugagent TO hugagent_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO hugagent_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO hugagent_user;
+GRANT ALL PRIVILEGES ON DATABASE sumc TO sumc_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO sumc_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO sumc_user;
 
 -- Create indexes for common queries (will be created by Alembic, but good to have here for reference)
 -- These are examples and should match your actual schema

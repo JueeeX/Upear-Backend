@@ -74,7 +74,7 @@ pub struct PayloadPaths<'a> {
 }
 
 pub fn current_target() -> &'static str {
-    if option_env!("HUGAGENT_DESKTOP_BUNDLE") == Some("thin") {
+    if option_env!("SUMC_DESKTOP_BUNDLE") == Some("thin") {
         return "unsupported";
     }
     #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
@@ -716,7 +716,7 @@ mod tests {
     #[test]
     fn previous_release_is_restored_with_atomic_state_files() {
         let root = std::env::temp_dir().join(format!(
-            "hugagent-payload-rollback-{}-{}",
+            "sumc-payload-rollback-{}-{}",
             std::process::id(),
             nonce()
         ));
@@ -795,7 +795,7 @@ mod tests {
 
         let generated = Path::new(env!("CARGO_MANIFEST_DIR")).join("../generated");
         let root = std::env::temp_dir().join(format!(
-            "hugagent-real-payload-{}-{}",
+            "sumc-real-payload-{}-{}",
             std::process::id(),
             nonce()
         ));
@@ -841,7 +841,7 @@ mod tests {
                 .args(["--host", "127.0.0.1", "--port", &port.to_string()])
                 .arg("--no-browser")
                 .current_dir(&release.source_dir)
-                .env("HUGAGENT_HOME", &data)
+                .env("SUMC_HOME", &data)
                 .env("PYTHONUTF8", "1")
                 .env("PYTHONDONTWRITEBYTECODE", "1")
                 .env(

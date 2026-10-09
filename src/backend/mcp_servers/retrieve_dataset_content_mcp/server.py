@@ -18,7 +18,7 @@ from typing import Any, Dict, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
 
-mcp = FastMCP("hugagent-retrieve-dataset-content")
+mcp = FastMCP("sumc-retrieve-dataset-content")
 _LOGGER = logging.getLogger(__name__)
 
 

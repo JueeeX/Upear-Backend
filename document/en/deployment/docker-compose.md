@@ -4,7 +4,7 @@
 
 > **When to use**: the **standard deployment form** for teams / production — multi-user, full features. For a personal single-machine trial, the lighter [No-Docker Quick Install](quick-install.md) is available.
 
-All HugAgentOS services are orchestrated by a single `docker-compose.yml` at the repository root, split by profiles into always-on core services, mutually exclusive sandbox sidecars (`script_runner` / `opensandbox`), and the optional memory infrastructure (`mem0`). This guide covers the full service topology, volumes and persistence, profile usage, and the rebuild flow after code changes.
+All SUMC services are orchestrated by a single `docker-compose.yml` at the repository root, split by profiles into always-on core services, mutually exclusive sandbox sidecars (`script_runner` / `opensandbox`), and the optional memory infrastructure (`mem0`). This guide covers the full service topology, volumes and persistence, profile usage, and the rebuild flow after code changes.
 
 ## Service topology
 
@@ -12,11 +12,11 @@ All HugAgentOS services are orchestrated by a single `docker-compose.yml` at the
 
 | Service | Container | Image / build | Ports (host→container) | Role |
 |---|---|---|---|---|
-| `postgres` | hugagent-postgres | `postgres:15-alpine` | `${POSTGRES_HOST_PORT:-5432}:5432` | Primary relational DB (business data, content_blocks, usage logs) |
-| `redis` | hugagent-redis | `redis:7-alpine` | `${REDIS_HOST_PORT:-6380}:6379` | Session store, streaming follower (Redis Streams), rate limiting |
-| `backend` | hugagent-backend | `docker/Dockerfile` (target `production`) | `${BACKEND_HOST_PORT:-3001}:${BACKEND_PORT:-3001}` | FastAPI app; runs alembic migrations automatically at startup |
-| `mcp` | hugagent-mcp | `docker/Dockerfile.mcp` | none exposed | CE starts 9 general MCP servers; EE also starts commercial MCP servers such as database query. The backend calls them at `http://mcp:91XX/mcp/` |
-| `frontend` | hugagent-frontend | `src/frontend/Dockerfile` | `${FRONTEND_PORT:-3002}:80` | nginx serving the frontend static bundle + `/api` reverse proxy to the backend |
+| `postgres` | sumc-postgres | `postgres:15-alpine` | `${POSTGRES_HOST_PORT:-5432}:5432` | Primary relational DB (business data, content_blocks, usage logs) |
+| `redis` | sumc-redis | `redis:7-alpine` | `${REDIS_HOST_PORT:-6380}:6379` | Session store, streaming follower (Redis Streams), rate limiting |
+| `backend` | sumc-backend | `docker/Dockerfile` (target `production`) | `${BACKEND_HOST_PORT:-3001}:${BACKEND_PORT:-3001}` | FastAPI app; runs alembic migrations automatically at startup |
+| `mcp` | sumc-mcp | `docker/Dockerfile.mcp` | none exposed | CE starts 9 general MCP servers; EE also starts commercial MCP servers such as database query. The backend calls them at `http://mcp:91XX/mcp/` |
+| `frontend` | sumc-frontend | `src/frontend/Dockerfile` | `${FRONTEND_PORT:-3002}:80` | nginx serving the frontend static bundle + `/api` reverse proxy to the backend |
 
 `BACKEND_PORT` is the container-internal listen port used by nginx, MCP, and the health check, and should normally remain `3001`. If host ports are occupied, adjust only `BACKEND_HOST_PORT`, `POSTGRES_HOST_PORT`, or `REDIS_HOST_PORT`; do not change the container-internal ports. For example, publish the backend on `13003` while keeping its internal port at `3001`.
 
@@ -31,18 +31,18 @@ Enterprise Edition (EE).
 
 | Service | Profile | Container | Image / build | Role |
 |---|---|---|---|---|
-| `script-runner` | `script_runner` | hugagent-script-runner | `docker/Dockerfile.script-runner` | Lightweight sandbox: 1 GB RAM / 1 CPU / read-only rootfs + tmpfs; skill directory mounted read-only at `/workspace/skills` |
-| `opensandbox-config-init` | `opensandbox` | hugagent-opensandbox-config-init | `alpine:3.19` | One-shot init: renders `@@HOST_REPO_PATH@@` / `@@HOST_STORAGE_PATH@@` in `docker/opensandbox-config.toml.tpl` into the named volume `opensandbox_config` |
-| `opensandbox` | `opensandbox` | hugagent-opensandbox | `opensandbox/server:v0.1.13` | Persistent sandbox controller (Enterprise Edition capability): starts/stops sandbox containers on demand via the host `docker.sock`; a Jupyter kernel keeps context across turns; debug port `${OPENSANDBOX_PORT:-8910}:8080` |
+| `script-runner` | `script_runner` | sumc-script-runner | `docker/Dockerfile.script-runner` | Lightweight sandbox: 1 GB RAM / 1 CPU / read-only rootfs + tmpfs; skill directory mounted read-only at `/workspace/skills` |
+| `opensandbox-config-init` | `opensandbox` | sumc-opensandbox-config-init | `alpine:3.19` | One-shot init: renders `@@HOST_REPO_PATH@@` / `@@HOST_STORAGE_PATH@@` in `docker/opensandbox-config.toml.tpl` into the named volume `opensandbox_config` |
+| `opensandbox` | `opensandbox` | sumc-opensandbox | `opensandbox/server:v0.1.13` | Persistent sandbox controller (Enterprise Edition capability): starts/stops sandbox containers on demand via the host `docker.sock`; a Jupyter kernel keeps context across turns; debug port `${OPENSANDBOX_PORT:-8910}:8080` |
 
 ### mem0 memory infrastructure (profile `mem0`, optional)
 
 | Service | Container | Image | Ports | Role |
 |---|---|---|---|---|
-| `etcd` | hugagent-etcd | `quay.io/coreos/etcd:v3.5.5` | internal | Milvus metadata store |
-| `minio` | hugagent-minio | `minio/minio:RELEASE.2023-03-13...` | internal | Milvus object storage |
-| `milvus` | hugagent-milvus | `milvusdb/milvus:v2.5.4` | `19530`, `9091` | Vector DB (L2 vector memory, self-hosted KB retrieval) |
-| `neo4j` | hugagent-neo4j | `neo4j:5.15-community` | `7474`, `7687` | Graph DB (L3 knowledge-graph memory, optional) |
+| `etcd` | sumc-etcd | `quay.io/coreos/etcd:v3.5.5` | internal | Milvus metadata store |
+| `minio` | sumc-minio | `minio/minio:RELEASE.2023-03-13...` | internal | Milvus object storage |
+| `milvus` | sumc-milvus | `milvusdb/milvus:v2.5.4` | `19530`, `9091` | Vector DB (L2 vector memory, self-hosted KB retrieval) |
+| `neo4j` | sumc-neo4j | `neo4j:5.15-community` | `7474`, `7687` | Graph DB (L3 knowledge-graph memory, optional) |
 
 ### Dependency graph
 
@@ -58,7 +58,7 @@ mcp ──depends_on──► postgres (healthy)
 milvus ──depends_on──► etcd (healthy) + minio (healthy)
 ```
 
-All services join the same bridge network `hugagent-network`; containers reach each other by service name (e.g. `http://backend:3001`, `http://mcp:9102/mcp/`, `http://milvus:19530`). Every container shares a json-file log-rotation policy (50 MB × 5 = 250 MB cap per container) to keep logs from filling the disk.
+All services join the same bridge network `sumc-network`; containers reach each other by service name (e.g. `http://backend:3001`, `http://mcp:9102/mcp/`, `http://milvus:19530`). Every container shares a json-file log-rotation policy (50 MB × 5 = 250 MB cap per container) to keep logs from filling the disk.
 
 ## Volumes and persistence
 
@@ -134,8 +134,8 @@ Option B — build locally and hot-swap into the running container (faster; requ
 ```bash
 cd src/frontend
 npm run build
-docker cp dist/. hugagent-frontend:/usr/share/nginx/html/
-docker exec hugagent-frontend nginx -s reload
+docker cp dist/. sumc-frontend:/usr/share/nginx/html/
+docker exec sumc-frontend nginx -s reload
 ```
 
 ### Both backend and frontend changed
@@ -153,7 +153,7 @@ docker-compose build --no-cache backend frontend
 docker-compose up -d backend frontend
 ```
 
-> Verify the code inside the container: `docker exec hugagent-backend grep '<new code marker>' /app/src/backend/<file>`. When "my change has no effect", 90% of the time a cached layer skipped the fresh code.
+> Verify the code inside the container: `docker exec sumc-backend grep '<new code marker>' /app/src/backend/<file>`. When "my change has no effect", 90% of the time a cached layer skipped the fresh code.
 
 > **Note:** The first build downloads optional DingTalk, Feishu, email, and
 > browser-rendering tools. Each download has retries and a bounded timeout. If
@@ -172,7 +172,7 @@ Manual operations (when developing a new migration):
 
 ```bash
 # Run migrations inside the container
-docker exec hugagent-backend alembic upgrade head
+docker exec sumc-backend alembic upgrade head
 
 # Generate a new migration (locally, after editing core/db/models.py)
 make migrate-new msg="describe change"

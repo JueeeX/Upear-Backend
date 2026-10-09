@@ -1,6 +1,6 @@
 """Test whether the autonomous loop works using the real EdgeBench task `order_addition_permutation_optimization`.
 
-    docker exec -e LOOP_MAX_ITERS=5 hugagent-backend \
+    docker exec -e LOOP_MAX_ITERS=5 sumc-backend \
       python /app/src/backend/scripts/_loop_test_edgebench.py
 
 This EdgeBench task: use metaheuristic search to find the permutation that minimizes a black-box cost (score=maximize). Scoring is independent of CPU speed

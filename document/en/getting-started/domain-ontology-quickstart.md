@@ -4,13 +4,13 @@
 > [简体中文](../../zh-CN/getting-started/domain-ontology-quickstart.md)
 
 This guide helps you build and publish a first Domain Pack in about 20 minutes.
-HugAgentOS then uses its controlled concepts, relationships, constraints, and
+SUMC then uses its controlled concepts, relationships, constraints, and
 workflows to validate domain tasks. The example has no external MCP dependency,
 so you can verify the complete loop before binding production tools and skills.
 
 ## What a Domain Pack contains
 
-A HugAgentOS domain ontology is an executable business contract, not only a
+A SUMC domain ontology is an executable business contract, not only a
 glossary for retrieval. A Domain Pack contains these parts:
 
 - **Metadata and configuration** define the pack ID, version, injection budget,
@@ -144,7 +144,7 @@ summary to contain at least 120 characters.
 ```
 
 Leave **Publish immediately after import** off, then select **Validate and
-Import**. HugAgentOS checks identifiers, versions, concept references, JSON
+Import**. SUMC checks identifiers, versions, concept references, JSON
 Schema, and tool references before it creates the working draft. Validation
 errors include the exact field path.
 

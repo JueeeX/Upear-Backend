@@ -2,7 +2,7 @@
 
 > Last updated: 2026-08-03
 
-HugAgentOS ships with a **layered persistent memory system**. L2 uses [mem0](https://github.com/mem0ai/mem0) with Milvus, while L3 uses a local adapter that connects directly to Neo4j. When enabled, the agent remembers a user's identity, preferences, **how work is done here** (definitions, orderings, red lines), and stable entity relationships across sessions. Memory is organized into three layers by information stability (L1 profile / L2 procedures / L3 knowledge graph) — all three layers are Community Edition capabilities; only **memory auditing** (compliance trail) belongs to the commercial edition (Enterprise Edition, EE).
+SUMC ships with a **layered persistent memory system**. L2 uses [mem0](https://github.com/mem0ai/mem0) with Milvus, while L3 uses a local adapter that connects directly to Neo4j. When enabled, the agent remembers a user's identity, preferences, **how work is done here** (definitions, orderings, red lines), and stable entity relationships across sessions. Memory is organized into three layers by information stability (L1 profile / L2 procedures / L3 knowledge graph) — all three layers are Community Edition capabilities; only **memory auditing** (compliance trail) belongs to the commercial edition (Enterprise Edition, EE).
 
 The whole system honors one core promise: **no memory I/O ever blocks the SSE hot path** — retrieval runs as a background task with a time budget, and writes go through a bounded post-response pipeline after the SSE stream closes (see the module docstring in `src/backend/core/memory/__init__.py`).
 
@@ -11,7 +11,7 @@ The whole system honors one core promise: **no memory I/O ever blocks the SSE ho
 | Layer | Name | Storage | Injection point | Implementation |
 |---|---|---|---|---|
 | L1 | Profile | DB (bounded markdown, 1500-char default cap) | Frozen into context at session start | `core/memory/profile.py` |
-| L2 | Procedures | Milvus vector store (collection `hugagent_memories`) | Top-K similarity retrieval at session start | `core/memory/service.py` (mem0 wrapper) |
+| L2 | Procedures | Milvus vector store (collection `sumc_memories`) | Top-K similarity retrieval at session start | `core/memory/service.py` (mem0 wrapper) |
 | L3 | Graph | Neo4j (optional, `MEM0_GRAPH_ENABLED=true`) | Entity-aware on-demand retrieval | `core/memory/graph.py` (local Neo4j adapter) |
 | — | Session working set | `chats.metadata.session_memory` | Within a single session | per-session task working set |
 | — | Audit side channel (Enterprise Edition, EE) | DB table `memory_audit` | Side-recorded on every read/write | `core/memory/audit.py` |

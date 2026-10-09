@@ -93,8 +93,8 @@ docker-compose.override.yml
 *.db
 *.sqlite
 *.sqlite3
-hugagent_dev.db
-hugagent_test.db
+sumc_dev.db
+sumc_test.db
 
 # Content snapshots (data exports — not source)
 src/backend/scripts/exported/
@@ -138,8 +138,8 @@ AGENTS.md
 # images
 img/
 
-# hugagent skills
-.hugagent/
+# sumc skills
+.sumc/
 
 # codex
 .codex

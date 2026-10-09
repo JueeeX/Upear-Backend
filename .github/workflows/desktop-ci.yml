@@ -40,7 +40,7 @@ jobs:
     name: ${{ matrix.name }}
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
-      HUGAGENT_DESKTOP_BUNDLE: "full"
+      SUMC_DESKTOP_BUNDLE: "full"
     strategy:
       fail-fast: false
       matrix:

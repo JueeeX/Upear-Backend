@@ -6,13 +6,13 @@ x-logging: &id001
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: hugagent-postgres
+    container_name: sumc-postgres
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
-      POSTGRES_DB: hugagent
-      POSTGRES_USER: hugagent_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-hugagent_dev_password}
+      POSTGRES_DB: sumc
+      POSTGRES_USER: sumc_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sumc_dev_password}
       POSTGRES_INITDB_ARGS: -E UTF8 --locale=C
     volumes:
     - postgres_data:/var/lib/postgresql/data
@@ -22,15 +22,15 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - pg_isready -U hugagent_user -d hugagent
+      - pg_isready -U sumc_user -d sumc
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-    - hugagent-network
+    - sumc-network
   redis:
     image: redis:7-alpine
-    container_name: hugagent-redis
+    container_name: sumc-redis
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
@@ -48,24 +48,25 @@ services:
       timeout: 5s
       retries: 5
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
   backend:
     build:
       context: .
       dockerfile: docker/Dockerfile
       target: production
-    container_name: hugagent-backend
+    container_name: sumc-backend
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
       JX_EDITION: ${JX_EDITION:-ce}
-      BRAND_PRODUCT_NAME: ${BRAND_PRODUCT_NAME:-HugAgentOS}
+      BRAND_PRODUCT_NAME: ${BRAND_PRODUCT_NAME:-SUMC}
       BRAND_ORG_NAME: ${BRAND_ORG_NAME:-}
       BRAND_POWERED_BY: ${BRAND_POWERED_BY:-true}
-      DATABASE_URL: postgresql://hugagent_user:${DB_PASSWORD:-hugagent_dev_password}@postgres:5432/hugagent
+      DATABASE_URL: postgresql://sumc_user:${DB_PASSWORD:-sumc_dev_password}@postgres:5432/sumc
       ENV: ${ENV:-dev}
       PORT: ${BACKEND_PORT:-3001}
+      PYTHONPATH: /app/src/backend:/app/safeharness/src
       AUTH_MODE: ${AUTH_MODE:-session}
       AUTH_API_URL: ${AUTH_API_URL:-}
       AUTH_API_TIMEOUT: ${AUTH_API_TIMEOUT:-5}
@@ -147,7 +148,7 @@ services:
       MILVUS_URL: ${MILVUS_URL:-http://milvus:19530}
       NEO4J_URL: ${NEO4J_URL:-bolt://neo4j:7687}
       NEO4J_USERNAME: ${NEO4J_USERNAME:-neo4j}
-      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-hugagent_neo4j_2026}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-sumc_neo4j_2026}
       MEMORY_RETRIEVAL_BUDGET_MS: ${MEMORY_RETRIEVAL_BUDGET_MS:-600}
       MCP_HOST: ${MCP_HOST:-mcp}
       SANDBOX_PROVIDER: ${SANDBOX_PROVIDER:-script_runner}
@@ -167,10 +168,13 @@ services:
       FILE_PARSER_TABLE_ENABLE: ${FILE_PARSER_TABLE_ENABLE:-true}
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:${BACKEND_PORT:-3001}}
       BACKEND_INTERNAL_TOKEN: ${BACKEND_INTERNAL_TOKEN:-}
+      SAFEHARNESS_PROTECTED_CHAT_ENABLED: ${SAFEHARNESS_PROTECTED_CHAT_ENABLED:-false}
+      SAFEHARNESS_PROTECTED_CHAT_SYSTEM_PROMPT: ${SAFEHARNESS_PROTECTED_CHAT_SYSTEM_PROMPT:-}
       HOST_REPO_PATH: ${HOST_REPO_PATH:-/app/repo}
-      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-hugagent}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-sumc}
     volumes:
     - ./src/backend:/app/src/backend
+    - ../src:/app/safeharness/src:ro
     - ./alembic.ini:/app/alembic.ini:ro
     - ${HOST_STORAGE_PATH:?HOST_STORAGE_PATH must be set in .env (host absolute path to storage dir)}:/app/storage:rw
     - manual_data:/app/storage/manual
@@ -202,17 +206,17 @@ services:
       retries: 3
       start_period: 40s
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
   mcp:
     build:
       context: .
       dockerfile: docker/Dockerfile.mcp
-    container_name: hugagent-mcp
+    container_name: sumc-mcp
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
-      DATABASE_URL: postgresql://hugagent_user:${DB_PASSWORD:-hugagent_dev_password}@postgres:5432/hugagent
+      DATABASE_URL: postgresql://sumc_user:${DB_PASSWORD:-sumc_dev_password}@postgres:5432/sumc
       STORAGE_TYPE: ${STORAGE_TYPE:-local}
       STORAGE_PATH: /app/storage
       MODEL_URL: ${MODEL_URL:-}
@@ -267,13 +271,13 @@ services:
       retries: 3
       start_period: 60s
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
   dbhub:
     profiles:
     - dbhub
     image: bytebase/dbhub:latest
-    container_name: hugagent-dbhub
+    container_name: sumc-dbhub
     logging: *id001
     command:
     - --transport
@@ -289,13 +293,13 @@ services:
     volumes:
     - ./docker/dbhub:/config:ro
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
   es-mcp:
     profiles:
     - dbhub
     image: docker.elastic.co/mcp/elasticsearch:latest
-    container_name: hugagent-es-mcp
+    container_name: sumc-es-mcp
     logging: *id001
     command:
     - http
@@ -305,13 +309,13 @@ services:
     - path: ./docker/dbhub/es.env
       required: false
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
   script-runner:
     build:
       context: .
       dockerfile: docker/Dockerfile.script-runner
-    container_name: hugagent-script-runner
+    container_name: sumc-script-runner
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
@@ -342,7 +346,7 @@ services:
       timeout: 5s
       retries: 3
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
   frontend:
     build:
@@ -354,7 +358,7 @@ services:
         VITE_EDITION: ${VITE_EDITION:-ce}
         VITE_DEFAULT_LANGUAGE: ${VITE_DEFAULT_LANGUAGE:-zh-CN}
         VITE_UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-50}
-    container_name: hugagent-frontend
+    container_name: sumc-frontend
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
@@ -379,11 +383,11 @@ services:
       timeout: 10s
       retries: 3
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
-    container_name: hugagent-etcd
+    container_name: sumc-etcd
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
@@ -404,13 +408,13 @@ services:
       timeout: 20s
       retries: 3
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
     profiles:
     - mem0
   minio:
     image: minio/minio:RELEASE.2023-03-13T19-46-17Z
-    container_name: hugagent-minio
+    container_name: sumc-minio
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
@@ -429,13 +433,13 @@ services:
       timeout: 20s
       retries: 3
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
     profiles:
     - mem0
   milvus:
     image: milvusdb/milvus:v2.5.4
-    container_name: hugagent-milvus
+    container_name: sumc-milvus
     logging: *id001
     command:
     - milvus
@@ -465,17 +469,17 @@ services:
       timeout: 20s
       retries: 3
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
     profiles:
     - mem0
   neo4j:
     image: neo4j:5.15-community
-    container_name: hugagent-neo4j
+    container_name: sumc-neo4j
     logging: *id001
     environment:
       TZ: ${TZ:-Asia/Shanghai}
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-hugagent_neo4j_2026}
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-sumc_neo4j_2026}
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_dbms_security_procedures_unrestricted: apoc.*
     volumes:
@@ -491,18 +495,18 @@ services:
       - -u
       - neo4j
       - -p
-      - ${NEO4J_PASSWORD:-hugagent_neo4j_2026}
+      - ${NEO4J_PASSWORD:-sumc_neo4j_2026}
       - RETURN 1
       interval: 30s
       timeout: 10s
       retries: 5
     networks:
-    - hugagent-network
+    - sumc-network
     restart: unless-stopped
     profiles:
     - mem0
 networks:
-  hugagent-network:
+  sumc-network:
     driver: bridge
 volumes:
   postgres_data: null

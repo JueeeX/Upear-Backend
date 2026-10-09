@@ -38,11 +38,11 @@ glob 模式（相对仓库根），命中即不拷贝。覆盖：
 
 ### 1.5 `renames` — 可选路径改名
 
-transforms 只改文件内容不改路径，因此本步骤为确有需要的路径迁移预留。CE 与 EE 目前统一使用 HugAgentOS 品牌和 `hugagent` 技术标识，`renames` 为空，`.claude/skills/hugagent-*-dev` 等路径原样保留。
+transforms 只改文件内容不改路径，因此本步骤为确有需要的路径迁移预留。CE 与 EE 目前统一使用 SUMC 品牌和 `sumc` 技术标识，`renames` 为空，`.claude/skills/sumc-*-dev` 等路径原样保留。
 
 ### 2. `transforms` — 品牌一致性与开源卫生文本变换
 
-按声明顺序整树应用于文本文件。CE 产品名为 `HugAgentOS`（`product_name` 字段），`hugagent` 容器名、环境变量、CLI 等技术标识原样保留；另一产品线的 HugAgentOS 字面量会统一为 HugAgentOS，历史展示名 `HugAgentOS` 则通过带负向前瞻的正则升级为 `HugAgentOS`，避免重复追加 `OS`。
+按声明顺序整树应用于文本文件。CE 产品名为 `SUMC`（`product_name` 字段），`sumc` 容器名、环境变量、CLI 等技术标识原样保留；另一产品线的 SUMC 字面量会统一为 SUMC，历史展示名 `SUMC` 则通过带负向前瞻的正则升级为 `SUMC`，避免重复追加 `OS`。
 
 > 生成器对 `src/**` 源码中仍含其他产品线品牌字面量的文件会单独点名告警（`_GENERIC_BRAND_TOKENS` 检查）——这类硬编码应收敛到 `settings.branding` / DB seed，而非长期依赖派生变换。
 
@@ -53,7 +53,7 @@ transforms 只改文件内容不改路径，因此本步骤为确有需要的路
 | pruner | 目标 | 动作 |
 |---|---|---|
 | `catalog_json` | `core/config/catalog.json` | 去掉 EE MCP 种子（`database_query`、`query_database`、`ai_chain_information_mcp`） |
-| `package_json` | `src/frontend/package.json` | 改名 `hugagent-ui`；删商业 License 预设 `@univerjs/preset-sheets-advanced` 与死依赖 `pptxgenjs`；固定 `@univerjs/icons=1.1.1`，避免无主仓 lockfile 时与 Univer 0.19 发生导出契约不兼容 |
+| `package_json` | `src/frontend/package.json` | 改名 `sumc-ui`；删商业 License 预设 `@univerjs/preset-sheets-advanced` 与死依赖 `pptxgenjs`；固定 `@univerjs/icons=1.1.1`，避免无主仓 lockfile 时与 Univer 0.19 发生导出契约不兼容 |
 | `requirements` | `requirements.txt` | 删云存储 / 持久沙箱依赖（boto3 / oss2 / opensandbox）；neo4j / mem0ai 移入独立档 `requirements-mem0.txt`（无 Docker 一键安装器会默认安装该档） |
 | `docker_compose` | `docker-compose.yml` | 删 opensandbox / litellm 服务及 depends_on；`script-runner` 摘掉 profile 转默认启动；整树摘除被排除组件的 env 注入（`OPENSANDBOX_` / `CUBE_` / `S3_` / `OSS_` / `MODEL_GATEWAY_` / `LITELLM_` 前缀）；把后端版本、认证与 SSO 默认值固定为 CE 本地会话模式，前端构建默认固定为 CE |
 | `frontend_lock` | `package-lock.json` + 前端 Dockerfile | 删 lock（与裁剪后的 package.json 必然失同步）、`npm ci` 改 `npm install` |
@@ -72,7 +72,7 @@ transforms 只改文件内容不改路径，因此本步骤为确有需要的路
 | `README.md` / `README_CN.md` / `LICENSE` / `NOTICE` / `CONTRIBUTING.md` / `SECURITY.md` | CE 开源仓门面文件；默认 README 为英文，中文作为语言切换入口保留 |
 | `install.sh` | 面向个人无 Docker 模式的公开一键安装脚本 |
 | `.env.example` | CE 环境模板（`JX_EDITION=ce`，无内网 IP / 无品牌默认） |
-| `.hugagent-edition` | 仅在派生后出现的机器可读 `ce` 标识；让发布工具区分派生 CE checkout 与生成器异常缺失的源代码 checkout |
+| `.sumc-edition` | 仅在派生后出现的机器可读 `ce` 标识；让发布工具区分派生 CE checkout 与生成器异常缺失的源代码 checkout |
 | `.github/workflows/desktop-release.yml` | 公开 CE 桌面发版 workflow，包含 release tag / 版本前置门禁 |
 | `src/backend/api/routes/v1/__init__.py` | CE 路由注册表；`EE_ROUTERS` 恒为空 |
 | `src/backend/core/auth/permissions_iface.py` | 单租户 owner-only 权限接口；不导出团队权限函数 |
@@ -88,7 +88,7 @@ transforms 只改文件内容不改路径，因此本步骤为确有需要的路
 | `src/frontend/default.conf.template` | CE 前端 Nginx 模板，移除 `/gateway/**` 反代与 litellm upstream |
 | `src/frontend/src/main.tsx` | CE 入口：只挂主应用 / API 文档 / 分享预览，不挂 /admin、/config |
 | `src/frontend/src/updates.ts` | CE 版本说明数据 |
-| `.claude/skills/hugagent-{backend,frontend}-dev/…` | 项目开发 skill 的 CE 版 SKILL.md 与 references（剔除 admin 面板 / EE 路由注册等商业版段落） |
+| `.claude/skills/sumc-{backend,frontend}-dev/…` | 项目开发 skill 的 CE 版 SKILL.md 与 references（剔除 admin 面板 / EE 路由注册等商业版段落） |
 
 > License、Team/RBAC、EE ORM 与 Dify 的实现根均在 `edition_ee/**`，CE 不提供同名实现 stub；派生树内对 `edition_ee` 的 import 探测必须返回不存在。
 
@@ -123,7 +123,7 @@ transforms 只改文件内容不改路径，因此本步骤为确有需要的路
 
 Windows 和 macOS 桌面服务载荷在两类 checkout 中遵守同一边界：源代码 checkout 中，
 `desktop/scripts/prepare-bundle.mjs` 仍会找到并运行 `scripts/build_ce.py`；在有意移除生成器的公开 CE 仓中，它要求
-`.hugagent-edition` 内容为 `ce`，然后只暂存当前 checkout 的 Git tracked 文件。正式发布会拒绝脏
+`.sumc-edition` 内容为 `ce`，然后只暂存当前 checkout 的 Git tracked 文件。正式发布会拒绝脏
 checkout，因此该 fallback 不能把一个生成器异常缺失的任意仓库静默当成 CE 载荷。边界检查和前端
 构建完成后，脚本把派生树压成单个 `server-ce.zip` 再交给平台安装包，避免安装和卸载阶段处理数千个
 散文件。
@@ -176,7 +176,7 @@ EE 始终全量建表。维护规则：**新增 EE 专属模型必须放进 `edi
 | 生成器 | `scripts/build_ce.py` |
 | 品牌门禁模式 | `ce/brand_scan.txt` |
 | overlay 目录 | `ce/overlay/` |
-| 派生树版本标识 | `ce/overlay/.hugagent-edition` |
+| 派生树版本标识 | `ce/overlay/.sumc-edition` |
 | 公开桌面发版 workflow | `ce/overlay/.github/workflows/desktop-release.yml` |
 | CE/EE 建表边界 | `src/backend/core/db/edition_tables.py` |
 | 幂等 Schema 升级器 | `src/backend/core/db/schema_reconcile.py` |

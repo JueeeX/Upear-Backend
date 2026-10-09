@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 #
-# HugAgentOS one-command installer for the personal, no-Docker profile.
+# SUMC one-command installer for the personal, no-Docker profile.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash
 #
 # Optional locations:
-#   HUGAGENT_HOME=$HOME/.hugagent
-#   HUGAGENT_SOURCE_DIR=$HOME/.hugagent/source
+#   SUMC_HOME=$HOME/.sumc
+#   SUMC_SOURCE_DIR=$HOME/.sumc/source
 
 set -euo pipefail
 
 REPOSITORY_URL="https://github.com/ZJU-REAL/HugAgentOS.git"
 REPOSITORY_BRANCH="main"
-HUGAGENT_DATA_DIR="${HUGAGENT_HOME:-${HOME}/.hugagent}"
-SOURCE_DIR="${HUGAGENT_SOURCE_DIR:-${HUGAGENT_DATA_DIR}/source}"
-VENV_DIR="${HUGAGENT_DATA_DIR}/venv"
-CJK_FONT_DIR="${HUGAGENT_DATA_DIR}/fonts"
+SUMC_DATA_DIR="${SUMC_HOME:-${HOME}/.sumc}"
+SOURCE_DIR="${SUMC_SOURCE_DIR:-${SUMC_DATA_DIR}/source}"
+VENV_DIR="${SUMC_DATA_DIR}/venv"
+CJK_FONT_DIR="${SUMC_DATA_DIR}/fonts"
 
 if [[ -t 1 ]]; then
     GREEN=$'\033[32m'
@@ -89,7 +89,7 @@ NODE_MAJOR="$(node -p 'Number(process.versions.node.split(".")[0])')"
 info "Python: $("${PYTHON_BIN}" --version 2>&1)"
 info "Node.js: $(node --version)"
 
-mkdir -p "${HUGAGENT_DATA_DIR}" "${CJK_FONT_DIR}"
+mkdir -p "${SUMC_DATA_DIR}" "${CJK_FONT_DIR}"
 
 has_libreoffice() {
     command -v libreoffice >/dev/null 2>&1 ||
@@ -151,16 +151,16 @@ libreoffice_install_hint() {
 }
 
 wants_libreoffice_install() {
-    case "${HUGAGENT_INSTALL_LIBREOFFICE:-ask}" in
+    case "${SUMC_INSTALL_LIBREOFFICE:-ask}" in
         1|true|TRUE|yes|YES) return 0 ;;
         0|false|FALSE|no|NO) return 1 ;;
         ask|"") ;;
-        *) warn "Ignoring invalid HUGAGENT_INSTALL_LIBREOFFICE value; expected 1 or 0." ;;
+        *) warn "Ignoring invalid SUMC_INSTALL_LIBREOFFICE value; expected 1 or 0." ;;
     esac
 
     # `curl ... | bash` consumes stdin, so read the answer from the controlling
     # terminal. Non-interactive installs skip this optional dependency unless
-    # HUGAGENT_INSTALL_LIBREOFFICE=1 is set explicitly.
+    # SUMC_INSTALL_LIBREOFFICE=1 is set explicitly.
     if [[ -t 1 && -r /dev/tty ]]; then
         local answer
         printf '%sLibreOffice is optional. Install it now for PPT/Word previews and Office-to-PDF conversion? [Y/n] %s' "${YELLOW}" "${RESET}" >/dev/tty
@@ -187,7 +187,7 @@ fi
 if has_libreoffice; then
     info "LibreOffice is ready for PPT and Word previews"
 else
-    warn "Continuing without LibreOffice. Install it later and restart HugAgentOS to enable the affected features."
+    warn "Continuing without LibreOffice. Install it later and restart SUMC to enable the affected features."
     warn "Manual install: $(libreoffice_install_hint)"
 fi
 
@@ -203,7 +203,7 @@ has_local_cjk_font() {
 
 # PDF Agent Skills need a Unicode font to render Chinese instead of square
 # placeholders. Prefer an existing system font; otherwise download and unpack
-# WenQuanYi into the user's HugAgentOS data directory without requiring root.
+# WenQuanYi into the user's SUMC data directory without requiring root.
 if [[ ! -f /usr/share/fonts/truetype/wqy/wqy-zenhei.ttc ]] && ! has_local_cjk_font; then
     if command -v apt-get >/dev/null 2>&1 && command -v dpkg-deb >/dev/null 2>&1; then
         info "Installing a local CJK font for PDF Agent Skills"
@@ -229,7 +229,7 @@ if [[ ! -f /usr/share/fonts/truetype/wqy/wqy-zenhei.ttc ]] && ! has_local_cjk_fo
 fi
 
 if [[ -e "${SOURCE_DIR}" && ! -d "${SOURCE_DIR}/.git" ]]; then
-    die "${SOURCE_DIR} exists but is not a Git checkout. Set HUGAGENT_SOURCE_DIR to another path."
+    die "${SOURCE_DIR} exists but is not a Git checkout. Set SUMC_SOURCE_DIR to another path."
 fi
 
 if [[ -d "${SOURCE_DIR}/.git" ]]; then
@@ -240,14 +240,14 @@ if [[ -d "${SOURCE_DIR}/.git" ]]; then
     esac
 
     if [[ -n "$(git -C "${SOURCE_DIR}" status --porcelain)" ]]; then
-        die "${SOURCE_DIR} contains local changes. Commit or move them before updating HugAgentOS."
+        die "${SOURCE_DIR} contains local changes. Commit or move them before updating SUMC."
     fi
 
-    info "Updating HugAgentOS in ${SOURCE_DIR}"
+    info "Updating SUMC in ${SOURCE_DIR}"
     git -C "${SOURCE_DIR}" checkout "${REPOSITORY_BRANCH}" >/dev/null
     git -C "${SOURCE_DIR}" pull --ff-only origin "${REPOSITORY_BRANCH}"
 else
-    info "Downloading HugAgentOS to ${SOURCE_DIR}"
+    info "Downloading SUMC to ${SOURCE_DIR}"
     git clone --depth 1 --branch "${REPOSITORY_BRANCH}" "${REPOSITORY_URL}" "${SOURCE_DIR}"
 fi
 
@@ -306,7 +306,7 @@ info "Installing Agent Skills Python dependencies"
 pip_install -r docker/requirements-script-runner.txt
 pip_install --no-deps -e .
 
-SKILL_NODE_DIR="${HUGAGENT_DATA_DIR}/node"
+SKILL_NODE_DIR="${SUMC_DATA_DIR}/node"
 PLAYWRIGHT_BROWSER_DIR="${SKILL_NODE_DIR}/browsers"
 info "Installing Agent Skills Node.js dependencies"
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --silent --no-audit --no-fund \
@@ -329,22 +329,22 @@ info "Building the web application"
     VITE_EDITION=ce VITE_DEFAULT_LANGUAGE=en NODE_OPTIONS="${BUILD_NODE_OPTIONS# }" npm run build
 )
 
-HUGAGENT_BIN="${VENV_DIR}/bin/hugagent"
-[[ -x "${HUGAGENT_BIN}" ]] || die "The HugAgentOS command was not installed correctly."
+SUMC_BIN="${VENV_DIR}/bin/sumc"
+[[ -x "${SUMC_BIN}" ]] || die "The SUMC command was not installed correctly."
 
 printf '\n'
-info "HugAgentOS is installed."
+info "SUMC is installed."
 printf '  Source: %s\n' "${SOURCE_DIR}"
-printf '  Data:   %s\n' "${HUGAGENT_DATA_DIR}"
-printf '  Start:  %s\n' "${HUGAGENT_BIN}"
+printf '  Data:   %s\n' "${SUMC_DATA_DIR}"
+printf '  Start:  %s\n' "${SUMC_BIN}"
 printf '\n'
-info "Starting HugAgentOS"
+info "Starting SUMC"
 
 # The CE server seeds admin/admin on a fresh data directory and requires a
 # password change immediately after sign-in. Model providers are configured in
 # Settings, so the one-command path does not require an interactive wizard.
-export HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS=1
+export SUMC_BOOTSTRAP_DEFAULT_PLUGINS=1
 if [[ -t 1 && -r /dev/tty ]]; then
-    exec "${HUGAGENT_BIN}" serve </dev/tty
+    exec "${SUMC_BIN}" serve </dev/tty
 fi
-exec "${HUGAGENT_BIN}" serve
+exec "${SUMC_BIN}" serve

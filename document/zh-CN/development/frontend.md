@@ -18,8 +18,8 @@ docker-compose up -d --build frontend
 ```bash
 cd src/frontend
 npm run build
-docker cp dist/. hugagent-frontend:/usr/share/nginx/html/
-docker exec hugagent-frontend nginx -s reload
+docker cp dist/. sumc-frontend:/usr/share/nginx/html/
+docker exec sumc-frontend nginx -s reload
 ```
 
 Lint：
@@ -98,7 +98,7 @@ interface ApiEnvelope<T> {
 
 1. 新建 `stores/xxxStore.ts`：先定义 `interface XxxState`（状态 + actions），再 `create<XxxState>((set, get) => ({...}))`；
 2. 在 `stores/index.ts` 加 export；
-3. 异步 action 内部 try/catch + `set({ loading })`；需要持久化的状态在 setter 中写 localStorage（键名 `hugagent_ui_*` 风格，见 `storage.ts`）；
+3. 异步 action 内部 try/catch + `set({ loading })`；需要持久化的状态在 setter 中写 localStorage（键名 `sumc_ui_*` 风格，见 `storage.ts`）；
 4. 组件内订阅用 hook 形式（`useXxxStore((s) => s.field)` 选择器优先），事件回调里读最新值用 `useXxxStore.getState()`。
 
 ## Edition 门控（CE/EE）

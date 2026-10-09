@@ -1,7 +1,7 @@
 """Sensitive-data sanitization gate.
 
 Inlines a default set of hardcoded rules covering the mixed government + enterprise scenarios
-HugAgentOS currently serves:
+SUMC currently serves:
 - Generic PII (national ID, mobile number, email, bank card)
 - Secrets (API key, JWT)
 - Government (official red-header document numbers)

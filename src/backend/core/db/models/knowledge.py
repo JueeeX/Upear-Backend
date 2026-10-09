@@ -41,8 +41,8 @@ class KBSpace(Base):
     visibility = Column(String(16), nullable=False, default="private")
     chunk_method = Column(String(32), nullable=False, default="semantic")
     extra_data = Column("metadata", JSONType, default={})
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     deleted_at = Column(TIMESTAMP(timezone=True))
 
     # Relationships
@@ -83,7 +83,7 @@ class KBDocument(Base):
         String(20), nullable=False, default="processing"
     )  # processing | completed | failed
     extra_data = Column("metadata", JSONType, default={})
-    uploaded_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    uploaded_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     deleted_at = Column(TIMESTAMP(timezone=True))
 
     # Relationships
@@ -109,7 +109,7 @@ class KBChunk(Base):
     """Knowledge base chunk table - stores parent chunks for context retrieval.
 
     Each document is split into parent chunks (stored here) and child chunks
-    (vectorised in Milvus hugagent_kb_private collection). Retrieval finds child
+    (vectorised in Milvus sumc_kb_private collection). Retrieval finds child
     chunks via vector search, then fetches the parent content from this table.
     """
 
@@ -128,8 +128,8 @@ class KBChunk(Base):
     questions = Column(JSONType, default=list)  # associated question list (array of strings)
     char_start = Column(Integer)
     char_end = Column(Integer)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     document = relationship("KBDocument", back_populates="chunks")
@@ -154,8 +154,8 @@ class CatalogOverride(Base):
     item_id = Column(String(100), nullable=False)
     enabled = Column(Boolean, nullable=False, default=True)
     config_data = Column("config", JSONType, default={})
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     user = relationship("UserShadow", back_populates="catalog_overrides")

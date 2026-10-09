@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
@@ -15,6 +15,7 @@ from core.db.models import ModelProvider, ModelRoleAssignment
 
 ROLE_DEFINITIONS: dict[str, dict] = {
     "main_agent": {"label": "主智能体推理", "type": "chat"},
+    "judge":      {"label": "安全语义判定", "type": "chat"},
     "summarizer": {"label": "标题摘要 + 分类", "type": "chat"},
     "followup":   {"label": "追问生成", "type": "chat"},
     "memory":     {"label": "记忆提取 (mem0)", "type": "chat"},
@@ -92,7 +93,7 @@ def update_provider(db: Session, provider_id: str, **fields) -> Optional[ModelPr
     for key, val in fields.items():
         if val is not None and hasattr(provider, key):
             setattr(provider, key, val)
-    provider.updated_at = datetime.utcnow()
+    provider.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(provider)
     return provider
@@ -122,7 +123,7 @@ def set_provider_test_result(db: Session, provider_id: str, success: bool) -> No
     provider = get_provider(db, provider_id)
     if provider is None:
         return
-    provider.last_tested_at = datetime.utcnow()
+    provider.last_tested_at = datetime.now(timezone.utc).replace(tzinfo=None)
     provider.last_test_status = "success" if success else "failure"
     db.commit()
 
@@ -174,13 +175,13 @@ def assign_role(db: Session, role_key: str, provider_id: str, updated_by: str = 
     ).first()
     if existing:
         existing.provider_id = provider_id
-        existing.updated_at = datetime.utcnow()
+        existing.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         existing.updated_by = updated_by
     else:
         db.add(ModelRoleAssignment(
             role_key=role_key,
             provider_id=provider_id,
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
             updated_by=updated_by,
         ))
     db.commit()
@@ -245,7 +246,7 @@ def import_all(db: Session, data: dict, overwrite: bool = True) -> dict:
                         "model_name", "gateway_group", "weight", "priority", "extra_config", "is_active"):
                 if key in p:
                     setattr(existing, key, p[key])
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             db.add(ModelProvider(
                 provider_id=p["provider_id"],
@@ -274,7 +275,7 @@ def import_all(db: Session, data: dict, overwrite: bool = True) -> dict:
         ).first()
         if existing:
             existing.provider_id = a["provider_id"]
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             existing.updated_by = "import"
         else:
             db.add(ModelRoleAssignment(

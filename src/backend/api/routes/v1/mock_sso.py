@@ -24,6 +24,13 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/mock-sso", tags=["Mock SSO"])
 
+
+def _default_login_language(edition: str) -> str:
+    configured = os.getenv("LOGIN_DEFAULT_LANGUAGE", "").strip()
+    if configured in {"en", "zh-CN"}:
+        return configured
+    return "en" if edition == "ce" else "zh-CN"
+
 # ── Mock-SSO ticket store ─────────────────────────────────────────────────
 # Moved to core.auth.mock_ticket_store so edition authentication can validate tickets
 # without importing this route module. Re-exported under original names.
@@ -296,6 +303,7 @@ def _render_legacy_mock_page(redirect: str, error: Optional[str]) -> str:
       min-height:calc(100vh - 140px); padding:24px 88px 96px;
     }}
     .visual {{ position:relative; min-height:640px; }}
+    .scene-layer {{ position:fixed; inset:0; z-index:1; pointer-events:none; }}
     .scene-tag {{
       position:absolute; display:inline-flex; align-items:center; justify-content:center;
       min-width:62px; height:26px; padding:0 12px;
@@ -385,7 +393,7 @@ def _render_legacy_mock_page(redirect: str, error: Optional[str]) -> str:
       .brand {{ padding:28px 24px 0; }}
       .brand-logo {{ width:240px; max-width:calc(100vw - 48px); }}
       .main {{ grid-template-columns:1fr; gap:24px; min-height:auto; padding:12px 20px 108px; }}
-      .visual {{ display:none; }}
+      .visual, .scene-layer {{ display:none; }}
       .card {{ min-height:unset; padding:40px 22px 28px; }}
       .title {{ font-size:24px; }}
     }}
@@ -395,15 +403,16 @@ def _render_legacy_mock_page(redirect: str, error: Optional[str]) -> str:
   <div class="page">
     <header class="brand">
       <a class="brand-link" href="/mock-sso/login?redirect={redirect}">
-        <img class="brand-logo" src="/home/hugagentos-logo.png" alt="{brand_name}"/>
+        <img class="brand-logo" src="/home/sumc-logo.png" alt="{brand_name}"/>
       </a>
     </header>
-    <main class="main">
-      <section class="visual" aria-hidden="true">
+    <div class="scene-layer" aria-hidden="true">
         <div class="scene-tag tag-ai">AI 问答</div>
         <div class="scene-tag tag-agent">智能体</div>
         <div class="scene-tag tag-kb">知识库</div>
-      </section>
+    </div>
+    <main class="main">
+      <section class="visual" aria-hidden="true"></section>
       <section class="panel">
         <div class="card">
           <div style="text-align:center"><span class="mock-badge">Mock SSO</span></div>
@@ -545,7 +554,7 @@ async def mock_login_page(
         from core.config.settings import settings as _settings
 
         local_enabled = bool(_settings.auth.local_enabled)
-        default_lang = "en" if _settings.edition.edition == "ce" else "zh-CN"
+        default_lang = _default_login_language(_settings.edition.edition)
     except Exception:
         local_enabled = True
         default_lang = "zh-CN"
@@ -583,6 +592,7 @@ async def mock_login_page(
     mock_hint_html = ""
     brand = get_branding_info()
     brand_name = brand["product_name"]
+    brand_logo_url = brand["logo_url"]
 
     html = f"""<!DOCTYPE html>
 <html lang="{default_lang if default_lang == 'en' else 'zh-CN'}">
@@ -647,11 +657,12 @@ async def mock_login_page(
       transform:translateY(-1px);
     }}
     .brand-logo {{
-      width:280px;
-      max-width:calc(100vw - 112px);
-      height:auto;
+      width:38px;
+      height:38px;
+      flex:none;
       display:block;
     }}
+    .brand-name {{ color:#126dff; font-size:28px; font-weight:700; line-height:1; }}
     .main {{
       position:relative;
       z-index:1;
@@ -665,6 +676,12 @@ async def mock_login_page(
     .visual {{
       position:relative;
       min-height:640px;
+    }}
+    .scene-layer {{
+      position:fixed;
+      inset:0;
+      z-index:1;
+      pointer-events:none;
     }}
     .scene-tag {{
       position:absolute;
@@ -1178,14 +1195,15 @@ async def mock_login_page(
     }}
     @media (max-width: 960px) {{
       .brand {{ padding:28px 24px 0; }}
-      .brand-logo {{ width:240px; max-width:calc(100vw - 48px); }}
+      .brand-logo {{ width:34px; height:34px; }}
+      .brand-name {{ font-size:23px; }}
       .main {{
         grid-template-columns:1fr;
         gap:24px;
         min-height:auto;
         padding:12px 20px 108px;
       }}
-      .visual {{ display:none; }}
+      .visual, .scene-layer {{ display:none; }}
       .card {{ min-height:unset; padding:40px 22px 28px; }}
       .title {{ margin-bottom:28px; font-size:24px; }}
       .dev-dock {{ right:16px; bottom:16px; }}
@@ -1198,15 +1216,17 @@ async def mock_login_page(
   <div class="page">
     <header class="brand">
       <a class="brand-link" href="/login?redirect={redirect}">
-        <img class="brand-logo" src="/home/hugagentos-logo.png" alt="{brand_name}" />
+        <img class="brand-logo" src="{brand_logo_url}" alt="" />
+        <span class="brand-name">{brand_name}</span>
       </a>
     </header>
-    <main class="main">
-      <section class="visual" aria-hidden="true">
+    <div class="scene-layer" aria-hidden="true">
         <div class="scene-tag tag-ai" data-i18n="AI 问答">AI 问答</div>
         <div class="scene-tag tag-agent" data-i18n="智能体">智能体</div>
         <div class="scene-tag tag-kb" data-i18n="知识库">知识库</div>
-      </section>
+    </div>
+    <main class="main">
+      <section class="visual" aria-hidden="true"></section>
       <section class="panel">
         <div class="card">
           <h1 class="title" data-i18n="统一身份认证登录">统一身份认证登录</h1>

@@ -3,7 +3,7 @@
 import asyncio
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import anyio
@@ -264,10 +264,11 @@ async def list_pending_confirms(
     参数路由吞掉（FastAPI 按声明顺序匹配）。
     """
     from core.llm.tools import _myspace_confirm as _mc
+    from core import safeharness_approval as _sa
 
     chat_service = ChatService(db)
     items = []
-    for cid in _mc.list_pending_chat_ids():
+    for cid in {*_mc.list_pending_chat_ids(), *_sa.list_pending_chat_ids()}:
         if chat_service.get_session(cid, user.user_id) is None:
             continue
         # Cannot just take "the latest one" (get_pending): when the latest is a
@@ -275,7 +276,7 @@ async def list_pending_confirms(
         # the blue dot would never light up. Prefer the latest write-confirm
         # pending; fall back to design_pick only if there is none (the frontend
         # renders that as merely lighting the blue dot).
-        pendings = _mc.get_all_pending(cid)
+        pendings = [*_mc.get_all_pending(cid), *_sa.get_all_pending(cid)]
         if not pendings:
             continue
         confirms = [p for p in pendings if p.get("kind") != _mc.KIND_DESIGN_PICK]
@@ -508,6 +509,22 @@ def _resolve_chat_agent_targets(
         service.list_for_user(user_id),
         disabled_agent_ids=disabled_ids,
     )
+
+    # External framework agents (ext-*) are platform-level targets: always
+    # selectable, executed by the external bridge rather than the sub-agent
+    # factory. They resolve before the delegate list because they are not
+    # UserAgent rows. Only a persistent agent_id conversation (or an explicit
+    # @mention) reaches them — same rule as native sub-agents.
+    from core.external_agents.registry import CATALOG as _EXTERNAL_CATALOG
+
+    if request.agent_id in _EXTERNAL_CATALOG:
+        return request, _EXTERNAL_CATALOG[request.agent_id].name, request.message, None
+    if request.mention_agent_id in _EXTERNAL_CATALOG:
+        external_name = _EXTERNAL_CATALOG[request.mention_agent_id].name
+        request = request.model_copy(update={"mention_name": external_name})
+        execution_message = _strip_direct_mention_prefix(request.message, external_name)
+        return request, None, execution_message, None
+
     persistent_agent_name: Optional[str] = None
     execution_message = request.message
     explicit_command = None
@@ -795,6 +812,7 @@ def _ensure_chat_session(
     plan_chat: bool = False,
     batch_chat: bool = False,
     project_id: Optional[str] = None,
+    safeharness_protected: Optional[bool] = None,
 ):
     extra_data: Dict[str, Any] = {"chat_id": chat_id}
     if agent_id:
@@ -805,6 +823,8 @@ def _ensure_chat_session(
         extra_data["plan_chat"] = True
     if batch_chat:
         extra_data["batch_chat"] = True
+    if safeharness_protected is not None:
+        extra_data["safeharness_protected"] = safeharness_protected
     # Prefer the edition-aware access resolver before creating a session.
     pair = chat_service.get_session_with_access(chat_id, user_id)
     if pair is not None:
@@ -841,6 +861,12 @@ def _ensure_chat_session(
     if batch_chat and not existing_meta.get("batch_chat"):
         merged["batch_chat"] = True
         dirty = True
+    if (
+        safeharness_protected is not None
+        and existing_meta.get("safeharness_protected") is not safeharness_protected
+    ):
+        merged["safeharness_protected"] = safeharness_protected
+        dirty = True
     if dirty:
         chat_service.update_session(chat_id, user_id, {"extra_data": merged})
     return session
@@ -857,6 +883,90 @@ def _load_session_messages(
     if messages is None:
         raise HTTPException(status_code=404, detail=f"Session {chat_id} not found")
     return messages
+
+
+def _external_agent_target(request: ChatRequest):
+    """The external framework agent this turn targets, if any."""
+    from core.external_agents.registry import CATALOG as _EXTERNAL_CATALOG
+
+    if request.agent_id in _EXTERNAL_CATALOG:
+        return _EXTERNAL_CATALOG[request.agent_id]
+    if request.mention_agent_id in _EXTERNAL_CATALOG:
+        return _EXTERNAL_CATALOG[request.mention_agent_id]
+    return None
+
+
+async def _run_external_agent_turn(
+    request: ChatRequest,
+    chat_service: ChatService,
+    effective_user_message: str,
+    actual_model_name: Optional[str],
+    *,
+    db_user_id: str = "",
+) -> ChatResponse:
+    """Execute one turn through the external bridge and persist the reply.
+
+    The bridge itself enforces the SafeHarness structural checks; a block comes
+    back as an assistant-visible notice (and an audited deny), never as a crash.
+    """
+    from core.external_agents import run_external_agent
+    from core.external_agents.registry import ExternalAgentBlocked
+
+    card = _external_agent_target(request)
+    assert card is not None
+    context = {
+        "tenant_id": "default",
+        "session_id": request.chat_id,
+        "trace_id": request.chat_id,
+        "user_id": db_user_id,
+    }
+    evidence: Dict[str, Any] = {}
+    history: List[Dict[str, Any]] = []
+    try:
+        # Cross-turn memory: feed the framework the recent window of this
+        # session, minus the just-persisted current user message.
+        prior = _load_session_messages(chat_service, request.chat_id, db_user_id or "")
+        history = prior[:-1] if prior and prior[-1].get("role") == "user" else prior
+    except Exception as exc:  # noqa: BLE001 — memory is best-effort
+        logger.warning("external_agent_history_load_failed", chat_id=request.chat_id, error=str(exc))
+
+    try:
+        data = await run_external_agent(
+            card.agent_id, effective_user_message, context=context, history=history
+        )
+        reply = str(data.get("reply") or "")
+        evidence = dict(data.get("evidence") or {})
+        route = f"external_agent:{evidence.get('framework') or card.framework}"
+    except ExternalAgentBlocked as exc:
+        reply = f"SafeHarness 已拦截该请求（{exc.reason_code}）；{card.name} 未执行。"
+        evidence = {"reason_code": exc.reason_code, "guard": "blocked"}
+        route = "external_agent:blocked"
+
+    chat_service.add_message(
+        chat_id=request.chat_id,
+        role="assistant",
+        content=reply,
+        model=actual_model_name or evidence.get("model"),
+        extra_data={
+            "timestamp": now_iso(),
+            "route": route,
+            "is_markdown": False,
+            "sources": [],
+            "artifacts": [],
+            "warnings": [],
+            "external_agent": evidence,
+        },
+    )
+    return ChatResponse(
+        chat_id=request.chat_id,
+        response=reply,
+        timestamp=now_iso(),
+        is_markdown=False,
+        route=route,
+        sources=[],
+        artifacts=[],
+        warnings=[],
+    )
 
 
 @router.post("/send", response_model=ChatResponse, summary="非流式聊天")
@@ -920,6 +1030,7 @@ async def chat_send(
             plan_chat=request.plan_chat,
             batch_chat=request.batch_chat,
             project_id=request.project_id,
+            safeharness_protected=request.safeharness_protected,
         )
         # Link orphan artifacts (uploaded before session existed) to this chat
         if request.attachments:
@@ -944,6 +1055,12 @@ async def chat_send(
             model=actual_model_name,
             extra_data=_build_user_extra_data(request, selected_model_provider_id),
         )
+
+        if _external_agent_target(request) is not None:
+            return await _run_external_agent_turn(
+                request, chat_service, effective_user_message, actual_model_name,
+                db_user_id=db_user_id,
+            )
 
         _user_settings = UserService(db).get_user_settings(db_user_id)
         ctx = _build_ctx(
@@ -1121,6 +1238,7 @@ async def chat_stream(
         plan_chat=request.plan_chat,
         batch_chat=request.batch_chat,
         project_id=request.project_id,
+        safeharness_protected=request.safeharness_protected,
     )
 
     # Link orphan artifacts (uploaded before session existed) to this chat
@@ -1144,6 +1262,22 @@ async def chat_stream(
         model=actual_model_name,
         extra_data=_build_user_extra_data(request, selected_model_provider_id),
     )
+
+    if _external_agent_target(request) is not None:
+        async def _external_stream():
+            result = await _run_external_agent_turn(
+                request, chat_service, effective_user_message, actual_model_name,
+                db_user_id=db_user_id,
+            )
+            text_frame = json.dumps(
+                {"type": "text", "content": result.response}, ensure_ascii=False
+            )
+            end_frame = json.dumps({"type": "end", "chat_id": request.chat_id}, ensure_ascii=False)
+            yield f"data: {text_frame}\n\n"
+            yield f"data: {end_frame}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return sse_response(_external_stream())
 
     context = _build_ctx(
         request,
@@ -1725,7 +1859,7 @@ async def submit_feedback(
     if existing:
         existing.rating = body.rating
         existing.comment = body.comment
-        existing.updated_at = datetime.utcnow()
+        existing.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         db.refresh(existing)
         record = existing
@@ -1783,12 +1917,13 @@ async def get_pending_confirm(
         raise HTTPException(status_code=404, detail="会话不存在或无权访问")
 
     from core.llm.tools import _myspace_confirm as _mc
+    from core import safeharness_approval as _sa
 
     # pendings: all outstanding items; the frontend restores the whole confirmation queue from this
     # (one round of parallel tool calls can concurrently register N distinct pending confirmations).
     return success_response(
         data={
-            "pendings": _mc.get_all_pending(chat_id),
+            "pendings": [*_mc.get_all_pending(chat_id), *_sa.get_all_pending(chat_id)],
         }
     )
 
@@ -1811,8 +1946,18 @@ async def file_confirm(
         raise HTTPException(status_code=404, detail="会话不存在或无权访问")
 
     from core.llm.tools import _myspace_confirm as _mc
+    from core import safeharness_approval as _sa
 
-    res = _mc.set_decision(chat_id, body.confirm_id, body.decision, option_id=body.option_id)
+    res = _sa.set_decision(
+        chat_id, body.confirm_id, body.decision, approver=str(user.user_id)
+    )
+    if res.get("reason") == "stale":
+        res = _mc.set_decision(
+            chat_id,
+            body.confirm_id,
+            body.decision,
+            option_id=body.option_id,
+        )
     if not res.get("ok"):
         # An expired confirmation (timeout reclaim / process restart) is not the user's fault —
         # return 200 with a stale flag so the frontend silently dismisses the zombie confirmation

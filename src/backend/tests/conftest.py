@@ -15,7 +15,7 @@ from core.db.engine import Base
 def test_database_url():
     """Test database URL."""
     # Default to the system temp dir: a relative path would leave a stray test.db in pytest's CWD (repo root, etc.)
-    return os.getenv("TEST_DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/hugagent_test.db")
+    return os.getenv("TEST_DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/sumc_test.db")
 
 
 @pytest.fixture(scope="function")

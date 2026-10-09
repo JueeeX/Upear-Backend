@@ -2,7 +2,7 @@
 
 > 最后更新：2026-07-19
 
-HugAgentOS 的知识库提供两种形态，可同时启用、在能力中心统一呈现：
+SUMC 的知识库提供两种形态，可同时启用、在能力中心统一呈现：
 
 1. **自建知识库**：文档上传 → 父子分块 → 向量化入 Milvus → 稠密 + 稀疏混合检索（RRF 融合）→ 可选重排。社区版 CE 仅提供当前用户拥有的私有知识库；管理员维护的公共知识库属于商业版 EE。
 2. **Dify 外接知识库**（商业版 EE）：`KNOWLEDGE_BASE=dify` 时，后端在运行时把 Dify datasets 注入能力中心目录，检索经 Dify Retrieval API 完成。
@@ -50,7 +50,7 @@ ORM 定义在 `src/backend/core/db/models/knowledge.py`：
 | `kb_documents` | 文档：storage_key、checksum、`indexing_status`（processing / completed / failed） |
 | `kb_chunks` | **父块**原文（检索命中后返回给 LLM），含标签 `tags` 与关联问题 `questions` |
 
-子块不入关系库——向量化后写 Milvus collection `hugagent_kb_private`（`core/kb/kb_vector.py`），每行带 `user_id` / `kb_id` 字段做归属隔离，`row_type` 区分 chunk 行与 question 行。
+子块不入关系库——向量化后写 Milvus collection `sumc_kb_private`（`core/kb/kb_vector.py`），每行带 `user_id` / `kb_id` 字段做归属隔离，`row_type` 区分 chunk 行与 question 行。
 
 ### 分块与索引
 

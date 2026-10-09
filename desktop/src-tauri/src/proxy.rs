@@ -45,7 +45,7 @@ pub struct ProxyState {
     pub cloud_server_base: String,
     /// 混合架构（Dual）：本机执行面地址（http://127.0.0.1:32101）。
     pub local_base: String,
-    /// 仅 Dual 为 true：启用按请求路由（x-hugagent-target: local → 本机）。
+    /// 仅 Dual 为 true：启用按请求路由（x-sumc-target: local → 本机）。
     pub hybrid_local: bool,
     /// 桥接秘密：本机路由请求注入 `X-Desktop-Bridge` 证明来自壳。
     pub bridge_secret: String,
@@ -54,7 +54,7 @@ pub struct ProxyState {
 }
 
 /// 前端标记「该请求属于本地项目」的头；反代读取后剥离，不透传给任何后端。
-pub const TARGET_HEADER: &str = "x-hugagent-target";
+pub const TARGET_HEADER: &str = "x-sumc-target";
 /// 桥接头（注入本机路由请求；来自 WebView 的同名头一律剥离防伪造）。
 pub const BRIDGE_SECRET_HEADER: &str = "x-desktop-bridge";
 pub const BRIDGE_USER_HEADER: &str = "x-desktop-bridge-user";
@@ -67,7 +67,7 @@ pub async fn serve(state: ProxyState, web_dir: PathBuf) -> std::io::Result<u16> 
     let raw_index = std::fs::read_to_string(&index).unwrap_or_default();
     let injected_index = inject_after_body(&raw_index, &platform_titlebar_block(true));
     let injected_path =
-        std::env::temp_dir().join(format!("hugagent-shell-index-{}.html", std::process::id()));
+        std::env::temp_dir().join(format!("sumc-shell-index-{}.html", std::process::id()));
     if let Err(error) = std::fs::write(&injected_path, injected_index.as_bytes()) {
         eprintln!("[proxy] 写入桌面标题栏首页失败，回退原始 index: {error}");
     }
@@ -125,7 +125,7 @@ async fn proxy_handler(State(state): State<ProxyState>, req: Request<Body>) -> R
 
     let path_q = uri.path_and_query().map(|p| p.as_str()).unwrap_or("/");
 
-    // 混合架构（Dual）：前端给「本地项目」的请求打 x-hugagent-target: local，
+    // 混合架构（Dual）：前端给「本地项目」的请求打 x-sumc-target: local，
     // 反代把它们转到本机执行面（127.0.0.1:32101），其余一律云端。单一形态不路由。
     // <img>/<iframe> 等 src 场景无法带请求头，等价支持 query 参数 ?hg_target=local。
     let to_local = state.hybrid_local
@@ -244,7 +244,7 @@ async fn proxy_handler(State(state): State<ProxyState>, req: Request<Body>) -> R
 async fn login_page() -> Html<String> {
     // 品牌名 / logo 走编译期可配（brand.rs）——默认，构建时环境变量可覆盖。
     let html = LOGIN_HTML
-        .replace("HugAgentOS", brand::NAME)
+        .replace("SUMC", brand::NAME)
         .replace("/icon.png", brand::LOGIN_LOGO_URL);
     Html(inject_after_body(&html, &platform_titlebar_block(false)))
 }
@@ -252,7 +252,7 @@ async fn login_page() -> Html<String> {
 /// 关闭主窗口时的自定义确认页（带「记住我的选择」勾选框）。按钮整页导航到
 /// `/__desktop/close-decide?action=..&remember=..`，由确认窗的 Rust 导航守卫执行。
 async fn close_confirm_page() -> Html<String> {
-    Html(CLOSE_CONFIRM_HTML.replace("HugAgentOS", brand::NAME))
+    Html(CLOSE_CONFIRM_HTML.replace("SUMC", brand::NAME))
 }
 
 /// 「设置服务器地址」页（菜单栏「文件 → 设置服务器地址…」打开）。输入框预填当前后端地址，
@@ -261,7 +261,7 @@ async fn close_confirm_page() -> Html<String> {
 async fn server_config_page(State(state): State<ProxyState>) -> Html<String> {
     let html = SERVER_CONFIG_HTML
         .replace("__CURRENT_BASE__", &html_escape(&state.server_base))
-        .replace("HugAgentOS", brand::NAME);
+        .replace("SUMC", brand::NAME);
     Html(inject_after_body(&html, &platform_titlebar_block(false)))
 }
 
@@ -299,7 +299,7 @@ async fn setup_page(State(state): State<ProxyState>) -> Html<String> {
                 "linux"
             },
         )
-        .replace("HugAgentOS", brand::NAME);
+        .replace("SUMC", brand::NAME);
     Html(inject_after_body(&html, &platform_titlebar_block(false)))
 }
 
@@ -342,7 +342,7 @@ async fn init_page(State(state): State<ProxyState>) -> Html<String> {
                 "linux"
             },
         )
-        .replace("HugAgentOS", brand::NAME);
+        .replace("SUMC", brand::NAME);
     Html(inject_after_body(&html, &platform_titlebar_block(false)))
 }
 
@@ -390,9 +390,9 @@ fn html_escape(s: &str) -> String {
 
 const TITLEBAR_HEIGHT: u8 = 36;
 const TB_OFFSET_SPA: &str =
-    ":root{--hugagent-desktop-titlebar-height:36px}body{box-sizing:border-box!important;padding-top:36px!important}.jx-appLoading{height:100%!important}.ant-message{top:calc(var(--hugagent-desktop-titlebar-height) + 8px)!important}.ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight{top:calc(var(--hugagent-desktop-titlebar-height) + 24px)!important}";
+    ":root{--sumc-desktop-titlebar-height:36px}body{box-sizing:border-box!important;padding-top:36px!important}.jx-appLoading{height:100%!important}.ant-message{top:calc(var(--sumc-desktop-titlebar-height) + 8px)!important}.ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight{top:calc(var(--sumc-desktop-titlebar-height) + 24px)!important}";
 const TB_OFFSET_PAGE: &str =
-    ":root{--hugagent-desktop-titlebar-height:36px}body{box-sizing:border-box!important;padding-top:36px!important}.ant-message{top:calc(var(--hugagent-desktop-titlebar-height) + 8px)!important}.ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight{top:calc(var(--hugagent-desktop-titlebar-height) + 24px)!important}";
+    ":root{--sumc-desktop-titlebar-height:36px}body{box-sizing:border-box!important;padding-top:36px!important}.ant-message{top:calc(var(--sumc-desktop-titlebar-height) + 8px)!important}.ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight{top:calc(var(--sumc-desktop-titlebar-height) + 24px)!important}";
 
 // The traffic lights start at y=13 and occupy about 14px. A 28px overlay keeps
 // their hit area clear without stacking a second, visibly empty toolbar above
@@ -402,29 +402,29 @@ const MAC_TITLEBAR_HEIGHT: u8 = 28;
 // blue gradient stop over its #F5F6F7 base.  The traffic lights therefore sit
 // on a true visual continuation of the sidebar instead of a detached grey bar.
 const MAC_OFFSET_SPA: &str =
-    ":root{--hugagent-desktop-titlebar-height:28px;--hugagent-desktop-sidebar-width:0px}body{box-sizing:border-box!important;padding-top:28px!important;background:linear-gradient(90deg,rgba(203,223,255,.38) 0 var(--hugagent-desktop-sidebar-width),#FFFFFF var(--hugagent-desktop-sidebar-width) 100%),#F5F6F7!important}.jx-brandRow,.jx-miniRail{padding-top:0!important}.jx-appLoading{height:100%!important}.ant-message{top:calc(var(--hugagent-desktop-titlebar-height) + 8px)!important}.ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight{top:calc(var(--hugagent-desktop-titlebar-height) + 24px)!important}";
+    ":root{--sumc-desktop-titlebar-height:28px;--sumc-desktop-sidebar-width:0px}body{box-sizing:border-box!important;padding-top:28px!important;background:linear-gradient(90deg,rgba(203,223,255,.38) 0 var(--sumc-desktop-sidebar-width),#FFFFFF var(--sumc-desktop-sidebar-width) 100%),#F5F6F7!important}.jx-brandRow,.jx-miniRail{padding-top:0!important}.jx-appLoading{height:100%!important}.ant-message{top:calc(var(--sumc-desktop-titlebar-height) + 8px)!important}.ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight{top:calc(var(--sumc-desktop-titlebar-height) + 24px)!important}";
 const MAC_OFFSET_PAGE: &str =
-    ":root{--hugagent-desktop-titlebar-height:28px}body{box-sizing:border-box!important;padding-top:28px!important}.ant-message{top:calc(var(--hugagent-desktop-titlebar-height) + 8px)!important}.ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight{top:calc(var(--hugagent-desktop-titlebar-height) + 24px)!important}";
+    ":root{--sumc-desktop-titlebar-height:28px}body{box-sizing:border-box!important;padding-top:28px!important}.ant-message{top:calc(var(--sumc-desktop-titlebar-height) + 8px)!important}.ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight{top:calc(var(--sumc-desktop-titlebar-height) + 24px)!important}";
 
 const TB_CSS: &str = r##"
-#hugagent-titlebar{position:fixed;inset:0 0 auto 0;height:36px;z-index:2147483647;display:flex;align-items:center;background:#F7F8FA;border-bottom:1px solid #E5E9EF;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#30343B}
-#hugagent-titlebar *{box-sizing:border-box}
-#hugagent-titlebar .tb-left{display:flex;align-items:center;height:100%;min-width:0;padding-left:8px}
-#hugagent-titlebar .tb-logo{width:17px;height:17px;border-radius:4px;margin-right:5px;object-fit:cover}
-#hugagent-titlebar .tb-spacer{flex:1;height:100%;min-width:30px}
-#hugagent-titlebar .tb-menu{display:flex;align-items:stretch;height:100%}
-#hugagent-titlebar .tb-menuGroup{position:relative;height:100%;display:flex;align-items:stretch}
-#hugagent-titlebar .tb-menuLabel{height:100%;padding:0 10px;border:0;background:transparent;color:#41464C;font:12.5px/1 inherit;cursor:default;-webkit-user-select:none;user-select:none}
-#hugagent-titlebar .tb-menuLabel:hover,#hugagent-titlebar .tb-menuGroup.open>.tb-menuLabel{background:#E7EBF1}
-#hugagent-titlebar .tb-drop{display:none;position:absolute;top:35px;left:0;min-width:180px;padding:5px;background:#fff;border:1px solid #DEE3EA;border-radius:8px;box-shadow:0 10px 28px rgba(15,23,42,.16)}
-#hugagent-titlebar .tb-menuGroup.open>.tb-drop{display:block}
-#hugagent-titlebar .tb-item{display:flex;align-items:center;width:100%;min-height:30px;padding:6px 11px;border:0;border-radius:6px;background:transparent;color:#30343B;font:13px/1.3 inherit;text-align:left;white-space:nowrap;cursor:default}
-#hugagent-titlebar .tb-item:hover{background:#EEF4FF;color:#126DFF}
-#hugagent-titlebar .tb-sep{height:1px;margin:5px 6px;background:#EDF0F4}
-#hugagent-titlebar .tb-controls{display:flex;align-items:stretch;height:100%;margin-left:4px}
-#hugagent-titlebar .tb-windowButton{width:46px;height:100%;padding:0;border:0;background:transparent;color:#41464C;display:flex;align-items:center;justify-content:center;cursor:default}
-#hugagent-titlebar .tb-windowButton:hover{background:#E3E7ED}
-#hugagent-titlebar .tb-windowButton.close:hover{background:#E81123;color:#fff}
+#sumc-titlebar{position:fixed;inset:0 0 auto 0;height:36px;z-index:2147483647;display:flex;align-items:center;background:#F7F8FA;border-bottom:1px solid #E5E9EF;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#30343B}
+#sumc-titlebar *{box-sizing:border-box}
+#sumc-titlebar .tb-left{display:flex;align-items:center;height:100%;min-width:0;padding-left:8px}
+#sumc-titlebar .tb-logo{width:17px;height:17px;border-radius:4px;margin-right:5px;object-fit:cover}
+#sumc-titlebar .tb-spacer{flex:1;height:100%;min-width:30px}
+#sumc-titlebar .tb-menu{display:flex;align-items:stretch;height:100%}
+#sumc-titlebar .tb-menuGroup{position:relative;height:100%;display:flex;align-items:stretch}
+#sumc-titlebar .tb-menuLabel{height:100%;padding:0 10px;border:0;background:transparent;color:#41464C;font:12.5px/1 inherit;cursor:default;-webkit-user-select:none;user-select:none}
+#sumc-titlebar .tb-menuLabel:hover,#sumc-titlebar .tb-menuGroup.open>.tb-menuLabel{background:#E7EBF1}
+#sumc-titlebar .tb-drop{display:none;position:absolute;top:35px;left:0;min-width:180px;padding:5px;background:#fff;border:1px solid #DEE3EA;border-radius:8px;box-shadow:0 10px 28px rgba(15,23,42,.16)}
+#sumc-titlebar .tb-menuGroup.open>.tb-drop{display:block}
+#sumc-titlebar .tb-item{display:flex;align-items:center;width:100%;min-height:30px;padding:6px 11px;border:0;border-radius:6px;background:transparent;color:#30343B;font:13px/1.3 inherit;text-align:left;white-space:nowrap;cursor:default}
+#sumc-titlebar .tb-item:hover{background:#EEF4FF;color:#126DFF}
+#sumc-titlebar .tb-sep{height:1px;margin:5px 6px;background:#EDF0F4}
+#sumc-titlebar .tb-controls{display:flex;align-items:stretch;height:100%;margin-left:4px}
+#sumc-titlebar .tb-windowButton{width:46px;height:100%;padding:0;border:0;background:transparent;color:#41464C;display:flex;align-items:center;justify-content:center;cursor:default}
+#sumc-titlebar .tb-windowButton:hover{background:#E3E7ED}
+#sumc-titlebar .tb-windowButton.close:hover{background:#E81123;color:#fff}
 "##;
 
 const TB_MENU: &str = r##"<nav class="tb-menu" aria-label="应用菜单">
@@ -462,10 +462,10 @@ const TB_CONTROLS: &str = r##"<div class="tb-controls">
 </div>"##;
 
 const TB_JS: &str = r##"(function(){
-var bar=document.getElementById('hugagent-titlebar');if(!bar)return;
+var bar=document.getElementById('sumc-titlebar');if(!bar)return;
 // 快速问答使用独立原生小窗，不展示主窗口标题栏。
 if(new URLSearchParams(location.search).get('quickask')==='1'){
-  bar.remove();var style=document.getElementById('hugagent-titlebar-style');if(style)style.remove();return;
+  bar.remove();var style=document.getElementById('sumc-titlebar-style');if(style)style.remove();return;
 }
 var lastFocus=null;
 document.addEventListener('focusin',function(event){if(!bar.contains(event.target))lastFocus=event.target;},true);
@@ -503,14 +503,14 @@ bar.addEventListener('dblclick',function(event){if(isControl(event.target))retur
 // we only reserve a compact draggable title region for the traffic lights; a
 // second branded toolbar would duplicate the native chrome and waste space.
 const MAC_TB_CSS: &str = r##"
-#hugagent-mac-titlebar{position:fixed;inset:0 0 auto 0;height:28px;z-index:2147483647;background:transparent;border:0;box-shadow:none;-webkit-user-select:none;user-select:none}
-#hugagent-mac-titlebar *{box-sizing:border-box}
+#sumc-mac-titlebar{position:fixed;inset:0 0 auto 0;height:28px;z-index:2147483647;background:transparent;border:0;box-shadow:none;-webkit-user-select:none;user-select:none}
+#sumc-mac-titlebar *{box-sizing:border-box}
 "##;
 
 const MAC_TB_JS: &str = r##"(function(){
-var bar=document.getElementById('hugagent-mac-titlebar');if(!bar)return;
+var bar=document.getElementById('sumc-mac-titlebar');if(!bar)return;
 if(new URLSearchParams(location.search).get('quickask')==='1'){
-  bar.remove();var style=document.getElementById('hugagent-titlebar-style');if(style)style.remove();return;
+  bar.remove();var style=document.getElementById('sumc-titlebar-style');if(style)style.remove();return;
 }
 var observedSidebar=null;
 var sidebarResizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(syncSidebarWidth):null;
@@ -521,7 +521,7 @@ function syncSidebarWidth(){
     observedSidebar=sidebar;sidebarResizeObserver.observe(sidebar);
   }
   var width=sidebar?Math.max(0,Math.round(sidebar.getBoundingClientRect().width)):0;
-  document.documentElement.style.setProperty('--hugagent-desktop-sidebar-width',width+'px');
+  document.documentElement.style.setProperty('--sumc-desktop-sidebar-width',width+'px');
 }
 syncSidebarWidth();
 new MutationObserver(syncSidebarWidth).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
@@ -537,8 +537,8 @@ bar.addEventListener('dblclick',function(event){
 
 fn titlebar_block(offset_css: &str) -> String {
     format!(
-        "<style id=\"hugagent-titlebar-style\">{css}{offset}</style>\
-<header id=\"hugagent-titlebar\" data-height=\"{height}\">\
+        "<style id=\"sumc-titlebar-style\">{css}{offset}</style>\
+<header id=\"sumc-titlebar\" data-height=\"{height}\">\
 <div class=\"tb-left\"><img class=\"tb-logo\" src=\"{logo}\" alt=\"\" onerror=\"this.style.display='none'\"/>{menu}</div>\
 <div class=\"tb-spacer\"></div>{controls}</header><script>{script}</script>",
         css = TB_CSS,
@@ -553,8 +553,8 @@ fn titlebar_block(offset_css: &str) -> String {
 
 fn mac_titlebar_block(offset_css: &str) -> String {
     format!(
-        "<style id=\"hugagent-titlebar-style\">{css}{offset}</style>\
-<header id=\"hugagent-mac-titlebar\" data-height=\"{height}\" aria-hidden=\"true\"></header><script>{script}</script>",
+        "<style id=\"sumc-titlebar-style\">{css}{offset}</style>\
+<header id=\"sumc-mac-titlebar\" data-height=\"{height}\" aria-hidden=\"true\"></header><script>{script}</script>",
         css = MAC_TB_CSS,
         offset = offset_css,
         height = MAC_TITLEBAR_HEIGHT,
@@ -592,7 +592,7 @@ const LOGIN_HTML: &str = r##"<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>登录 · HugAgentOS</title>
+<title>登录 · SUMC</title>
 <style>
   :root{
     color-scheme:light;--primary:#0A66FF;--primary-hover:#005BE6;--primary-active:#0052CC;
@@ -634,10 +634,10 @@ const LOGIN_HTML: &str = r##"<!doctype html>
 </head>
 <body>
   <div class="card">
-    <img class="logo" src="/icon.png" alt="HugAgentOS" onerror="this.style.display='none'"/>
+    <img class="logo" src="/icon.png" alt="SUMC" onerror="this.style.display='none'"/>
     <!-- 初始态：等待用户点击登录 -->
     <div id="idle">
-      <h1>HugAgentOS</h1>
+      <h1>SUMC</h1>
       <button class="btn" onclick="startLogin()">登录并继续</button>
     </div>
     <!-- 等待态：浏览器已打开，等待回跳 -->
@@ -678,7 +678,7 @@ const INIT_HTML: &str = r##"<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>选择运行模式 · HugAgentOS</title>
+<title>选择运行模式 · SUMC</title>
 <style>
   :root{
     color-scheme:light;
@@ -728,8 +728,8 @@ const INIT_HTML: &str = r##"<!doctype html>
 </head>
 <body class="platform-__PLATFORM__">
   <main class="setup">
-    <img class="logo" src="/icon.png" alt="HugAgentOS" onerror="this.style.visibility='hidden'" />
-    <p class="product">HugAgentOS</p>
+    <img class="logo" src="/icon.png" alt="SUMC" onerror="this.style.visibility='hidden'" />
+    <p class="product">SUMC</p>
     <h1 id="title">选择运行模式</h1>
     <div class="form">
       <label for="mode">运行模式</label>
@@ -799,7 +799,7 @@ const SETUP_HTML: &str = r##"<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>服务设置 · HugAgentOS</title>
+<title>服务设置 · SUMC</title>
 <style>
   :root{
     color-scheme:light;
@@ -863,8 +863,8 @@ const SETUP_HTML: &str = r##"<!doctype html>
 </head>
 <body class="platform-__PLATFORM__">
   <main class="setup">
-    <img class="logo" src="/icon.png" alt="HugAgentOS" onerror="this.style.visibility='hidden'" />
-    <p class="product">HugAgentOS</p>
+    <img class="logo" src="/icon.png" alt="SUMC" onerror="this.style.visibility='hidden'" />
+    <p class="product">SUMC</p>
     <h1 id="title">在这台电脑上开始使用</h1>
     <section class="actions" aria-label="初始化操作">
       <button class="button primary" id="install" type="button" onclick="installLocal()">从零开始安装</button>
@@ -875,7 +875,7 @@ const SETUP_HTML: &str = r##"<!doctype html>
       <div class="error" id="error"></div>
       <details id="details"><summary>查看安装详情</summary><pre class="log" id="log">等待安装日志…</pre></details>
       <div class="ready-actions" id="readyActions">
-        <button class="button primary" id="readyButton" type="button" onclick="finishReady()">进入 HugAgentOS</button>
+        <button class="button primary" id="readyButton" type="button" onclick="finishReady()">进入 SUMC</button>
       </div>
     </section>
   </main>
@@ -974,7 +974,7 @@ const CLOSE_CONFIRM_HTML: &str = r##"<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>关闭 · HugAgentOS</title>
+<title>关闭 · SUMC</title>
 <style>
   :root{
     --primary:#126DFF; --primary-hover:#3C87FF; --primary-active:#0862F3;
@@ -1001,7 +1001,7 @@ const CLOSE_CONFIRM_HTML: &str = r##"<!doctype html>
 </style>
 </head>
 <body>
-  <h1>关闭HugAgentOS</h1>
+  <h1>关闭SUMC</h1>
   <p>关闭后可最小化到系统托盘继续在后台运行（自动化任务等），或直接退出程序。</p>
   <label class="remember"><input type="checkbox" id="remember" /> 记住我的选择，下次不再询问</label>
   <div class="btns">
@@ -1023,7 +1023,7 @@ const SERVER_CONFIG_HTML: &str = r##"<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>服务器地址 · HugAgentOS</title>
+<title>服务器地址 · SUMC</title>
 <style>
   :root{
     --primary:#126DFF; --primary-hover:#3C87FF; --primary-active:#0862F3;
@@ -1100,7 +1100,7 @@ mod tests {
     #[test]
     fn mac_titlebar_is_a_compact_drag_region_without_duplicate_actions() {
         let block = mac_titlebar_block(MAC_OFFSET_SPA);
-        assert!(block.contains("hugagent-mac-titlebar"));
+        assert!(block.contains("sumc-mac-titlebar"));
         assert!(block.contains("height:28px"));
         assert!(block.contains("background:transparent"));
         assert!(!block.contains("border-bottom"));
@@ -1110,7 +1110,7 @@ mod tests {
         assert!(!block.contains("data-win=\"minimize\""));
         assert!(!block.contains("data-win=\"close\""));
         assert!(!block.contains("tb-menuLabel"));
-        assert!(block.contains("--hugagent-desktop-sidebar-width"));
+        assert!(block.contains("--sumc-desktop-sidebar-width"));
         assert!(block.contains("linear-gradient(90deg,rgba(203,223,255,.38)"));
         assert!(block.contains("#F5F6F7!important"));
         assert!(block.contains(".jx-brandRow,.jx-miniRail{padding-top:0!important}"));
@@ -1126,15 +1126,15 @@ mod tests {
             mac_titlebar_block(MAC_OFFSET_PAGE),
         ] {
             assert!(block.contains(
-                ".ant-message{top:calc(var(--hugagent-desktop-titlebar-height) + 8px)!important}"
+                ".ant-message{top:calc(var(--sumc-desktop-titlebar-height) + 8px)!important}"
             ));
             assert!(block.contains(
                 ".ant-notification-top,.ant-notification-topLeft,.ant-notification-topRight"
             ));
         }
-        assert!(titlebar_block(TB_OFFSET_SPA).contains("--hugagent-desktop-titlebar-height:36px"));
+        assert!(titlebar_block(TB_OFFSET_SPA).contains("--sumc-desktop-titlebar-height:36px"));
         assert!(
-            mac_titlebar_block(MAC_OFFSET_SPA).contains("--hugagent-desktop-titlebar-height:28px")
+            mac_titlebar_block(MAC_OFFSET_SPA).contains("--sumc-desktop-titlebar-height:28px")
         );
     }
 

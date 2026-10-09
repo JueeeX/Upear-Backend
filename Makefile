@@ -11,7 +11,7 @@ BACKEND_PORT ?= 3001
 PYTHONPATH_BACKEND := src/backend
 
 help:
-	@echo "HugAgentOS Makefile Commands:"
+	@echo "SUMC Makefile Commands:"
 	@echo ""
 	@echo "Development:"
 	@echo "  make install        - Install runtime dependencies"

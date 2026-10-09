@@ -1,6 +1,6 @@
 # generate_chart_tool MCP Server
 
-Standalone **stdio MCP server** exposing HugAgentOS tool:
+Standalone **stdio MCP server** exposing SUMC tool:
 
 - Tool: `generate_chart_tool(data: str, query: str) -> str`
 

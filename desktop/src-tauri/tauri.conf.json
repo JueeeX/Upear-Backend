@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "HugAgentOS",
+  "productName": "SUMC",
   "version": "0.2.16",
-  "identifier": "com.hugagent.desktop",
+  "identifier": "com.sumc.desktop",
   "build": {
     "frontendDist": "../../src/frontend/dist",
     "beforeBuildCommand": "npm --prefix ../src/frontend run build",
@@ -47,6 +47,7 @@
     "deep-link": {
       "desktop": {
         "schemes": [
+          "sumc",
           "hugagent"
         ]
       }

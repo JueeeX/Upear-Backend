@@ -2,7 +2,7 @@
 
 > Last updated: 2026-07-02
 
-HugAgentOS is an enterprise-grade AI Agent platform. Built around a ReAct agent core, it brings conversation, tool calling (MCP), skills, sandboxed code execution, long-term memory, knowledge-base RAG, automation, and batch processing together in a fully containerized (Docker Compose) system. The backend runs on FastAPI + AgentScope 2.0, the frontend on React 19 + Vite + Zustand, and every capability is registered in a unified catalog that can be toggled at will. Out of the box it is a complete, self-hostable product — not a half-finished framework.
+SUMC is an enterprise-grade AI Agent platform. Built around a ReAct agent core, it brings conversation, tool calling (MCP), skills, sandboxed code execution, long-term memory, knowledge-base RAG, automation, and batch processing together in a fully containerized (Docker Compose) system. The backend runs on FastAPI + AgentScope 2.0, the frontend on React 19 + Vite + Zustand, and every capability is registered in a unified catalog that can be toggled at will. Out of the box it is a complete, self-hostable product — not a half-finished framework.
 
 The platform ships in two editions: the **Community Edition (CE, open source)** and the **Enterprise Edition (EE, commercial)**. CE targets individuals and small teams and includes the full conversation, tool, skill, sandbox, three-layer memory, automation, batch, and data-canvas stack. EE layers organization-scale capabilities on top: team collaboration, SSO, audit & compliance, industry data tools, persistent sandboxes, cloud storage, and the full admin console. See [Edition Comparison](../editions/overview.md) for the exact boundary.
 

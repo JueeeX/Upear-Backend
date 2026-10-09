@@ -37,7 +37,7 @@ class AllowedFunctionTool(FunctionTool):
     async def check_permissions(self, *args: Any, **kwargs: Any) -> PermissionDecision:
         return PermissionDecision(
             behavior=PermissionBehavior.ALLOW,
-            message="HugAgentOS self-developed tool (auto-allowed).",
+            message="SUMC self-developed tool (auto-allowed).",
         )
 
 

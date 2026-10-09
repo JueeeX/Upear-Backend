@@ -9,7 +9,7 @@ Validates the fix for batch execution truncation:
           (using a mock per-item executor — no real LLM calls)
 
 Run inside the backend container:
-  docker exec hugagent-backend bash -c "cd /app && PYTHONPATH=src/backend python src/backend/scripts/e2e_long_xlsx.py /tmp/test_long.xlsx"
+  docker exec sumc-backend bash -c "cd /app && PYTHONPATH=src/backend python src/backend/scripts/e2e_long_xlsx.py /tmp/test_long.xlsx"
 """
 
 from __future__ import annotations
@@ -188,7 +188,7 @@ def test_c_planner(file_id: str, user_id: str) -> Tuple[bool, str, str]:
             max_retries=0,
             status="confirmed",  # skip /confirm endpoint
             progress={"done": 0, "success": 0, "failed": 0},
-            expires_at=datetime.utcnow() + timedelta(hours=24),
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24),
         )
         db.add(plan)
         db.commit()

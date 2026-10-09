@@ -1,8 +1,8 @@
 {
-  "name": "hugagent-desktop",
+  "name": "sumc-desktop",
   "version": "0.2.16",
   "private": true,
-  "description": "HugAgentOS 桌面客户端（远程连接 + Windows/macOS/Linux 离线本机服务）",
+  "description": "SUMC 桌面客户端（远程连接 + Windows/macOS/Linux 离线本机服务）",
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",

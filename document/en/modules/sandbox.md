@@ -2,7 +2,7 @@
 
 > Last updated: 2026-06-11
 
-The sandbox is the isolated environment where HugAgentOS's agents execute code: every `bash` call the model makes in a conversation, every [skill](agent-skills.md) script run, every generated deliverable happens inside the sandbox rather than the backend process. A single **provider protocol** abstracts three interchangeable execution backends — from the single-host lightweight script_runner, through OpenSandbox with persistent sessions and snapshot recovery, to a remote MicroVM fleet (Cube) — with the tool layer above completely agnostic to the choice.
+The sandbox is the isolated environment where SUMC's agents execute code: every `bash` call the model makes in a conversation, every [skill](agent-skills.md) script run, every generated deliverable happens inside the sandbox rather than the backend process. A single **provider protocol** abstracts three interchangeable execution backends — from the single-host lightweight script_runner, through OpenSandbox with persistent sessions and snapshot recovery, to a remote MicroVM fleet (Cube) — with the tool layer above completely agnostic to the choice.
 
 Edition split (see [editions](../editions/overview.md)): the **lightweight sandbox (script_runner) plus the sandbox tool / offload infrastructure are Community CE**; the **persistent sandboxes (opensandbox / cube — session retention, environment reuse, snapshot recovery) are Enterprise EE** — the CE derivation strips those two provider files and the factory transparently falls back to the lightweight implementation.
 
@@ -29,7 +29,7 @@ Two key optional fields on `ExecuteRequest`:
 
 | Provider | File | Form | When to use | Edition |
 |---|---|---|---|---|
-| `script_runner` | `script_runner_provider.py` | Wraps HTTP calls to the `hugagent-script-runner` sidecar container (setrlimit subprocesses inside), stateless | Single-host deployments, one-shot code execution; the default | CE |
+| `script_runner` | `script_runner_provider.py` | Wraps HTTP calls to the `sumc-script-runner` sidecar container (setrlimit subprocesses inside), stateless | Single-host deployments, one-shot code execution; the default | CE |
 | `opensandbox` | `opensandbox_provider.py` + `_opensandbox_*.py` | Alibaba OpenSandbox (Docker containers + persistent Jupyter kernels): per-chat persistent sessions, warm pools, snapshots | Multi-turn iterative analysis, heavy skill workflows | **EE** |
 | `cube` | `cube_provider.py` | Tencent CubeSandbox (E2B-compatible MicroVMs) on a **remote node** — the backend reaches it over the network via the `e2b_code_interpreter` SDK, no local sidecar | Deployments where the backend host is resource-constrained, stronger (MicroVM-grade) isolation is required, or sandbox compute must scale independently | **EE** |
 
@@ -116,7 +116,7 @@ All skill files are exposed inside the sandbox through a **single read-only bind
 | Variable | Default | Description |
 |---|---|---|
 | `SANDBOX_PROVIDER` | `script_runner` | Provider selection: `script_runner` / `opensandbox` / `cube` |
-| `SANDBOX_RUNNER_URL` | `http://hugagent-script-runner:8900` | script_runner sidecar address |
+| `SANDBOX_RUNNER_URL` | `http://sumc-script-runner:8900` | script_runner sidecar address |
 | `OPENSANDBOX_DOMAIN` / `OPENSANDBOX_API_KEY` / `OPENSANDBOX_IMAGE` | — | OpenSandbox server & image |
 | `OPENSANDBOX_DEFAULT_TIMEOUT_S` | 1800 | Server-side sandbox TTL |
 | `OPENSANDBOX_POOL_{JUPYTER,LIGHT}_{MIN,MAX}_IDLE` / `OPENSANDBOX_POOL_MAX_TOTAL` | 2/3, 2/5, 20 | Warm-pool watermarks |

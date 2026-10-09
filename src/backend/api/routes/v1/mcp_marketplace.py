@@ -9,6 +9,7 @@ from core.auth.capabilities import resolve_user_capabilities
 from core.db.engine import get_db
 from core.infra.exceptions import AccessDeniedError
 from core.infra.responses import created_response, success_response
+from core.safeharness_capabilities import reject_uncontrolled_mutation
 from core.services import mcp_marketplace_service as market
 from core.services import mcp_oauth_service
 from fastapi import APIRouter, Depends, Query, Request
@@ -81,6 +82,7 @@ async def start_oauth(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     user_id = str(user.user_id)
     _require_can_add_mcp(user_id, db)
     market.get_market_item(
@@ -141,6 +143,7 @@ async def oauth_callback(
     error: str = Query(""),
     error_description: str = Query(""),
 ):
+    reject_uncontrolled_mutation()
     await mcp_oauth_service.complete_callback(
         flow_id,
         code=code,
@@ -149,7 +152,7 @@ async def oauth_callback(
     )
     return HTMLResponse(
         "<!doctype html><meta charset='utf-8'><title>OAuth</title>"
-        "<p>OAuth 登录结果已返回 HugAgentOS，可以关闭此窗口。</p>"
+        "<p>OAuth 登录结果已返回 SUMC，可以关闭此窗口。</p>"
         "<script>window.close()</script>"
     )
 
@@ -160,6 +163,7 @@ async def install_item(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     user_id = str(user.user_id)
     _require_can_add_mcp(user_id, db)
     result = await market.install_market_item(
@@ -189,6 +193,7 @@ async def submit_item(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     user_id = str(user.user_id)
     _require_can_add_mcp(user_id, db)
     result = await market.submit_to_marketplace(
@@ -219,6 +224,7 @@ async def withdraw_submission(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     user_id = str(user.user_id)
     _require_can_add_mcp(user_id, db)
     market.withdraw_submission(db, submission_id, user_id)

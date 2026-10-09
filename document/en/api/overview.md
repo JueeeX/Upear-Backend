@@ -2,7 +2,7 @@
 
 > Last updated: 2026-07-28
 
-The HugAgentOS backend is a FastAPI application; all business endpoints live under the `/v1/*` prefix. In a production deployment, Nginx strips the `/api/` prefix before forwarding to the backend (see `src/frontend/default.conf.template`), so **the full browser-facing path is `/api/v1/...`**, while hitting the backend container directly uses `/v1/...`. Examples in this document use the local development address `http://localhost:3000/api`.
+The SUMC backend is a FastAPI application; all business endpoints live under the `/v1/*` prefix. In a production deployment, Nginx strips the `/api/` prefix before forwarding to the backend (see `src/frontend/default.conf.template`), so **the full browser-facing path is `/api/v1/...`**, while hitting the backend container directly uses `/v1/...`. Examples in this document use the local development address `http://localhost:3000/api`.
 
 Related docs: [Authentication](../modules/auth.md) · [Error Codes](error-codes.md) · [Environment Variables](../deployment/environment-variables.md) · [License & Enterprise Edition](../editions/license.md)
 

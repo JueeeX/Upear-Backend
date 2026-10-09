@@ -4,7 +4,7 @@
   "display_name": "定时任务管理",
   "description": "在对话里用自然语言管理定时任务：创建、查看、修改、暂停、恢复、删除；结果可投递到站内或飞书等渠道会话（多目标）。装上后智能体即可调度周期任务。",
   "category": "效率工具",
-  "author": "HugAgentOS",
+  "author": "SUMC",
   "components": {
     "skills": ["scheduled-tasks"],
     "mcp": ["automation_task"],

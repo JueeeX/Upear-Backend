@@ -76,11 +76,11 @@ MAX_STDERR_BYTES = 10240
 # Backend-side view of the sandbox workspace root. Stays ``/workspace`` for the
 # Docker sidecar / opensandbox / cube containers (in-container absolute path). The
 # no-Docker local profile runs script_runner as a host subprocess pointed at a
-# real dir (e.g. ``~/.hugagent/workspace``) via ``SCRIPT_RUNNER_WORKSPACE`` — the
+# real dir (e.g. ``~/.sumc/workspace``) via ``SCRIPT_RUNNER_WORKSPACE`` — the
 # CLI exports it once so both the backend and the sidecar child agree. Kept as the
 # single source for every model-facing ``/workspace`` mention and path we build.
 WORKSPACE = os.getenv("SCRIPT_RUNNER_WORKSPACE", "/workspace")
-STDIN_FILE = f"{WORKSPACE}/.hugagent_stdin.json"
+STDIN_FILE = f"{WORKSPACE}/.sumc_stdin.json"
 
 USER_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 

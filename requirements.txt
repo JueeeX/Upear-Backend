@@ -12,9 +12,15 @@ httpx>=0.27.0
 # JSON Schema Validation
 jsonschema>=4.20.0
 
-# AgentScope (replaces LangChain ecosystem)
+# AgentScope (main SUMC workflow)
 # 已迁移到 2.0：Agent/Toolkit/Middleware/MCP 全面重写，固定 ==2.0.0（GitHub main 已与 2.0.0 分叉，不兼容）
 agentscope==2.0.0
+
+# Optional SafeHarness protected-chat path. Registration remains disabled unless
+# SAFEHARNESS_PROTECTED_CHAT_ENABLED=true and the SafeHarness package is present.
+langgraph>=1.0
+langchain-core>=1.0
+langchain-openai>=1.0
 
 # 多厂商模型渠道所需 SDK（均为惰性 import，未装只影响对应渠道，不影响其余功能）：
 #   - anthropic / dashscope / openai 已随 agentscope==2.0.0 内置，无需在此重复声明

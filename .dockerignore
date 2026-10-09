@@ -65,4 +65,4 @@ src/frontend/
 *.tmp
 *.cache
 result/
-.hugagent/
+.sumc/

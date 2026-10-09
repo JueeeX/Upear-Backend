@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable, List, Optional
 
 from core.db.engine import SessionLocal
@@ -132,7 +132,7 @@ def _upsert(
         workspace_id=workspace_id,
         content_hash=content_hash,
     )
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     row = db.query(MemoryRefShadow).filter(MemoryRefShadow.ref_id == ref_id).first()
     if row is None:
         db.add(

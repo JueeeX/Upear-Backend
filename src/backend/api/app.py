@@ -1,4 +1,4 @@
-"""FastAPI application for HugAgentOS.
+"""FastAPI application for SUMC.
 
 This module is the slim orchestrator: it creates the FastAPI instance,
 wires up middleware / error-handlers / routers, and defines lifecycle
@@ -11,7 +11,6 @@ events.  Heavy logic lives in dedicated sub-modules:
 """
 
 import os
-import sys
 from contextlib import asynccontextmanager
 from typing import Callable
 
@@ -52,6 +51,7 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     # ── startup ──
     await _startup_ensure_tables()
+    await _startup_register_safeharness_chat()
     await _startup_seed_ce_admin()
     await _startup_local_sidecars()
     await _startup_recover_chat_runs()
@@ -82,6 +82,7 @@ async def lifespan(app: FastAPI):
     await _shutdown_datasource_sidecar_recovery()
     await _shutdown_mcp_market_monitor()
     await _shutdown_local_sidecars()
+    await _shutdown_safeharness_chat()
     await _shutdown_pools()
 
 
@@ -270,7 +271,7 @@ def _docs_title() -> str:
     """Title for the docs pages (Swagger / ReDoc) and OpenAPI info.title — fetched
     live from the admin-platform config (product_name + API-docs label),
     removing the hard-coded brand. Falls back to app.title when the DB read
-    fails (already the env brand, no literal "HugAgentOS")."""
+    fails (already the env brand, no literal "SUMC")."""
     try:
         from core.content.content_blocks import get_admin_platform_info
 
@@ -426,6 +427,27 @@ async def _startup_ensure_tables():
     if DATABASE_URL.startswith("sqlite://"):
         logger.info("[startup] SQLite detected – ensuring tables via create_all()")
         init_db()
+
+
+async def _startup_register_safeharness_chat():
+    """Opt in to protected chat; dependency/config failures remain fail-closed."""
+    try:
+        from core.safeharness_protected_chat import bootstrap_protected_chat
+
+        runner = bootstrap_protected_chat()
+        if runner is not None:
+            app.state.safeharness_protected_chat_runner = runner
+    except Exception as exc:  # noqa: BLE001 - preserve route-level 503 on startup failure
+        logger.warning("[safeharness] protected chat bootstrap failed: %s", exc)
+
+
+async def _shutdown_safeharness_chat():
+    try:
+        from core.safeharness_protected_chat import shutdown_protected_chat
+
+        shutdown_protected_chat()
+    except Exception as exc:  # noqa: BLE001 - shutdown remains best effort
+        logger.warning("[safeharness] protected chat shutdown failed: %s", exc)
 
 
 async def _startup_seed_ce_admin():

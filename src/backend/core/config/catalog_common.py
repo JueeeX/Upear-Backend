@@ -50,7 +50,7 @@ def _item(
         "kind": kind,
         "name": name,
         "description": description,
-        # `desc` is kept for compatibility with hugagent-ui-react type expectations.
+        # `desc` is kept for compatibility with sumc-ui-react type expectations.
         "desc": description,
         "enabled": bool(enabled),
         "version": version,

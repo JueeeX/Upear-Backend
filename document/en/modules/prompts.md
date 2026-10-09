@@ -2,7 +2,7 @@
 
 > Last updated: 2026-06-11
 
-System prompts in HugAgentOS are not hardcoded strings — they form a **DB-first, file-fallback, versioned** assembly system: at runtime, the main agent's prompt is assembled from the parts of the active version stored in the database; administrators maintain multiple versions in the Config console and activate them with one click; the whole thing can be exported as a snapshot and migrated across environments. Markdown files on disk serve only as the first-deployment seed and the fallback when the DB is unavailable.
+System prompts in SUMC are not hardcoded strings — they form a **DB-first, file-fallback, versioned** assembly system: at runtime, the main agent's prompt is assembled from the parts of the active version stored in the database; administrators maintain multiple versions in the Config console and activate them with one click; the whole thing can be exported as a snapshot and migrated across environments. Markdown files on disk serve only as the first-deployment seed and the fallback when the DB is unavailable.
 
 ## Assembly (prompts/prompt_runtime.py)
 

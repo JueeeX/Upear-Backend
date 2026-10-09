@@ -17,7 +17,7 @@ import mimetypes
 import posixpath
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.db.models import Site
@@ -301,7 +301,7 @@ class SiteService:
             "version": version,
             "file_count": len(cleaned),
             "total_size_bytes": total_size,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }
 
     def _validate_files(self, files: List[Tuple[str, bytes]]) -> List[Tuple[str, bytes]]:
@@ -500,7 +500,7 @@ class SiteService:
         meta["last_rollback"] = {
             "from": site.current_version,
             "to": version,
-            "at": datetime.utcnow().isoformat(),
+            "at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }
         return self.repo.update(
             site.site_id,
@@ -610,7 +610,7 @@ class SiteService:
         from core.artifacts.store import save_artifact_bytes
         from core.services.artifact_service import ArtifactService
 
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y%m%d_%H%M%S")
         filename = f"{site.title}_表单数据_{ts}.csv"
         item = save_artifact_bytes(
             content=content,

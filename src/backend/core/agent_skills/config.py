@@ -27,16 +27,16 @@ def get_default_skill_sources() -> List[SkillSourceConfig]:
     Priority levels:
     - Built-in (priority=0): skill_bundles/
     - Admin (priority=75): /app/storage/admin_skills/
-    - User (priority=50): ~/.hugagent/skills/
-    - Project (priority=100): .hugagent/skills/
+    - User (priority=50): ~/.sumc/skills/
+    - Project (priority=100): .sumc/skills/
 
     Environment variables:
-    - HUGAGENT_ADMIN_SKILLS_DIR: Override admin skills directory
-    - HUGAGENT_USER_SKILLS_DIR: Override user skills directory
-    - HUGAGENT_PROJECT_SKILLS_DIR: Override project skills directory
-    - HUGAGENT_DISABLE_ADMIN_SKILLS: Disable admin skills (set to "1" or "true")
-    - HUGAGENT_DISABLE_USER_SKILLS: Disable user skills (set to "1" or "true")
-    - HUGAGENT_DISABLE_PROJECT_SKILLS: Disable project skills (set to "1" or "true")
+    - SUMC_ADMIN_SKILLS_DIR: Override admin skills directory
+    - SUMC_USER_SKILLS_DIR: Override user skills directory
+    - SUMC_PROJECT_SKILLS_DIR: Override project skills directory
+    - SUMC_DISABLE_ADMIN_SKILLS: Disable admin skills (set to "1" or "true")
+    - SUMC_DISABLE_USER_SKILLS: Disable user skills (set to "1" or "true")
+    - SUMC_DISABLE_PROJECT_SKILLS: Disable project skills (set to "1" or "true")
 
     Returns:
         List of SkillSourceConfig in priority order (lowest to highest).
@@ -60,10 +60,10 @@ def get_default_skill_sources() -> List[SkillSourceConfig]:
 
     # 2. Admin skills (managed via admin backend)
     admin_skills_dir = os.getenv(
-        "HUGAGENT_ADMIN_SKILLS_DIR",
+        "SUMC_ADMIN_SKILLS_DIR",
         "/app/storage/admin_skills/",
     )
-    admin_disabled = os.getenv("HUGAGENT_DISABLE_ADMIN_SKILLS", "").lower() in (
+    admin_disabled = os.getenv("SUMC_DISABLE_ADMIN_SKILLS", "").lower() in (
         "1",
         "true",
         "yes",
@@ -79,10 +79,10 @@ def get_default_skill_sources() -> List[SkillSourceConfig]:
 
     # 3. User skills
     user_skills_dir = os.getenv(
-        "HUGAGENT_USER_SKILLS_DIR",
-        "~/.hugagent/skills",
+        "SUMC_USER_SKILLS_DIR",
+        "~/.sumc/skills",
     )
-    user_disabled = os.getenv("HUGAGENT_DISABLE_USER_SKILLS", "").lower() in (
+    user_disabled = os.getenv("SUMC_DISABLE_USER_SKILLS", "").lower() in (
         "1",
         "true",
         "yes",
@@ -98,10 +98,10 @@ def get_default_skill_sources() -> List[SkillSourceConfig]:
 
     # 4. Project skills
     project_skills_dir = os.getenv(
-        "HUGAGENT_PROJECT_SKILLS_DIR",
-        ".hugagent/skills",
+        "SUMC_PROJECT_SKILLS_DIR",
+        ".sumc/skills",
     )
-    project_disabled = os.getenv("HUGAGENT_DISABLE_PROJECT_SKILLS", "").lower() in (
+    project_disabled = os.getenv("SUMC_DISABLE_PROJECT_SKILLS", "").lower() in (
         "1",
         "true",
         "yes",
@@ -125,6 +125,24 @@ def get_enabled_skill_sources() -> List[SkillSourceConfig]:
         List of enabled SkillSourceConfig in priority order.
     """
     return [src for src in get_default_skill_sources() if src.enabled]
+
+
+def auto_detect_scripts_enabled() -> bool:
+    """Whether skills without an explicit ``_scripts.json`` get their scripts
+    auto-whitelisted for sandbox execution.
+
+    Default OFF. The executable-script whitelist is a privilege: auto-deriving
+    it from whatever files happen to sit next to SKILL.md means any skill that
+    ships (or is materialised by the evolution loop) with a ``.py`` payload
+    silently gains an execution grant nobody reviewed. With the flag off, the
+    only approval path is an explicit ``_scripts.json`` authored by the skill
+    owner/administrator. Opt back in with ``SUMC_SKILL_AUTO_DETECT_SCRIPTS=1``.
+    """
+    return os.getenv("SUMC_SKILL_AUTO_DETECT_SCRIPTS", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 def get_sandbox_skills_dir() -> Path:
@@ -157,7 +175,7 @@ def get_sandbox_skills_dir() -> Path:
         candidate.mkdir(parents=True, exist_ok=True)
         return candidate.resolve()
     except Exception:  # noqa: BLE001 — non-Docker/local fallback
-        fallback = Path.home() / ".cache" / "hugagent" / "skills"
+        fallback = Path.home() / ".cache" / "sumc" / "skills"
         fallback.mkdir(parents=True, exist_ok=True)
         return fallback.resolve()
 

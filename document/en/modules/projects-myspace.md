@@ -2,7 +2,7 @@
 
 > Last updated: 2026-07-31
 
-HugAgentOS provides two tiers of personal workspace:
+SUMC provides two tiers of personal workspace:
 
 - **MySpace**: the user's file asset hub — uploads, AI conversation outputs, a personal folder tree, chat favorites, share records, and notifications;
 - **Projects**: workspaces — a set of files (a linked folder) + project instructions + an isolated memory scope, automatically carried into every conversation started inside the project. Projects come in two kinds, `personal` and `team` (team projects depend on the teams system, Enterprise Edition, EE).

@@ -1,7 +1,7 @@
 # 社区版与商业版总览
 > 最后更新：2026-07-22
 
-HugAgentOS 采用 **open-core（开放内核）** 模式发行，对标 Dify / FastGPT 等开源 Agent 平台的通行做法：
+SUMC 采用 **open-core（开放内核）** 模式发行，对标 Dify / FastGPT 等开源 Agent 平台的通行做法：
 
 - **社区版（CE，Community Edition）**：开源免费。一个人、一台机器即可完整自洽运行——完整对话、知识库 RAG、子智能体、通用工具、自动化、批量执行、数据画布与三层个人记忆全部包含。
 - **商业版（EE，Enterprise Edition）**：在社区版之上叠加**组织规模化**能力——团队协同、SSO、审计合规、计费、行业数据工具、管理台与 white-label，按年订阅授权（离线 License 文件）。
@@ -16,7 +16,7 @@ HugAgentOS 采用 **open-core（开放内核）** 模式发行，对标 Dify / F
 python scripts/build_ce.py        # 生成 dist/ce/（CE 派生树）
 ```
 
-派生树中 EE 专属代码**物理不存在**（白名单铁律）。CE 与 EE 统一使用 `HugAgentOS` 展示品牌，并保留 `hugagent` 技术标识；派生细节见 [CE 构建管线](build-ce.md)。
+派生树中 EE 专属代码**物理不存在**（白名单铁律）。CE 与 EE 统一使用 `SUMC` 展示品牌，并保留 `sumc` 技术标识；派生细节见 [CE 构建管线](build-ce.md)。
 
 ```
 主仓（EE，本仓库）

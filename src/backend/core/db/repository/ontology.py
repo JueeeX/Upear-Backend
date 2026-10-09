@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from core.db.models import (
@@ -42,7 +42,7 @@ class OntologyRepository:
     def update_pack(self, row: OntologyPack, data: dict[str, Any]) -> OntologyPack:
         for key, value in data.items():
             setattr(row, key, value)
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.flush()
         return row
 
@@ -117,7 +117,7 @@ class OntologyRepository:
     ) -> OntologyPackVersion:
         for key, value in data.items():
             setattr(row, key, value)
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.flush()
         return row
 
@@ -131,11 +131,11 @@ class OntologyRepository:
             OntologyPackVersion.status == "active",
         ).update({OntologyPackVersion.status: "retired"}, synchronize_session=False)
         version.status = "active"
-        version.activated_at = datetime.utcnow()
-        version.updated_at = datetime.utcnow()
+        version.activated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        version.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         pack.active_version_id = version.version_id
         pack.is_enabled = True
-        pack.updated_at = datetime.utcnow()
+        pack.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.flush()
 
     def create_event(self, data: dict[str, Any]) -> OntologyEnforcementEvent:

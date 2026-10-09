@@ -2,7 +2,7 @@
 
 > 最后更新：2026-06-11
 
-能力目录（catalog）是 HugAgentOS 中"哪些能力可用"的**单一真源**：技能（skills）、子智能体（agents）、MCP 工具（mcp）、知识库（kb）四类能力都登记在 catalog 里，从 MCP 工具加载、系统提示词拼装到前端能力中心展示，全部经由它门控。在系统级默认之上，每个用户还有自己的覆盖层（catalog_overrides）与自助添加的私有能力（owner 隔离）。
+能力目录（catalog）是 SUMC 中"哪些能力可用"的**单一真源**：技能（skills）、子智能体（agents）、MCP 工具（mcp）、知识库（kb）四类能力都登记在 catalog 里，从 MCP 工具加载、系统提示词拼装到前端能力中心展示，全部经由它门控。在系统级默认之上，每个用户还有自己的覆盖层（catalog_overrides）与自助添加的私有能力（owner 隔离）。
 
 ## 体系结构
 

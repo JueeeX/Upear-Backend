@@ -36,7 +36,7 @@ def main() -> int:
     out = build_system_prompt(cfg, ctx={"selftest": True})
 
     # We assert on stable structure, not exact wording — the product name in the
-    # first line varies by edition (HugAgentOS in the main repo / neutralized in the
+    # first line varies by edition (SUMC in the main repo / neutralized in the
     # CE tree), so a brand string would fail on both sides and would also leak the
     # brand name into the CE tree. "## 防幻觉约束" comes from the 10_constraints
     # part, proving multiple parts are loaded and concatenated.

@@ -13,6 +13,7 @@ from core.db.repository import KBRepository
 from core.infra.exceptions import BadRequestError
 from core.infra.responses import success_response
 from core.kb.external_provider import is_enabled, list_collections
+from core.safeharness_capabilities import reject_uncontrolled_mutation, with_capability_security
 from core.services import CatalogService
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
@@ -341,9 +342,17 @@ async def get_catalog_items(
             logger.warning("Failed to load external knowledge collections: %s", exc)
 
     # ── Private KB (local Milvus) ─────────────────────────────────────────────
+    local_kb_levels: Dict[str, str] = {}
     try:
+        from core.auth.kb_permissions import get_accessible_local_kb_levels
+
         kb_repo = KBRepository(db)
-        spaces = kb_repo.list_spaces(user.user_id)
+        local_kb_levels = get_accessible_local_kb_levels(db, user.user_id)
+        spaces = [
+            space
+            for space in kb_repo.list_spaces(user.user_id)
+            if space.kb_id in local_kb_levels
+        ]
     except Exception as exc:
         logger.warning("Failed to load private KB spaces: %s", exc)
         spaces = []
@@ -366,7 +375,7 @@ async def get_catalog_items(
                 "desc": space.description or "无简介",
                 "enabled": True,
                 "version": "local",
-                "provider": "HugAgentOS-KB",
+                "provider": "SUMC-KB",
                 "visibility": space.visibility,
                 "is_public": space.visibility == "public",
                 "chunk_method": space.chunk_method or "semantic",
@@ -392,10 +401,10 @@ async def get_catalog_items(
     public_local_kb_items: List[Dict[str, Any]] = []
     if not is_ce:
         try:
-            from core.auth.kb_permissions import get_accessible_local_kb_levels, level_to_caps
+            from core.auth.kb_permissions import level_to_caps
             from core.db.models import KBSpace
 
-            levels = get_accessible_local_kb_levels(db, user.user_id)
+            levels = local_kb_levels
             owned_ids = {s.kb_id for s in spaces}
             shared_ids = [kid for kid in levels if kid not in owned_ids]
             shared_spaces = []
@@ -424,7 +433,7 @@ async def get_catalog_items(
                         "desc": space.description or "无简介",
                         "enabled": True,
                         "version": "local",
-                        "provider": "HugAgentOS-KB",
+                        "provider": "SUMC-KB",
                         "visibility": space.visibility,
                         "is_public": space.visibility == "public",
                         "access_level": level,
@@ -455,22 +464,37 @@ async def get_catalog_items(
     ]
     mcp_list = [it for it in mcp_items if it.get("id") not in plugin_mcp_ids]
 
+    def attach_security(items: List[Dict[str, Any]], kind: str) -> List[Dict[str, Any]]:
+        return [
+            with_capability_security(
+                item,
+                kind=kind,
+                identifier_key="id",
+                source_type=(
+                    "user_private" if item.get("owner") == "self" else "runtime_catalog"
+                ),
+            )
+            for item in items
+        ]
+
     data = {
-        "skills": skill_list,
-        "agents": merge_items(base_catalog.get("agents", []), user_overrides.get("agents", [])),
-        "mcp": mcp_list,
+        "skills": attach_security(skill_list, "skill"),
+        "agents": attach_security(
+            merge_items(base_catalog.get("agents", []), user_overrides.get("agents", [])),
+            "agent",
+        ),
+        "mcp": attach_security(mcp_list, "mcp"),
         "kb": kb_items,
     }
 
     return success_response(data=data, message="Catalog retrieved successfully")
 
 
-@router.patch("/{kind}/{id}", summary="更新能力配置")
-async def update_catalog_item(
+async def _update_catalog_item_for_user(
     kind: str = Path(..., description="Item kind: skill, agent, mcp, or kb"),
     id: str = Path(..., description="Item ID"),
     request: UpdateCatalogRequest = ...,
-    user: UserContext = Depends(get_current_user),
+    user_id: str = ...,
     db: Session = Depends(get_db),
 ):
     """更新当前用户对某能力项的配置（启用状态 enabled 与配置覆盖 config）。
@@ -531,7 +555,7 @@ async def update_catalog_item(
 
     item_exists = any(item.get("id") == id for item in base_items)
     # Private items (skill/mcp self-added by a user) are not in the global catalog, but their owner may still override enable/disable
-    if not item_exists and not _is_owned_capability(db, user.user_id, normalized_kind, id):
+    if not item_exists and not _is_owned_capability(db, user_id, normalized_kind, id):
         raise BadRequestError(
             message="Item not found in catalog",
             data={
@@ -543,7 +567,7 @@ async def update_catalog_item(
 
     # Get current override or default values
     catalog_service = CatalogService(db)
-    user_overrides = catalog_service.get_user_overrides(user.user_id, normalized_kind)
+    user_overrides = catalog_service.get_user_overrides(user_id, normalized_kind)
 
     # Find current item config
     current_enabled = True
@@ -584,7 +608,7 @@ async def update_catalog_item(
 
     # Save override
     catalog_service.update_override(
-        user_id=user.user_id,
+        user_id=user_id,
         kind=normalized_kind,
         item_id=id,
         enabled=new_enabled,
@@ -603,7 +627,7 @@ async def update_catalog_item(
     try:
         from core.config.catalog_resolver import invalidate_capability_cache
 
-        invalidate_capability_cache(str(user.user_id))
+        invalidate_capability_cache(str(user_id))
     except Exception:
         pass
 
@@ -611,3 +635,14 @@ async def update_catalog_item(
         data={"kind": normalized_kind, "id": id, "enabled": new_enabled, "config": new_config},
         message="Catalog item updated successfully",
     )
+
+
+@router.patch("/{kind}/{id}", summary="更新能力配置")
+async def update_catalog_item(
+    kind: str = Path(..., description="Item kind: skill, agent, mcp, or kb"),
+    id: str = Path(..., description="Item ID"),
+    request: UpdateCatalogRequest = ...,
+    user: UserContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    reject_uncontrolled_mutation()

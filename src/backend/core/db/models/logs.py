@@ -57,7 +57,7 @@ class ToolCallLog(Base):
     subagent_log_id = Column(String(64), index=True)
     skill_log_id = Column(String(64), index=True)
     started_at = Column(TIMESTAMP(timezone=True))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         CheckConstraint(
@@ -109,7 +109,7 @@ class SubAgentCallLog(Base):
     parent_subagent_log_id = Column(String(64), index=True)
     started_at = Column(TIMESTAMP(timezone=True))
     completed_at = Column(TIMESTAMP(timezone=True))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         CheckConstraint(
@@ -156,7 +156,7 @@ class SkillCallLog(Base):
     source = Column(String(20), nullable=False, default="main_agent")
     subagent_log_id = Column(String(64), index=True)
     started_at = Column(TIMESTAMP(timezone=True))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         CheckConstraint(

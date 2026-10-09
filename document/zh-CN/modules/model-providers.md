@@ -2,7 +2,7 @@
 
 > 最后更新：2026-06-11
 
-HugAgentOS 通过 **OpenAI 兼容协议**接入任意大模型端点（vLLM、Ollama、DashScope、DeepSeek、各类网关均可）。模型配置以数据库为准——管理员在 Config 管理台登记「模型供应商」，再把供应商绑定到「角色」（主推理、摘要、向量化等），全链路经 `ModelConfigService` 30 秒 TTL 缓存生效，改配置无需重启。`MODEL_URL` / `API_KEY` / `BASE_MODEL_NAME` 等环境变量保留为兼容兜底与 MCP 子进程注入用途。
+SUMC 通过 **OpenAI 兼容协议**接入任意大模型端点（vLLM、Ollama、DashScope、DeepSeek、各类网关均可）。模型配置以数据库为准——管理员在 Config 管理台登记「模型供应商」，再把供应商绑定到「角色」（主推理、摘要、向量化等），全链路经 `ModelConfigService` 30 秒 TTL 缓存生效，改配置无需重启。`MODEL_URL` / `API_KEY` / `BASE_MODEL_NAME` 等环境变量保留为兼容兜底与 MCP 子进程注入用途。
 
 ## 配置模型：供应商 + 角色
 

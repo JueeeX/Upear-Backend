@@ -74,8 +74,8 @@ class UserAgent(UserAgentEditionFields, Base):
     source_market_slug = Column(String(128))
 
     # Metadata
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     created_by = Column(String(64))
 
     # Relationships
@@ -141,8 +141,8 @@ class AgentMarketSubmission(Base):
     status = Column(String(16), nullable=False, default="pending")
     review_note = Column(Text)  # rejection reason / review note
     reviewed_at = Column(TIMESTAMP(timezone=True))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint(
@@ -171,8 +171,8 @@ class Plan(Base):
     completed_steps = Column(Integer, default=0)
     result_summary = Column(Text)
     extra_data = Column("metadata", JSONType, default={})
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     steps = relationship(
         "PlanStep",
@@ -250,8 +250,8 @@ class AgentLoop(Base):
     final_score = Column(Numeric)
     result_summary = Column(Text)
     extra_data = Column("metadata", JSONType, default=dict)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     iterations = relationship(
         "LoopIteration",
@@ -290,7 +290,7 @@ class LoopIteration(Base):
     tool_calls = Column(Integer, default=0)
     tokens = Column(Integer, default=0)
     decided_by = Column(String(20))  # environment / llm / fallback
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     loop = relationship("AgentLoop", back_populates="iterations")
 

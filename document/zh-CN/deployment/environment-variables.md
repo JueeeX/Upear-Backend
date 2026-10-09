@@ -18,8 +18,8 @@
 | `MCP_OAUTH_PUBLIC_BASE_URL` | （空） | MCP 浏览器 OAuth 的外部 API 基址；同源 nginx/Vite `/api` 反代留空，跨域部署填写如 `https://app.example.com/api` | CE |
 | `ENV` / `ENVIRONMENT` | `dev` | 运行环境（dev / staging / prod），影响日志格式与 `.env.<ENV>` 加载 | CE |
 | `TZ` | `Asia/Shanghai` | 全部容器时区 | CE |
-| `SERVICE_NAME` | `hugagent` | 服务名（日志 / 告警标识） | CE |
-| `HOST_STORAGE_PATH` | `/var/lib/hugagent-storage` | 宿主机存储目录绝对路径，bind mount 进 backend/mcp 的 `/app/storage`；compose 强校验**必填** | CE |
+| `SERVICE_NAME` | `sumc` | 服务名（日志 / 告警标识） | CE |
+| `HOST_STORAGE_PATH` | `/var/lib/sumc-storage` | 宿主机存储目录绝对路径，bind mount 进 backend/mcp 的 `/app/storage`；compose 强校验**必填** | CE |
 | `HOST_REPO_PATH` | 仓库绝对路径 | 宿主机仓库根路径；backend 经 docker.sock 调宿主 daemon 重建沙盒镜像时解析 compose 相对路径用 | CE |
 | `DOCKER_GID` | `999` | 宿主 docker 组 GID，授予 backend 容器读写 `/var/run/docker.sock`（`stat -c '%g' /var/run/docker.sock` 查询） | CE |
 | `COMPOSE_PROFILES` | `script_runner` | compose profile 选择（`script_runner` / `opensandbox`，可叠加 `,mem0`），须与 `SANDBOX_PROVIDER` 一致 | CE |
@@ -114,9 +114,9 @@
 
 | 变量 | 默认值 | 说明 | 版本 |
 |---|---|---|---|
-| `DATABASE_URL` | compose 内拼为 `postgresql://hugagent_user:${DB_PASSWORD}@postgres:5432/hugagent`；代码兜底 `sqlite:///./hugagent.db` | 主库连接串 | CE |
-| `DB_PASSWORD` | `hugagent_dev_password`（compose 默认） | PostgreSQL 密码（生产必改） | CE |
-| `SQLITE_FALLBACK_URL` | `sqlite:///./hugagent_dev.db`（代码默认） | SQLite 兜底库 | CE |
+| `DATABASE_URL` | compose 内拼为 `postgresql://sumc_user:${DB_PASSWORD}@postgres:5432/sumc`；代码兜底 `sqlite:///./sumc.db` | 主库连接串 | CE |
+| `DB_PASSWORD` | `sumc_dev_password`（compose 默认） | PostgreSQL 密码（生产必改） | CE |
+| `SQLITE_FALLBACK_URL` | `sqlite:///./sumc_dev.db`（代码默认） | SQLite 兜底库 | CE |
 | `DB_ECHO` | `false` | SQLAlchemy SQL 回显 | CE |
 | `DB_POOL_SIZE` | `.env.example` 50；代码默认 20 | 连接池大小 | CE |
 | `DB_POOL_MAX_OVERFLOW` | `10` | 连接池溢出上限 | CE |
@@ -172,8 +172,8 @@
 | `COMPANY_API_URL` / `COMPANY_AUTH_TOKEN` | （空） | 企业画像 API | EE（行业工具） |
 | `BACKEND_INTERNAL_URL` | `http://backend:3001` | batch_runner 等 MCP 回调后端的内部地址 | CE |
 | `BACKEND_INTERNAL_TOKEN` | （**批量执行必填**） | MCP → 后端回调令牌 | CE |
-| `HUGAGENT_USER_SKILLS_DIR` / `HUGAGENT_PROJECT_SKILLS_DIR` | `~/.hugagent/skills` / `.hugagent/skills` | 技能目录覆盖 | CE |
-| `HUGAGENT_DISABLE_USER_SKILLS` / `HUGAGENT_DISABLE_PROJECT_SKILLS` | `0` | 禁用用户 / 项目技能 | CE |
+| `SUMC_USER_SKILLS_DIR` / `SUMC_PROJECT_SKILLS_DIR` | `~/.sumc/skills` / `.sumc/skills` | 技能目录覆盖 | CE |
+| `SUMC_DISABLE_USER_SKILLS` / `SUMC_DISABLE_PROJECT_SKILLS` | `0` | 禁用用户 / 项目技能 | CE |
 
 ## 沙箱
 
@@ -184,7 +184,7 @@
 | `SANDBOX_PROVIDER` | `script_runner` | `script_runner` / `opensandbox` / `cube` | CE（持久沙箱 opensandbox/cube 为 EE） |
 | `SANDBOX_TOOLS_ENABLED` | `false` | 是否给 Agent 注册 `bash` / `sandbox_put_artifact` / `sandbox_get_artifact` 三个工具 | CE |
 | `SANDBOX_MAX_CONCURRENT` | `4` | 单进程并发沙盒执行数（预留） | CE |
-| `SANDBOX_RUNNER_URL` | `http://hugagent-script-runner:8900` | script_runner sidecar 地址 | CE |
+| `SANDBOX_RUNNER_URL` | `http://sumc-script-runner:8900` | script_runner sidecar 地址 | CE |
 | `SANDBOX_TOOLS_TIMEOUT` / `SANDBOX_TOOLS_MAX_TIMEOUT` | `30` / `120` | 单条 bash 命令默认 / 最大超时（秒） | CE |
 | `SANDBOX_TOOLS_MAX_MEMORY` | `256` | script_runner 内存上限（MB） | CE |
 | `MYSPACE_WRITE_CONFIRM` | `true`（代码默认） | 沙盒对 `/myspace` 写操作须用户带外确认 | CE |
@@ -195,7 +195,7 @@
 |---|---|---|
 | `OPENSANDBOX_DOMAIN` | `http://opensandbox:8080` | OpenSandbox server 地址 |
 | `OPENSANDBOX_API_KEY` | （空 = insecure 模式） | 上生产必须填强随机串 |
-| `OPENSANDBOX_IMAGE` | `hugagent-opensandbox-custom:latest`（compose 默认；代码兜底 `opensandbox/code-interpreter:v1.0.2`） | 沙盒运行时镜像；自建镜像预装项目全部依赖（`docker/Dockerfile.opensandbox`） |
+| `OPENSANDBOX_IMAGE` | `sumc-opensandbox-custom:latest`（compose 默认；代码兜底 `opensandbox/code-interpreter:v1.0.2`） | 沙盒运行时镜像；自建镜像预装项目全部依赖（`docker/Dockerfile.opensandbox`） |
 | `OPENSANDBOX_DEFAULT_TIMEOUT_S` | `1800` | 沙盒 TTL（秒），到期未续期自动销毁 |
 | `OPENSANDBOX_READY_TIMEOUT_S` | `90` | 等沙盒就绪上限（秒） |
 | `OPENSANDBOX_REQUEST_TIMEOUT_S` | `120` | 单次 HTTP 调用超时（秒） |
@@ -227,7 +227,7 @@
 | `CUBE_SKILL_PREPUSH` / `CUBE_SKILL_PREPUSH_MAX_MB` / `CUBE_SKILL_PREPUSH_CONCURRENCY` | `true` / `20` / `3` | 技能 tar 打包预推优化 |
 | `CUBE_NODE_SSH_HOST` / `PORT` / `USER` / `KEY` | 回退 `CUBE_NODE_IP` / `22` / `root` / `/home/appuser/.ssh/cube_node_key` | 管理台「应用依赖」远程重建模板的 SSH 配置 |
 | `CUBE_NODE_SSH_KEY_HOST` | `/home/<user>/.ssh/id_rsa` | 宿主机私钥路径（compose 只读挂载进容器） |
-| `CUBE_BUILD_CTX_DIR` / `CUBE_BUILD_IMAGE_TAG` / `CUBE_BUILD_REGISTRY` | `/opt/cube-build` / `hugagent-cube-sandbox:latest` / `127.0.0.1:5000` | 节点构建上下文 / 镜像 tag / 本地 registry |
+| `CUBE_BUILD_CTX_DIR` / `CUBE_BUILD_IMAGE_TAG` / `CUBE_BUILD_REGISTRY` | `/opt/cube-build` / `sumc-cube-sandbox:latest` / `127.0.0.1:5000` | 节点构建上下文 / 镜像 tag / 本地 registry |
 | `CUBE_BUILD_WRITABLE_LAYER` / `CUBE_BUILD_CPU` / `CUBE_BUILD_MEMORY` | `8Gi` / `2000` / `4000` | create-from-image 资源参数 |
 | `CUBE_BUILD_EXPOSE_PORTS` / `CUBE_BUILD_PROBE_PORT` / `CUBE_BUILD_PROBE_PATH` | `49983,49999` / `49999` / `/health` | 模板端口与探针 |
 | `CUBE_BUILD_TIMEOUT_S` / `CUBE_BUILD_REGISTER_TIMEOUT_S` | `1800` / `900` | 构建 / 注册超时（秒） |
@@ -244,7 +244,7 @@
 | `MEMORY_MODEL_URL` / `MEMORY_API_KEY` / `MEMORY_MODEL_NAME` | 回退主模型配置 | 记忆抽取专用 LLM（不设则用主模型） | CE |
 | `MILVUS_URL` / `MILVUS_TOKEN` | `http://milvus:19530` /（空） | 向量库 | CE |
 | `NEO4J_URL` | `bolt://neo4j:7687` | Neo4j 地址 | CE |
-| `NEO4J_USERNAME` / `NEO4J_PASSWORD` | `neo4j` / `hugagent_neo4j_2026`（compose 默认） | Neo4j 凭据 | CE |
+| `NEO4J_USERNAME` / `NEO4J_PASSWORD` | `neo4j` / `sumc_neo4j_2026`（compose 默认） | Neo4j 凭据 | CE |
 | `MEMORY_LAYERED_ENABLED` | `true` | 分层记忆（L1 Profile / L2 Fact / L3 Graph）；`false` 回退扁平 mem0 | CE |
 | `MEMORY_AUDIT_ENABLED` | `true` | 记忆审计表写入（合规留痕） | EE |
 | `MEMORY_RETRIEVAL_BUDGET_MS` | `600` | Fact 向量检索预算（毫秒），超时只注入 Profile | CE |

@@ -2,7 +2,7 @@
 
 A local project is a real folder on the user's computer. The no-Docker host
 subprocess sandbox works out of a single workspace root
-(``SCRIPT_RUNNER_WORKSPACE``, e.g. ``~/.hugagent/workspace``). To let the agent
+(``SCRIPT_RUNNER_WORKSPACE``, e.g. ``~/.sumc/workspace``). To let the agent
 reach a local folder without changing the per-request cwd machinery, we expose
 it under a stable ``local/<slug>`` namespace inside that root via a symlink (or,
 on Windows, a directory junction — refined in ticket #10). The model then works

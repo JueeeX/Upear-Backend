@@ -32,11 +32,11 @@
 在任意目录运行公开安装器：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash
 ```
 
-安装器会把最新社区版下载到 `~/.hugagent/source`，在
-`~/.hugagent/venv` 创建隔离环境，安装依赖并构建 Web 应用，然后进入交互式
+安装器会把最新社区版下载到 `~/.sumc/source`，在
+`~/.sumc/venv` 创建隔离环境，安装依赖并构建 Web 应用，然后进入交互式
 首次配置向导。
 
 ### 完成首次配置
@@ -44,7 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh
 按照终端提示创建管理员账号并配置对话模型。向量模型、重排模型、文件解析服务和
 互联网搜索服务均为可选项，可以稍后再添加。
 
-配置完成后，HugAgentOS 会自动启动并打开
+配置完成后，SUMC 会自动启动并打开
 [http://127.0.0.1:3001](http://127.0.0.1:3001)。
 
 ### 再次启动
@@ -52,13 +52,13 @@ curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh
 以后需要启动应用时，运行已安装的命令：
 
 ```bash
-~/.hugagent/venv/bin/hugagent
+~/.sumc/venv/bin/sumc
 ```
 
 也可以把命令加入 Shell 的 `PATH`：
 
 ```bash
-export PATH="$HOME/.hugagent/venv/bin:$PATH"
+export PATH="$HOME/.sumc/venv/bin:$PATH"
 ```
 
 ## 方式二：Docker Compose
@@ -68,7 +68,7 @@ Docker Desktop 和 Docker Compose v2，然后运行：
 
 ```bash
 git clone https://github.com/ZJU-REAL/HugAgentOS.git
-cd HugAgentOS
+cd SUMC
 cp .env.example .env
 mkdir -p data/storage
 docker compose up -d --build

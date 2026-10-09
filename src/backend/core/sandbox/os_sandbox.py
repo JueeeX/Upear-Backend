@@ -12,7 +12,7 @@ folders + the usual temp/dev paths), while reads stay open.
 
 SAFETY / ROLLOUT: a wrong profile can break every command, and this can't be
 end-to-end validated without the running local server, so it is **opt-in**:
-enabled only when ``HUGAGENT_LOCAL_OS_SANDBOX=1``. When off (default),
+enabled only when ``SUMC_LOCAL_OS_SANDBOX=1``. When off (default),
 ``wrap_command`` returns the command unchanged. The command-string policy gate
 (always on in local mode) still applies either way.
 """
@@ -31,7 +31,7 @@ _LINUX_EXTRA_WRITE = ["/tmp", "/dev", "/run"]
 
 
 def os_sandbox_enabled() -> bool:
-    return os.getenv("HUGAGENT_LOCAL_OS_SANDBOX", "").strip() in ("1", "true", "yes")
+    return os.getenv("SUMC_LOCAL_OS_SANDBOX", "").strip() in ("1", "true", "yes")
 
 
 def _current_platform() -> str:

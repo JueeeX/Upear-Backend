@@ -2,7 +2,7 @@
 
 > 最后更新：2026-07-21
 
-HugAgentOS 的认证与权限体系覆盖三条互相独立的链路：**终端用户认证**（本地账号 / Mock SSO / 企业 SSO / 个人 API-Key）、**管理凭证**（`ADMIN_TOKEN` 与 `CONFIG_TOKEN` 两类 Bearer 令牌）以及**资源级权限**（团队文件、项目、会话分享的细粒度访问控制）。整套实现集中在 `src/backend/core/auth/`，FastAPI 依赖注入入口在 `src/backend/api/deps.py`。
+SUMC 的认证与权限体系覆盖三条互相独立的链路：**终端用户认证**（本地账号 / Mock SSO / 企业 SSO / 个人 API-Key）、**管理凭证**（`ADMIN_TOKEN` 与 `CONFIG_TOKEN` 两类 Bearer 令牌）以及**资源级权限**（团队文件、项目、会话分享的细粒度访问控制）。整套实现集中在 `src/backend/core/auth/`，FastAPI 依赖注入入口在 `src/backend/api/deps.py`。
 
 社区版（CE）以单用户 / 单租户为中心；团队、邀请码、企业 SSO 等组织级能力属**商业版（EE）**，通过路由注册表（`api/routes/v1/__init__.py`）与 License 能力位双重门控，详见 [版本与授权](../editions/overview.md)。
 
@@ -56,7 +56,7 @@ HugAgentOS 的认证与权限体系覆盖三条互相独立的链路：**终端�
 - 完成状态存放在当前管理员的 `users_shadow.metadata` 中，并带版本号。刷新或重新登录
   后不会重复进入已完成的向导。
 
-一键安装器的终端 `hugagent onboard` 已经完成账号和模型配置，因此成功结束时会写入
+一键安装器的终端 `sumc onboard` 已经完成账号和模型配置，因此成功结束时会写入
 同一个完成标记，不会再重复显示网页向导。
 
 ### Mock SSO（开发联调）

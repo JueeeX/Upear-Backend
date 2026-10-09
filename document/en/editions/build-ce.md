@@ -38,11 +38,11 @@ Glob patterns (relative to the repo root); a match means the file is never copie
 
 ### 1.5 `renames` — optional path renames
 
-Transforms rewrite file contents only, never paths, so this step remains available for paths that genuinely need migration. CE and EE now share the HugAgentOS brand and `hugagent` technical identifiers; `renames` is empty and paths such as `.claude/skills/hugagent-*-dev` remain unchanged.
+Transforms rewrite file contents only, never paths, so this step remains available for paths that genuinely need migration. CE and EE now share the SUMC brand and `sumc` technical identifiers; `renames` is empty and paths such as `.claude/skills/sumc-*-dev` remain unchanged.
 
 ### 2. `transforms` — brand-consistency and open-source hygiene rewrites
 
-Applied tree-wide to text files in declaration order. The CE product name is `HugAgentOS` (the `product_name` field), while technical identifiers used by containers, environment variables, and the CLI remain `hugagent`. HugAgentOS literals from another product line are normalized to HugAgentOS, and the historical display name `HugAgentOS` is upgraded with a negative-lookahead regex so `OS` is never appended twice.
+Applied tree-wide to text files in declaration order. The CE product name is `SUMC` (the `product_name` field), while technical identifiers used by containers, environment variables, and the CLI remain `sumc`. SUMC literals from another product line are normalized to SUMC, and the historical display name `SUMC` is upgraded with a negative-lookahead regex so `OS` is never appended twice.
 
 > The generator separately calls out any `src/**` source file that still contains another product line's brand literals (the `_GENERIC_BRAND_TOKENS` check). Such hard-coding should move to `settings.branding` / DB seeds instead of relying on derivation rewrites indefinitely.
 
@@ -53,7 +53,7 @@ Content edits that plain text substitution cannot express, implemented in `build
 | Pruner | Target | Action |
 |---|---|---|
 | `catalog_json` | `core/config/catalog.json` | drops the EE MCP seeds (`database_query`, `query_database`, `ai_chain_information_mcp`) |
-| `package_json` | `src/frontend/package.json` | renames to `hugagent-ui`; drops the commercially licensed `@univerjs/preset-sheets-advanced` and dead dependency `pptxgenjs`; pins `@univerjs/icons=1.1.1` to preserve the Univer 0.19 export contract when the main-repo lockfile is absent |
+| `package_json` | `src/frontend/package.json` | renames to `sumc-ui`; drops the commercially licensed `@univerjs/preset-sheets-advanced` and dead dependency `pptxgenjs`; pins `@univerjs/icons=1.1.1` to preserve the Univer 0.19 export contract when the main-repo lockfile is absent |
 | `requirements` | `requirements.txt` | drops cloud storage / persistent-sandbox deps (boto3 / oss2 / opensandbox); moves neo4j / mem0ai into the separate `requirements-mem0.txt` (installed by default by the no-Docker installer) |
 | `docker_compose` | `docker-compose.yml` | removes the opensandbox / litellm services and their depends_on; un-profiles `script-runner` so it starts by default; strips env injections of excluded components tree-wide (`OPENSANDBOX_` / `CUBE_` / `S3_` / `OSS_` / `MODEL_GATEWAY_` / `LITELLM_` prefixes); pins backend edition, authentication, and SSO defaults to CE local-session mode and pins the frontend build default to CE |
 | `frontend_lock` | `package-lock.json` + frontend Dockerfile | deletes the lock (inevitably out of sync with the pruned package.json) and rewrites `npm ci` to `npm install` |
@@ -72,7 +72,7 @@ Content edits that plain text substitution cannot express, implemented in `build
 | `README.md` / `README_CN.md` / `LICENSE` / `NOTICE` / `CONTRIBUTING.md` / `SECURITY.md` | CE open-source repo front matter; English is the default README and Chinese remains available as a language alternative |
 | `install.sh` | Public one-command installer for the personal no-Docker profile |
 | `.env.example` | CE environment template (`JX_EDITION=ce`, no intranet IPs / brand defaults) |
-| `.hugagent-edition` | Machine-readable `ce` marker used only after derivation; it lets release tooling distinguish a derived CE checkout from a source checkout whose generator is unexpectedly missing |
+| `.sumc-edition` | Machine-readable `ce` marker used only after derivation; it lets release tooling distinguish a derived CE checkout from a source checkout whose generator is unexpectedly missing |
 | `.github/workflows/desktop-release.yml` | Public CE desktop release workflow, including the release-tag/version preflight gate |
 | `src/backend/api/routes/v1/__init__.py` | CE route registry; `EE_ROUTERS` is always empty |
 | `src/backend/core/auth/permissions_iface.py` | Owner-only single-tenant authorization interface with no team permission exports |
@@ -88,7 +88,7 @@ Content edits that plain text substitution cannot express, implemented in `build
 | `src/frontend/default.conf.template` | CE frontend Nginx template with `/gateway/**` proxying and the litellm upstream removed |
 | `src/frontend/src/main.tsx` | CE entry: mounts only the main app / API docs / share preview — no /admin, no /config |
 | `src/frontend/src/updates.ts` | CE release-notes data |
-| `.claude/skills/hugagent-{backend,frontend}-dev/…` | CE versions of the project dev skills' SKILL.md and references (admin-console / EE router-registration sections stripped) |
+| `.claude/skills/sumc-{backend,frontend}-dev/…` | CE versions of the project dev skills' SKILL.md and references (admin-console / EE router-registration sections stripped) |
 
 > License, Team/RBAC, EE ORM, and Dify implementations all live under `edition_ee/**`. CE supplies no same-name implementation stubs; module discovery for `edition_ee` must report that it is absent.
 
@@ -130,7 +130,7 @@ Using `git ls-files` as the copy list means `.env`, local databases, and other u
 The Windows and macOS desktop payloads follow the same boundary in both checkout
 types. In the source checkout, `desktop/scripts/prepare-bundle.mjs` finds and runs
 `scripts/build_ce.py`. In a derived CE checkout, where the generator is intentionally
-absent, it requires `.hugagent-edition` to contain `ce` and stages only the current
+absent, it requires `.sumc-edition` to contain `ce` and stages only the current
 checkout's tracked files. Release builds reject a dirty checkout. This fallback cannot
 silently turn an arbitrary repository into a CE payload. After the boundary checks and
 frontend build finish, the script compresses the derived tree into one `server-ce.zip`
@@ -185,7 +185,7 @@ A qualifying release build must pass all of:
 | Generator | `scripts/build_ce.py` |
 | Brand-gate patterns | `ce/brand_scan.txt` |
 | Overlay directory | `ce/overlay/` |
-| Derived-tree edition marker | `ce/overlay/.hugagent-edition` |
+| Derived-tree edition marker | `ce/overlay/.sumc-edition` |
 | Public desktop release workflow | `ce/overlay/.github/workflows/desktop-release.yml` |
 | CE/EE table boundary | `src/backend/core/db/edition_tables.py` |
 | Idempotent schema reconciler | `src/backend/core/db/schema_reconcile.py` |

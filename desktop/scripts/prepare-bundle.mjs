@@ -26,9 +26,9 @@ const npmCommand =
 const npmPrefix =
   process.platform === "win32" ? ["/d", "/s", "/c", "npm.cmd"] : [];
 const desktopVersion = readDesktopVersion(desktopDir);
-const bundleFlavor = process.env.HUGAGENT_DESKTOP_BUNDLE || "full";
+const bundleFlavor = process.env.SUMC_DESKTOP_BUNDLE || "full";
 if (!["full", "thin"].includes(bundleFlavor)) {
-  throw new Error(`Unknown HUGAGENT_DESKTOP_BUNDLE flavor: ${bundleFlavor}`);
+  throw new Error(`Unknown SUMC_DESKTOP_BUNDLE flavor: ${bundleFlavor}`);
 }
 if (bundleFlavor === "full") {
   // The offline runtime is a native payload, so a cross-architecture target
@@ -130,7 +130,7 @@ if (bundleFlavor === "thin") {
 
 const ceBuilder = join(repoRoot, "scripts", "build_ce.py");
 const requireClean =
-  Boolean(process.env.CI) || process.env.HUGAGENT_RELEASE_BUILD === "1";
+  Boolean(process.env.CI) || process.env.SUMC_RELEASE_BUILD === "1";
 if (existsSync(ceBuilder)) {
   const ceArgs = [
     "run",

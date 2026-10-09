@@ -68,6 +68,15 @@ def db(monkeypatch):
     monkeypatch.setattr(A, "SessionLocal", factory)
     monkeypatch.setattr(L, "SessionLocal", factory)
     monkeypatch.setattr(weights_mod, "_cache", {})
+    # These tests exercise materialisation mechanics, not the SafeHarness gate;
+    # the gate itself is covered in test_content_gate.py.
+    from core.evolution import content_gate as gate_mod
+
+    monkeypatch.setattr(
+        gate_mod,
+        "inspect_materialisation_content",
+        lambda content, **_kw: gate_mod.GateDecision(allowed=True, reason_code="stub"),
+    )
     session = factory()
     yield session
     session.close()
@@ -412,7 +421,6 @@ def test_materialisation_writes_the_manifest_and_the_lineage(db, monkeypatch):
 
     candidate_id = _materialisable_candidate(db, monkeypatch)
     result = A.materialise_skill_candidate(candidate_id, approver="admin")
-
     row = db.query(AdminSkill).one()
     manifest = load_manifest(row.extra_files)
     assert manifest is not None
@@ -428,6 +436,28 @@ def test_materialisation_writes_the_manifest_and_the_lineage(db, monkeypatch):
     # 图谱证据可以通过 relation_id 反查。
     graph_links = [l for l in links if l.relation == LN.REL_CONSTRAINED_BY]
     assert graph_links[0].source_id == "grel_dep1"
+
+
+def test_materialisation_refuses_content_the_gate_blocks(db, monkeypatch):
+    """The SafeHarness gate is a hard stop: no AdminSkill row, no release."""
+    from core.evolution import activation as A
+    from core.evolution import content_gate as gate_mod
+
+    candidate_id = _materialisable_candidate(db, monkeypatch)
+    monkeypatch.setattr(
+        gate_mod,
+        "inspect_materialisation_content",
+        lambda content, **_kw: gate_mod.GateDecision(
+            allowed=False,
+            reason_code="prompt_injection_detected",
+            detail="stub structural hit",
+        ),
+    )
+    with pytest.raises(A.ActivationError) as err:
+        A.materialise_skill_candidate(candidate_id, approver="admin")
+    assert err.value.code == "content_blocked"
+    assert db.query(AdminSkill).count() == 0
+    assert db.query(EvolutionRelease).count() == 0
 
 
 def test_a_graph_conflicted_candidate_cannot_activate_directly(db, monkeypatch):

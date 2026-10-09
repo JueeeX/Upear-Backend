@@ -41,7 +41,7 @@ class ProfileMemory(Base):
     workspace_id = Column(String(64), primary_key=True, default="default")
     content_md = Column(Text, nullable=False, default="")
     last_compacted_at = Column(TIMESTAMP(timezone=True))
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (Index("idx_profile_memory_updated_at", "updated_at"),)
 
@@ -76,8 +76,8 @@ class MemoryRefShadow(Base):
     external_id = Column(String(128))
     content_preview = Column(String(200), default="")
     first_seen_episode_id = Column(String(64))
-    first_seen_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
-    last_seen_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    first_seen_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    last_seen_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     seen_count = Column(Integer, default=1, nullable=False)
 
     __table_args__ = (
@@ -104,7 +104,7 @@ class MemorySanitizerRule(Base):
     pattern = Column(Text, nullable=False)  # redact regex or classified word
     description = Column(Text)
     enabled = Column(Boolean, default=True, nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     created_by = Column(String(64))
 
     __table_args__ = (

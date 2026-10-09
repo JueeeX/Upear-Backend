@@ -22,10 +22,10 @@ PyPI。联网只用于用户主动配置的在线模型、更新和联网工具�
 
 | 目标 | 私有运行时 | 业务数据 |
 |---|---|---|
-| Windows x86_64 | CPython 3.11 Windows x64 | `%LOCALAPPDATA%\com.hugagent.desktop\local-server\data` |
-| macOS Apple Silicon | CPython 3.11 arm64 | `~/.hugagent` |
-| macOS Intel | CPython 3.11 x86_64 | `~/.hugagent` |
-| Linux x86_64 | CPython 3.11 manylinux/glibc x64 | `~/.hugagent` |
+| Windows x86_64 | CPython 3.11 Windows x64 | `%LOCALAPPDATA%\com.sumc.desktop\local-server\data` |
+| macOS Apple Silicon | CPython 3.11 arm64 | `~/.sumc` |
+| macOS Intel | CPython 3.11 x86_64 | `~/.sumc` |
+| Linux x86_64 | CPython 3.11 manylinux/glibc x64 | `~/.sumc` |
 
 源码与运行时统一放在 Tauri 应用本地数据目录的 `local-server/releases/`（Windows 使用等价短目录
 `local-server/r/`），按内容指纹复用；Windows 物理目录使用 128-bit 指纹前缀，状态清单仍保存和

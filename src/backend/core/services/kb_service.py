@@ -2,10 +2,14 @@
 
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
-from core.content.kb_processing import vectorise_document_background
+from core.auth.kb_permissions import resolve_space_kb_tenant_id, resolve_user_kb_context
+from core.content.kb_processing import (
+    build_document_security_metadata,
+    vectorise_document_background,
+)
 from core.db.models import KBChunk, KBDocument, UserShadow
 from core.db.repository import ArtifactRepository, AuditLogRepository, KBRepository
 from core.services.artifact_edition import can_access_artifact
@@ -39,6 +43,9 @@ MANAGED_SYNC_KB_META = {
     "uploadable": False,
     "tag": MANAGED_SYNC_KB_TAG,
 }
+_RESERVED_SPACE_METADATA = frozenset(
+    {*MANAGED_SYNC_KB_META, "tenant_id", "tenant_binding", "indexing_identity"}
+)
 
 
 class KBService:
@@ -69,6 +76,12 @@ class KBService:
 
     def _get_user(self, user_id: str) -> Optional[UserShadow]:
         return self.db.query(UserShadow).filter(UserShadow.user_id == user_id).first()
+
+    def _require_tenant(self, user_id: str, tenant_id: Optional[str] = None) -> str:
+        context = resolve_user_kb_context(self.db, user_id)
+        if context is None or (tenant_id is not None and context[0] != tenant_id):
+            raise PermissionError("Authoritative KB tenant context is unavailable")
+        return context[0]
 
     def ensure_system_owner(self) -> str:
         """Ensure the synthetic system owner row exists; return its user_id.
@@ -101,9 +114,14 @@ class KBService:
                 return space
         return None
 
-    def _ensure_managed_metadata(self, space: Any) -> Any:
+    def _ensure_managed_metadata(self, space: Any, tenant_id: str) -> Any:
         current = dict(space.extra_data or {}) if isinstance(space.extra_data, dict) else {}
-        merged = {**current, **MANAGED_SYNC_KB_META}
+        merged = {
+            **current,
+            **MANAGED_SYNC_KB_META,
+            "tenant_id": tenant_id,
+            "tenant_binding": {"version": 1, "source": "authoritative_user_context"},
+        }
         changed = (
             space.name != MANAGED_SYNC_KB_NAME
             or (space.description or "") != MANAGED_SYNC_KB_DESCRIPTION
@@ -115,7 +133,7 @@ class KBService:
             space.description = MANAGED_SYNC_KB_DESCRIPTION
             space.visibility = "private"
             space.extra_data = merged
-            space.updated_at = datetime.utcnow()
+            space.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             self.db.commit()
             self.db.refresh(space)
         return space
@@ -140,6 +158,7 @@ class KBService:
         return None
 
     def ensure_my_space_sync_space(self, user_id: str) -> Tuple[Any, bool]:
+        tenant_id = self._require_tenant(user_id)
         space = self._get_system_managed_space(user_id)
         created = False
         if not space:
@@ -151,7 +170,14 @@ class KBService:
                     "description": MANAGED_SYNC_KB_DESCRIPTION,
                     "visibility": "private",
                     "chunk_method": "semantic",
-                    "extra_data": dict(MANAGED_SYNC_KB_META),
+                    "extra_data": {
+                        **MANAGED_SYNC_KB_META,
+                        "tenant_id": tenant_id,
+                        "tenant_binding": {
+                            "version": 1,
+                            "source": "authoritative_user_context",
+                        },
+                    },
                 }
             )
             created = True
@@ -165,7 +191,7 @@ class KBService:
                 }
             )
         else:
-            space = self._ensure_managed_metadata(space)
+            space = self._ensure_managed_metadata(space, tenant_id)
 
         return space, created
 
@@ -195,10 +221,10 @@ class KBService:
             else {}
         )
         sync_settings["enabled"] = enabled
-        sync_settings["updated_at"] = datetime.utcnow().isoformat()
+        sync_settings["updated_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         metadata["my_space_sync_kb"] = sync_settings
         user.extra_data = metadata
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
 
     def is_my_space_sync_enabled(self, user_id: str) -> bool:
@@ -243,9 +269,31 @@ class KBService:
                 "uploaded_at": existing.uploaded_at.isoformat() if existing.uploaded_at else "",
             }
 
+        document_id = f"doc_{uuid.uuid4().hex[:16]}"
+        document_metadata = build_document_security_metadata(
+            tenant_id=self._require_tenant(user_id),
+            user_id=user_id,
+            kb_id=space.kb_id,
+            document_id=document_id,
+            source_type="my_space_sync",
+            source_reference=artifact.artifact_id,
+            content_check={
+                "status": "unknown",
+                "file_type_validation": "not_run",
+                "malware_scan": "not_run",
+                "prompt_injection_scan": "not_run",
+            },
+        )
+        document_metadata.update(
+            {
+                "source": "my_space_sync",
+                "source_artifact_id": artifact.artifact_id,
+                "system_managed": True,
+            }
+        )
         document = self.repo.create_document(
             {
-                "document_id": f"doc_{uuid.uuid4().hex[:16]}",
+                "document_id": document_id,
                 "kb_id": space.kb_id,
                 "title": artifact.title or artifact.filename,
                 "filename": artifact.filename,
@@ -255,11 +303,7 @@ class KBService:
                 "storage_url": artifact.storage_url,
                 "checksum": None,
                 "indexing_status": "processing",
-                "extra_data": {
-                    "source": "my_space_sync",
-                    "source_artifact_id": artifact.artifact_id,
-                    "system_managed": True,
-                },
+                "extra_data": document_metadata,
             }
         )
 
@@ -275,6 +319,7 @@ class KBService:
             document_id=document.document_id,
             kb_id=space.kb_id,
             user_id=user_id,
+            tenant_id=self._require_tenant(user_id),
             title=document.title,
             file_bytes=file_bytes,
             mime_type=mime_type,
@@ -374,7 +419,7 @@ class KBService:
             return False
 
         # Perform soft delete
-        space.deleted_at = datetime.utcnow()
+        space.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
 
         # Audit log
@@ -413,7 +458,7 @@ class KBService:
             return False
 
         # Perform soft delete
-        document.deleted_at = datetime.utcnow()
+        document.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Decrement document count and total size on the KB space
         space.document_count = max((space.document_count or 0) - 1, 0)
@@ -445,6 +490,7 @@ class KBService:
         visibility: str = "private",
         initial_grants: Optional[list[tuple[str, str]]] = None,
         granted_by: Optional[str] = None,
+        tenant_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create a new KB space.
 
@@ -455,6 +501,17 @@ class KBService:
         creation.  CE supplies an empty list; EE decides which organization principals inherit
         visibility without leaking those contracts into this shared service.
         """
+        authoritative_tenant = self._require_tenant(user_id, tenant_id)
+        safe_metadata = {
+            key: value
+            for key, value in (metadata or {}).items()
+            if key not in _RESERVED_SPACE_METADATA
+        }
+        safe_metadata["tenant_id"] = authoritative_tenant
+        safe_metadata["tenant_binding"] = {
+            "version": 1,
+            "source": "authoritative_user_context",
+        }
         space_data = {
             "kb_id": f"kb_{uuid.uuid4().hex[:16]}",
             "user_id": user_id,
@@ -462,7 +519,7 @@ class KBService:
             "description": description,
             "visibility": visibility,
             "chunk_method": chunk_method,
-            "extra_data": metadata or {},
+            "extra_data": safe_metadata,
         }
 
         space = self.repo.create_space(space_data)
@@ -575,6 +632,9 @@ class KBService:
         mime_type: str,
         storage_key: str,
         checksum: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        user_metadata: Optional[Dict[str, Any]] = None,
+        content_check: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Upload a document to KB space."""
         # Check ownership
@@ -584,8 +644,12 @@ class KBService:
         if not self._has_kb_level(space, user_id, "edit"):
             raise PermissionError("Access denied to this KB space")
 
+        authoritative_tenant = self._require_tenant(user_id, tenant_id)
+        if resolve_space_kb_tenant_id(self.db, space) != authoritative_tenant:
+            raise PermissionError("Access denied to this KB tenant")
+        document_id = f"doc_{uuid.uuid4().hex[:16]}"
         document_data = {
-            "document_id": f"doc_{uuid.uuid4().hex[:16]}",
+            "document_id": document_id,
             "kb_id": kb_id,
             "title": title,
             "filename": filename,
@@ -594,6 +658,22 @@ class KBService:
             "storage_key": storage_key,
             "checksum": checksum,
             "indexing_status": "processing",
+            "extra_data": build_document_security_metadata(
+                tenant_id=authoritative_tenant,
+                user_id=user_id,
+                kb_id=kb_id,
+                document_id=document_id,
+                source_type="direct_upload",
+                checksum_sha256=checksum,
+                user_metadata=user_metadata,
+                content_check=content_check
+                or {
+                    "status": "unknown",
+                    "file_type_validation": "not_run",
+                    "malware_scan": "not_run",
+                    "prompt_injection_scan": "not_run",
+                },
+            ),
         }
 
         document = self.repo.create_document(document_data)
@@ -640,6 +720,9 @@ class KBService:
             raise PermissionError("只能加入到你自己的私有知识库")
         if self._is_system_managed_space(space):
             raise PermissionError("系统托管知识库不支持手动加入文件")
+        tenant_id = self._require_tenant(user_id)
+        if resolve_space_kb_tenant_id(self.db, space) != tenant_id:
+            raise PermissionError("知识库 tenant 不匹配")
 
         for document in self._list_all_space_documents(kb_id):
             meta = document.extra_data if isinstance(document.extra_data, dict) else {}
@@ -655,8 +738,29 @@ class KBService:
                     "chunk_method": space.chunk_method or "semantic",
                 }
 
+        document_id = f"doc_{uuid.uuid4().hex[:16]}"
+        document_metadata = build_document_security_metadata(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            kb_id=kb_id,
+            document_id=document_id,
+            source_type="my_space_manual",
+            source_reference=artifact_id,
+            content_check={
+                "status": "unknown",
+                "file_type_validation": "not_run",
+                "malware_scan": "not_run",
+                "prompt_injection_scan": "not_run",
+            },
+        )
+        document_metadata.update(
+            {
+                "source": "my_space_manual",
+                "source_artifact_id": artifact_id,
+            }
+        )
         document_data = {
-            "document_id": f"doc_{uuid.uuid4().hex[:16]}",
+            "document_id": document_id,
             "kb_id": kb_id,
             "title": artifact.title or artifact.filename or artifact.artifact_id,
             "filename": artifact.filename or artifact.title or artifact.artifact_id,
@@ -665,10 +769,7 @@ class KBService:
             "storage_key": artifact.storage_key,
             "checksum": None,
             "indexing_status": "processing",
-            "extra_data": {
-                "source": "my_space_manual",
-                "source_artifact_id": artifact_id,
-            },
+            "extra_data": document_metadata,
         }
         document = self.repo.create_document(document_data)
 

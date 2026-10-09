@@ -1,6 +1,6 @@
 """Project-local capability catalog.
 
-Frontend contract (hugagent-ui-react) expects:
+Frontend contract (sumc-ui-react) expects:
 {
   "skills": [...],
   "agents": [...],

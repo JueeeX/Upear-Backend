@@ -1,7 +1,7 @@
 """Chat session and message business logic."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.auth.permissions_iface import ChatAccessLevel, can_delete_session, resolve_chat_access
@@ -296,7 +296,7 @@ class ChatService:
         session = self.session_repo.get_by_id(chat_id)
         if session:
             session.message_count = (session.message_count or 0) + 1
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             session.updated_at = now
             session.last_message_at = now
             self.db.commit()
@@ -334,7 +334,7 @@ class ChatService:
             msg = self.message_repo.update(message_id, update)
             session = self.session_repo.get_by_id(chat_id)
             if session:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
                 session.updated_at = now
                 session.last_message_at = now
                 self.db.commit()
@@ -425,7 +425,7 @@ class ChatService:
                 .count()
             )
             session.message_count = remaining
-            session.updated_at = datetime.utcnow()
+            session.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         self.db.commit()
         return deleted

@@ -2,7 +2,7 @@
 
 > Last updated: 2026-07-19
 
-HugAgentOS supports two knowledge base flavors that can run side by side and are presented together in the capability center:
+SUMC supports two knowledge base flavors that can run side by side and are presented together in the capability center:
 
 1. **Self-hosted knowledge bases**: document upload → parent-child chunking → vectorization into Milvus → dense + sparse hybrid retrieval (RRF fusion) → optional reranking. Community Edition (CE) provides only private spaces owned by the current user. Admin-managed public spaces are an Enterprise Edition (EE) capability.
 2. **External Dify knowledge bases** (Enterprise Edition, EE): with `KNOWLEDGE_BASE=dify`, the backend injects Dify datasets into the capability catalog at runtime, and retrieval goes through the Dify Retrieval API.
@@ -51,7 +51,7 @@ ORM definitions live in `src/backend/core/db/models/knowledge.py`:
 | `kb_documents` | Documents: storage_key, checksum, `indexing_status` (processing / completed / failed) |
 | `kb_chunks` | **Parent chunk** text (returned to the LLM on retrieval), with `tags` and related `questions` |
 
-Child chunks never touch the relational DB — they are vectorized into the Milvus collection `hugagent_kb_private` (`core/kb/kb_vector.py`); every row carries `user_id` / `kb_id` for ownership isolation, and `row_type` distinguishes chunk rows from question rows.
+Child chunks never touch the relational DB — they are vectorized into the Milvus collection `sumc_kb_private` (`core/kb/kb_vector.py`); every row carries `user_id` / `kb_id` for ownership isolation, and `row_type` distinguishes chunk rows from question rows.
 
 ### Chunking and indexing
 

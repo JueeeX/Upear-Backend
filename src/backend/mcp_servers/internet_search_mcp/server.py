@@ -11,7 +11,7 @@ from typing import Any, Dict
 
 from mcp.server import FastMCP
 
-mcp = FastMCP("hugagent-internet-search")
+mcp = FastMCP("sumc-internet-search")
 
 
 @mcp.tool()

@@ -12,7 +12,7 @@ import {
 } from "./desktop-version.mjs";
 
 function createDesktopFixture(versions = {}) {
-  const root = mkdtempSync(join(tmpdir(), "hugagent-desktop-version-"));
+  const root = mkdtempSync(join(tmpdir(), "sumc-desktop-version-"));
   const desktopDir = join(root, "desktop");
   mkdirSync(join(desktopDir, "src-tauri"), { recursive: true });
   writeFileSync(
@@ -36,7 +36,7 @@ function createDesktopFixture(versions = {}) {
   );
   writeFileSync(
     join(desktopDir, "src-tauri", "Cargo.lock"),
-    `[[package]]\nname = "hugagent-desktop"\nversion = "${versions.cargoLock || "1.2.3"}"\n`,
+    `[[package]]\nname = "sumc-desktop"\nversion = "${versions.cargoLock || "1.2.3"}"\n`,
   );
   return { root, desktopDir };
 }
@@ -98,7 +98,7 @@ test("reads and updates Cargo.lock with Windows CRLF line endings", () => {
   try {
     writeFileSync(
       join(fixture.desktopDir, "src-tauri", "Cargo.lock"),
-      '[[package]]\r\nname = "hugagent-desktop"\r\nversion = "1.2.3"\r\n',
+      '[[package]]\r\nname = "sumc-desktop"\r\nversion = "1.2.3"\r\n',
     );
     assert.equal(readDesktopVersion(fixture.desktopDir), "1.2.3");
     assert.equal(setDesktopVersion(fixture.desktopDir, "1.3.0"), "1.3.0");

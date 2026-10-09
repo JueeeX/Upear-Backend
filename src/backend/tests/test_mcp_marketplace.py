@@ -195,7 +195,7 @@ async def test_oauth_bundle_is_provider_neutral_and_never_sent_as_header():
         {
             "client_metadata": {
                 "redirect_uris": ["https://app.example.test/api/v1/mcp-market/oauth/callback"],
-                "client_name": "HugAgentOS MCP Client",
+                "client_name": "SUMC MCP Client",
             },
             "client_info": {
                 "redirect_uris": ["https://app.example.test/api/v1/mcp-market/oauth/callback"],

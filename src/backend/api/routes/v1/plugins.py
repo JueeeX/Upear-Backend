@@ -39,6 +39,7 @@ from core.auth.capabilities import resolve_user_capabilities
 from core.db.engine import get_db
 from core.infra.exceptions import AccessDeniedError, BadRequestError
 from core.infra.responses import created_response, success_response
+from core.safeharness_capabilities import reject_uncontrolled_mutation, with_capability_security
 from core.services import marketplace_listing as ml
 from core.services import plugin_service as ps
 
@@ -63,13 +64,31 @@ def _require_can_import_plugin(user_id: str, db: Session) -> None:
         raise AccessDeniedError(message="管理员未开放插件安装/导入功能", reason="can_import_plugin_disabled")
 
 
+def _secure_plugin(item: Dict, *, identifier_key: str, source_type: str) -> Dict:
+    return with_capability_security(
+        item,
+        kind="plugin",
+        identifier_key=identifier_key,
+        source_type=item.get("source") or source_type,
+    )
+
+
 @router.get("", summary="内置插件包列表")
 async def list_plugins(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     items = ps.list_plugins(db, owner_user_id=str(user.user_id))
-    return success_response(data={"items": items})
+    return success_response(
+        data={
+            "items": [
+                _secure_plugin(
+                    item, identifier_key="slug", source_type="plugin_marketplace"
+                )
+                for item in items
+            ]
+        }
+    )
 
 
 @router.get("/installed", summary="我已安装的插件")
@@ -77,9 +96,17 @@ async def list_installed(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return success_response(data={"items": ps.list_installed(
-        db, owner_user_id=str(user.user_id), include_global=True
-    )})
+    items = ps.list_installed(db, owner_user_id=str(user.user_id), include_global=True)
+    return success_response(
+        data={
+            "items": [
+                _secure_plugin(
+                    item, identifier_key="install_id", source_type="installed_plugin"
+                )
+                for item in items
+            ]
+        }
+    )
 
 
 @router.get("/installed/{install_id}/detail", summary="已安装插件详情（含组件）")
@@ -89,9 +116,14 @@ async def get_installed_detail(
     db: Session = Depends(get_db),
 ):
     """已安装插件的完整详情：技能（含指令/文件清单）+ MCP（含工具列表）。"""
-    return success_response(data=ps.get_installed_detail(
-        db, install_id, owner_user_id=str(user.user_id)
-    ))
+    detail = ps.get_installed_detail(db, install_id, owner_user_id=str(user.user_id))
+    return success_response(
+        data=_secure_plugin(
+            detail,
+            identifier_key="install_id",
+            source_type="installed_plugin",
+        )
+    )
 
 
 @router.get("/feishu-cli/app/status", summary="查询飞书插件共享应用初始化状态")
@@ -108,6 +140,7 @@ async def get_feishu_app_status(_: str = Depends(require_system_settings)):
 
 @router.post("/feishu-cli/app/init", summary="从飞书插件页发起共享应用初始化")
 async def init_feishu_app(_: str = Depends(require_system_settings)):
+    reject_uncontrolled_mutation()
     from core.services.lark_service import LarkService
 
     return success_response(data=await LarkService(None).start_app_init())
@@ -115,6 +148,7 @@ async def init_feishu_app(_: str = Depends(require_system_settings)):
 
 @router.post("/feishu-cli/app/reset", summary="从飞书插件页重置共享应用")
 async def reset_feishu_app(_: str = Depends(require_system_settings)):
+    reject_uncontrolled_mutation()
     from core.services.lark_service import LarkService
 
     return success_response(data=await LarkService(None).reset_app())
@@ -127,7 +161,13 @@ async def get_plugin(
     db: Session = Depends(get_db),
 ):
     ml.ensure_item_visible(db, ml.KIND_PLUGIN, slug, str(user.user_id), resource="plugin")
-    return success_response(data=ps.get_plugin_detail(slug, db))
+    return success_response(
+        data=_secure_plugin(
+            ps.get_plugin_detail(slug, db),
+            identifier_key="slug",
+            source_type="plugin_marketplace",
+        )
+    )
 
 
 class InstallRequest(BaseModel):
@@ -141,6 +181,7 @@ async def install_plugin(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     # Both installing from and importing into the plugin marketplace require can_import_plugin
     # (same as the skill marketplace's can_add_skill); granted per user via the Config backend
     # "User Management -> Permission Config". Admin global install goes through admin_plugins.
@@ -160,6 +201,7 @@ async def import_plugin(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """上传插件 zip 并导入（私有）。返回 import_report（imported / adapted / dropped）。"""
     _require_can_import_plugin(str(user.user_id), db)
     raw = await file.read()
@@ -177,6 +219,7 @@ async def uninstall_plugin(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     result = ps.uninstall_plugin(db, install_id, owner_user_id=str(user.user_id))
     return success_response(data=result)
 
@@ -192,6 +235,7 @@ async def set_enabled(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     # Each user toggles on their own (writes a per-user override); global plugins can also be
     # enabled/disabled per user without affecting others.
     result = ps.set_plugin_enabled_for_user(

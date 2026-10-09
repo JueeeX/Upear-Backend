@@ -5,7 +5,7 @@ Simulates the resume scenario where "the sandbox has been wiped (rebuild/restart
 Asserts the driver **resumes from the DB ledger** (seq starts from 3, no re-decompose to re-split the goal), and reaches completed after R2 passes.
 Also verifies save_ledger receives mirror writes throughout. No real LLM/sandbox/git, <1s.
 
-Run: docker exec hugagent-backend python -m scripts._loop_db_resume_unit
+Run: docker exec sumc-backend python -m scripts._loop_db_resume_unit
 """
 import asyncio
 

@@ -265,7 +265,13 @@ def test_ce_branding_repairs_persistent_page_config(db_session, monkeypatch):
     monkeypatch.setattr(
         blocks,
         "settings",
-        SimpleNamespace(edition=SimpleNamespace(edition="ce")),
+        SimpleNamespace(
+            edition=SimpleNamespace(edition="ce"),
+            branding=SimpleNamespace(
+                product_name="SUMC-preview",
+                product_subtitle="智能管控中枢预览版",
+            ),
+        ),
     )
     db_session.add(
         ContentBlock(
@@ -291,14 +297,14 @@ def test_ce_branding_repairs_persistent_page_config(db_session, monkeypatch):
     assert blocks.enforce_ce_branding(db_session) is True
     row = db_session.query(ContentBlock).filter_by(id="page_config").one()
     assert row.payload["branding"] == {
-        "product_name": "HugAgentOS",
-        "product_subtitle": "AI 智能助手",
-        "page_title": "HugAgentOS",
-        "hero_title": "你好，我是 HugAgentOS",
+        "product_name": "SUMC-preview",
+        "product_subtitle": "智能管控中枢预览版",
+        "page_title": "SUMC-preview",
+        "hero_title": "你好，我是 SUMC-preview",
         "logo_url": "/custom.svg",
     }
-    assert row.payload["navigation"]["admin_header"]["title"] == "HugAgentOS — 后台管理"
-    assert row.payload["navigation"]["admin_platform"]["product_name"] == "HugAgentOS"
+    assert row.payload["navigation"]["admin_header"]["title"] == "SUMC-preview — 后台管理"
+    assert row.payload["navigation"]["admin_platform"]["product_name"] == "SUMC-preview"
     assert row.payload["auth"]["allow_register"] is False
     assert blocks.enforce_ce_branding(db_session) is False
 
@@ -315,8 +321,7 @@ def test_ce_registration_is_disabled_unconditionally(monkeypatch):
     assert blocks.is_register_allowed() is False
 
 
-@pytest.mark.asyncio
-async def test_ce_local_login_starts_in_english_with_brand_title(monkeypatch):
+def test_ce_local_login_uses_configured_default_language_and_brand(monkeypatch):
     import api.routes.v1.mock_sso as mock_sso
     import core.config.settings as settings_module
     from starlette.requests import Request
@@ -331,10 +336,11 @@ async def test_ce_local_login_starts_in_english_with_brand_title(monkeypatch):
         ),
     )
     monkeypatch.setattr(mock_sso, "is_register_allowed", lambda: False)
+    monkeypatch.setenv("LOGIN_DEFAULT_LANGUAGE", "zh-CN")
     monkeypatch.setattr(
         mock_sso,
         "get_branding_info",
-        lambda: {"product_name": "HugAgentOS", "logo_url": "/icon.png"},
+        lambda: {"product_name": "SUMC-preview", "logo_url": "/icon.png"},
     )
     request = Request(
         {
@@ -351,23 +357,25 @@ async def test_ce_local_login_starts_in_english_with_brand_title(monkeypatch):
         }
     )
 
-    response = await mock_sso.mock_login_page(
-        request,
-        redirect="/",
-        auto="0",
-        error=None,
-        tab=None,
-        reg_error=None,
+    response = asyncio.run(
+        mock_sso.mock_login_page(
+            request,
+            redirect="/",
+            auto="0",
+            error=None,
+            tab=None,
+            reg_error=None,
+        )
     )
     html = response.body.decode()
     assert response.status_code == 200
-    assert '<html lang="en">' in html
-    assert "<title>HugAgentOS</title>" in html
+    assert '<html lang="zh-CN">' in html
+    assert "<title>SUMC-preview</title>" in html
     assert 'data-tab="register"' not in html
     assert 'name="confirm_password"' not in html
-    assert '<img class="brand-logo" src="/home/hugagentos-logo.png" alt="HugAgentOS" />' in html
-    assert "<span>HugAgentOS</span>" not in html
-    assert "document.title = 'HugAgentOS'" in html
+    assert '<img class="brand-logo" src="/icon.png" alt="" />' in html
+    assert '<span class="brand-name">SUMC-preview</span>' in html
+    assert "document.title = 'SUMC-preview'" in html
 
 
 def test_mock_login_shortcuts_require_non_ce_explicit_mock_mode(monkeypatch):
@@ -532,11 +540,11 @@ def test_workspace_path_alias_in_local_mode(monkeypatch):
     and leave /myspace and lookalikes (/workspaces) untouched. No-op in Docker."""
     import core.llm.tools._paths as p
 
-    monkeypatch.setattr(p, "WORKSPACE_ROOT", "/home/u/.hugagent/workspace")
-    assert p.canonicalize_ws_path("/workspace") == "/home/u/.hugagent/workspace"
+    monkeypatch.setattr(p, "WORKSPACE_ROOT", "/home/u/.sumc/workspace")
+    assert p.canonicalize_ws_path("/workspace") == "/home/u/.sumc/workspace"
     assert (
         p.canonicalize_ws_path("/workspace/site-src/foo")
-        == "/home/u/.hugagent/workspace/site-src/foo"
+        == "/home/u/.sumc/workspace/site-src/foo"
     )
     assert p.canonicalize_ws_path("/workspaces/other") == "/workspaces/other"
     assert p.canonicalize_ws_path("/myspace/a") == "/myspace/a"
@@ -545,7 +553,7 @@ def test_workspace_path_alias_in_local_mode(monkeypatch):
     # to_physical_path returns the aliased (real) root for non-myspace paths.
     assert (
         p.to_physical_path("/workspace/site-src/foo", "u1")
-        == "/home/u/.hugagent/workspace/site-src/foo"
+        == "/home/u/.sumc/workspace/site-src/foo"
     )
 
     # Docker parity: root == /workspace → every alias is a byte-for-byte no-op.
@@ -558,7 +566,7 @@ def test_runner_canon_ws_and_bash_rewrite(monkeypatch):
     the bash/python it executes, so model-written /workspace paths resolve locally."""
     import services.script_runner_service.server as srv
 
-    local_root = "/Users/test/Library/Application Support/HugAgentOS/workspace"
+    local_root = "/Users/test/Library/Application Support/SUMC/workspace"
     monkeypatch.setattr(srv, "WORKSPACE_ROOT", local_root)
     assert srv._canon_ws("/workspace") == local_root
     assert srv._canon_ws("/workspace/a.txt") == f"{local_root}/a.txt"

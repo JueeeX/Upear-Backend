@@ -1,5 +1,5 @@
 """
-Logging configuration for HugAgentOS.
+Logging configuration for SUMC.
 
 This module provides structured logging with:
 - JSON format for production environments
@@ -73,7 +73,7 @@ def add_user_context(logger: Any, method_name: str, event_dict: EventDict) -> Ev
 
 def add_service_info(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
     """Add service name to log event."""
-    event_dict["service"] = "hugagent"
+    event_dict["service"] = "sumc"
     return event_dict
 
 
@@ -133,7 +133,7 @@ def _resolve_writable_log_path(configured_path: str) -> Path:
     candidates = [
         Path(configured_path),
         repo_root / "logs" / "backend.log",
-        Path(tempfile.gettempdir()) / "hugagent" / "backend.log",
+        Path(tempfile.gettempdir()) / "sumc" / "backend.log",
     ]
     for path in candidates:
         try:

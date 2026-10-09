@@ -6,7 +6,7 @@ import XxxRepository`` keeps working unchanged.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import sqlalchemy as sa
@@ -52,7 +52,7 @@ class CatalogRepository:
             override.enabled = enabled
             if config is not None:
                 override.config_data = config
-            override.updated_at = datetime.utcnow()
+            override.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             override = CatalogOverride(
                 user_id=user_id,

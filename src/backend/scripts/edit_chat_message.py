@@ -9,7 +9,7 @@ Usage (from repo root):
     PYTHONPATH=src/backend python src/backend/scripts/edit_chat_message.py delete --message-id <message_id>
 
 Or inside the backend container (backend source is mounted at /app/src/backend):
-    docker exec -it hugagent-backend python /app/src/backend/scripts/edit_chat_message.py list --chat-id xxx
+    docker exec -it sumc-backend python /app/src/backend/scripts/edit_chat_message.py list --chat-id xxx
 
 Notes:
     - Updating `content` keeps the original `message_id` so frontend citation /

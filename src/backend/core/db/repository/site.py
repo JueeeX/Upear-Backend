@@ -1,7 +1,7 @@
 """Repository — site hosting (sites / site_kv / site_submissions tables)."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import desc, func
@@ -56,7 +56,7 @@ class SiteRepository:
             return None
         for key, value in data.items():
             setattr(item, key, value)
-        item.updated_at = datetime.utcnow()
+        item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(item)
         return item
@@ -66,9 +66,9 @@ class SiteRepository:
         item = self.get_by_id(site_id)
         if not item:
             return False
-        ts = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        ts = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y%m%d%H%M%S")
         item.slug = f"{item.slug}--del-{ts}"[:80]
-        item.deleted_at = datetime.utcnow()
+        item.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         return True
 
@@ -92,7 +92,7 @@ class SiteRepository:
         row = self.kv_get(site_id, key)
         if row:
             row.v = value
-            row.updated_at = datetime.utcnow()
+            row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             row = SiteKV(site_id=site_id, k=key, v=value)
             self.db.add(row)

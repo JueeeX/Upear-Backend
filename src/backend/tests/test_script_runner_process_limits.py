@@ -61,14 +61,14 @@ def test_desktop_local_install_never_provisions_system_tools():
 
 
 def test_windows_workspace_rewrite_treats_backslashes_literally():
-    workspace = r"C:\Users\Aaron\AppData\Local\com.hugagent.desktop\local-server\data\workspace"
+    workspace = r"C:\Users\Aaron\AppData\Local\com.sumc.desktop\local-server\data\workspace"
 
     rewritten = server._rewrite_workspace_refs(
         'open("/workspace/myspace/report.txt")', workspace
     )
 
     assert rewritten == (
-        'open("C:\\Users\\Aaron\\AppData\\Local\\com.hugagent.desktop\\local-server'
+        'open("C:\\Users\\Aaron\\AppData\\Local\\com.sumc.desktop\\local-server'
         '\\data\\workspace/myspace/report.txt")'
     )
     assert server._rewrite_workspace_refs(
@@ -77,10 +77,10 @@ def test_windows_workspace_rewrite_treats_backslashes_literally():
 
 
 def test_windows_git_bash_receives_msys_workspace_path():
-    workspace = r"C:\Users\Aaron\AppData\Local\com.hugagent.desktop\local-server\data\workspace"
+    workspace = r"C:\Users\Aaron\AppData\Local\com.sumc.desktop\local-server\data\workspace"
 
     assert server._execution_workspace_root("bash", workspace, "nt") == (
-        "/c/Users/Aaron/AppData/Local/com.hugagent.desktop/local-server/data/workspace"
+        "/c/Users/Aaron/AppData/Local/com.sumc.desktop/local-server/data/workspace"
     )
     assert server._execution_workspace_root("python", workspace, "nt") == workspace
 
@@ -184,7 +184,7 @@ def test_ce_installer_and_script_runner_ship_office_skill_runtime():
     assert "apt-get download fonts-wqy-zenhei" in installer
     assert "install_libreoffice" in installer
     assert "wants_libreoffice_install" in installer
-    assert "HUGAGENT_INSTALL_LIBREOFFICE" in installer
+    assert "SUMC_INSTALL_LIBREOFFICE" in installer
     assert "libreoffice-impress libreoffice-writer libreoffice-calc" in installer
     assert "PPT and Word previews" in installer
     assert "Continuing without LibreOffice" in installer

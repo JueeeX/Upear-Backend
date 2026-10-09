@@ -73,7 +73,43 @@ async def list_agents(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return success_response(data=UserAgentService(db).list_for_user(user.user_id))
+    items = UserAgentService(db).list_for_user(user.user_id)
+    # External framework agents (ext-*) are platform-level, read-only entries:
+    # selectable in the chat @ menu, executed by the bridge, never editable
+    # through the UserAgent CRUD (their ids fail service lookups by design).
+    from core.external_agents.registry import CATALOG as external_catalog
+
+    for agent_id, card in external_catalog.items():
+        items.append(
+            {
+                "agent_id": agent_id,
+                "owner_type": "system",
+                "user_id": None,
+                "name": card.name,
+                "avatar": None,
+                "description": f"[外部框架 {card.framework}] {card.project} — {card.description}",
+                "system_prompt": "",
+                "welcome_message": "",
+                "suggested_questions": [],
+                "mcp_server_ids": [],
+                "skill_ids": [],
+                "plugin_ids": [],
+                "kb_ids": [],
+                "model_provider_id": None,
+                "temperature": None,
+                "max_tokens": None,
+                "max_iters": None,
+                "timeout": None,
+                "is_enabled": True,
+                "sort_order": 1000,
+                "source_market_slug": None,
+                "ontology_tags": [],
+                "external": True,
+                "framework": card.framework,
+                "project": card.project,
+            }
+        )
+    return success_response(data=items)
 
 
 @router.get("/available-resources", summary="可绑定到子智能体的资源列表")
@@ -97,6 +133,8 @@ async def get_agent(
         return error_response(code=404, message="Agent not found")
     except PermissionError:
         return error_response(code=403, message="Access denied")
+    except ValueError as exc:
+        return error_response(code=400, message=str(exc))
     return success_response(data=agent)
 
 
@@ -140,6 +178,8 @@ async def update_agent(
         return error_response(code=404, message="Agent not found")
     except PermissionError:
         return error_response(code=403, message="Access denied")
+    except ValueError as exc:
+        return error_response(code=400, message=str(exc))
     return success_response(data=agent)
 
 

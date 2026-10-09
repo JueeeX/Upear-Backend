@@ -6,7 +6,7 @@ import XxxRepository`` keeps working unchanged.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import sqlalchemy as sa
@@ -52,7 +52,7 @@ class UserRepository:
         for key, value in update_data.items():
             setattr(user, key, value)
 
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(user)
         return user
@@ -108,7 +108,7 @@ class LocalUserRepository:
             return None
         for k, v in data.items():
             setattr(record, k, v)
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(record)
         return record
@@ -118,7 +118,7 @@ class LocalUserRepository:
         if not record:
             return False
         record.status = status
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         return True
 
@@ -151,7 +151,7 @@ class DingTalkConnectionRepository:
             return None
         for k, v in data.items():
             setattr(record, k, v)
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(record)
         return record
@@ -184,7 +184,7 @@ class LarkConnectionRepository:
             return None
         for k, v in data.items():
             setattr(record, k, v)
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(record)
         return record
@@ -217,7 +217,7 @@ class EmailConnectionRepository:
             return None
         for k, v in data.items():
             setattr(record, k, v)
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(record)
         return record

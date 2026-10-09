@@ -1,1 +1,1 @@
-"""Prompt-related modules for HugAgentOS."""
+"""Prompt-related modules for SUMC."""

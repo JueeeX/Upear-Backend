@@ -15,10 +15,8 @@ import os
 import random
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
-
-import pytz
 
 from core.config.settings import DEFAULT_CHAT_MODEL_ALIAS
 from core.infra.logging import get_logger
@@ -132,7 +130,7 @@ class AutomationScheduler:
         from core.db.engine import SessionLocal
         from core.services.automation_service import AutomationService
 
-        now = datetime.utcnow().replace(tzinfo=pytz.utc)
+        now = datetime.now(timezone.utc)
         with SessionLocal() as db:
             svc = AutomationService(db)
             due_tasks = svc.get_due_tasks(now)
@@ -253,7 +251,7 @@ class AutomationScheduler:
                 svc.update_task_system(
                     task_id,
                     consecutive_failures=0,
-                    last_run_at=datetime.utcnow(),
+                    last_run_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     sidebar_activated=True,
                 )
                 # next_run_at already pre-advanced in _check_and_fire; now that
@@ -323,7 +321,7 @@ class AutomationScheduler:
                 updates: Dict[str, Any] = {
                     "consecutive_failures": new_failures,
                     "last_error": error_msg,
-                    "last_run_at": datetime.utcnow(),
+                    "last_run_at": datetime.now(timezone.utc).replace(tzinfo=None),
                     "sidebar_activated": True,
                 }
                 if new_failures >= task_max_failures:
@@ -493,7 +491,7 @@ class AutomationScheduler:
                 tool_calls=tool_calls_log if tool_calls_log else None,
                 usage=usage,
                 extra_data={
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                     "route": meta_fields.get("route", "main"),
                     "is_markdown": meta_fields.get("is_markdown", True),
                     "sources": meta_fields.get("sources", []),
@@ -835,7 +833,7 @@ class AutomationScheduler:
         from core.db.engine import SessionLocal
         from core.services.automation_service import AutomationService
 
-        now = datetime.utcnow().replace(tzinfo=pytz.utc)
+        now = datetime.now(timezone.utc)
         try:
             with SessionLocal() as db:
                 svc = AutomationService(db)
@@ -895,7 +893,7 @@ class AutomationScheduler:
                 "status": status,
                 "summary": summary[:200],
                 "chat_id": chat_id,
-                "timestamp": int(datetime.utcnow().timestamp() * 1000),
+                "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
                 "read": False,
             }
             key = f"jx:notifications:{user_id}"

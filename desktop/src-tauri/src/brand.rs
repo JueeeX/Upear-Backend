@@ -4,15 +4,15 @@
 //! 打出不同品牌 / 指向不同后端的安装包：
 //!
 //! ```powershell
-//! $env:JX_BRAND_NAME='HugAgentOS'
+//! $env:JX_BRAND_NAME='SUMC'
 //! $env:JX_DEFAULT_SERVER_BASE='https://agent.example.gov.cn'
 //! $env:JX_DESKTOP_UPDATE_BASE='https://downloads.example.gov.cn'
 //! $env:JX_BRAND_LOGO_URL='/home/logo.svg'
 //! cargo tauri build
 //! ```
 //!
-//! 未设环境变量时用下面的默认值（HugAgentOS）。运行时仍可再被 `<配置目录>/server.json` /
-//! `HUGAGENT_SERVER_BASE` 覆盖服务器地址（见 `config.rs`）。
+//! 未设环境变量时用下面的默认值（SUMC）。运行时仍可再被 `<配置目录>/server.json` /
+//! `SUMC_SERVER_BASE` 覆盖服务器地址（见 `config.rs`）。
 //!
 //! 说明：
 //! - **产品名 / 安装包名 / 应用图标**（.exe 图标、安装目录）由 `tauri.conf.json` 的
@@ -25,10 +25,10 @@
 /// 应用内可见品牌名：窗口标题、系统托盘、登录卡片、关闭确认框等。
 pub const NAME: &str = match option_env!("JX_BRAND_NAME") {
     Some(v) => v,
-    None => "HugAgentOS",
+    None => "SUMC",
 };
 
-/// 编译期默认后端地址（运行时可被 server.json / HUGAGENT_SERVER_BASE 覆盖）。
+/// 编译期默认后端地址（运行时可被 server.json / SUMC_SERVER_BASE 覆盖）。
 /// 注意：这是本地开发默认，指向本机 dev（localhost:3000）；对外分发时改回正式地址，
 /// 或改用构建时环境变量 JX_DEFAULT_SERVER_BASE / 运行时 server.json 覆盖。
 pub const DEFAULT_SERVER_BASE: &str = match option_env!("JX_DEFAULT_SERVER_BASE") {
@@ -45,10 +45,10 @@ pub const DESKTOP_UPDATE_BASE: &str = match option_env!("JX_DESKTOP_UPDATE_BASE"
 
 /// 本机服务 `/health` 返回的 `service` 标识（backend `api/health.py`）。就绪判定
 /// 靠它确认端口上跑的是我们的后端——两侧必须一致，否则健康检查 200 也永远
-/// 不算就绪，本机模式卡在「启动超时」（HugAgentOS 分支实测踩坑）。
+/// 不算就绪，本机模式卡在「启动超时」（SUMC 分支实测踩坑）。
 pub const LOCAL_SERVICE_NAME: &str = match option_env!("JX_LOCAL_SERVICE_NAME") {
     Some(v) => v,
-    None => "hugagent",
+    None => "sumc",
 };
 
 /// 登录卡片上展示的 logo（走本地反代的静态路径，或可访问的绝对 URL）。

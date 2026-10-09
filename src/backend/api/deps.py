@@ -219,7 +219,7 @@ def user_can_manage_system_settings(db: Session, user_id: Optional[str]) -> bool
     itself, not here):
 
     1. Capability flag ``can_system_config`` (implied by ``super_admin``) —
-       covers the admin created by ``hugagent onboard`` in local single-node
+       covers the admin created by ``sumc onboard`` in local single-node
        mode and EE-authorized users;
     2. CE + mock single trust domain: when ``JX_EDITION=ce`` and
        ``AUTH_MODE=mock``, allow any authenticated user — in mock mode every

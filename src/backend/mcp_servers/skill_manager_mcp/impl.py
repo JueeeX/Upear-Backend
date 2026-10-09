@@ -17,7 +17,7 @@ import os
 import tarfile
 import tempfile
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -297,7 +297,7 @@ def _register_skill_dir(db, root: Path, *, owner_user_id: Optional[str]) -> Dict
     tags = list(meta.tags or [])
     version = meta.version or "1.0.0"
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     existing = db.query(AdminSkill).filter(AdminSkill.skill_id == install_id).first()
     if existing is not None:
         if existing.owner_user_id != owner_user_id:
@@ -607,7 +607,7 @@ def edit_skill(
         if files_touched:
             changed.append("附属文件")
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         row.skill_content = skill_content
         row.display_name = new_display
         row.description = new_desc

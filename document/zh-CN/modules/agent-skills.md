@@ -2,7 +2,7 @@
 
 > 最后更新：2026-06-11
 
-技能（Agent Skill）是 HugAgentOS 中"教会模型一套作业流程"的标准载体：一个技能 = 一个目录，核心是一份带 frontmatter 的 `SKILL.md` 作业手册，外加任意数量的脚本、模板与参考资料。技能遵循**渐进式披露**（progressive disclosure）原则——系统提示词里只出现技能的名称、描述和目录路径，模型判断需要时才读取完整手册并按手册指挥沙箱执行脚本。
+技能（Agent Skill）是 SUMC 中"教会模型一套作业流程"的标准载体：一个技能 = 一个目录，核心是一份带 frontmatter 的 `SKILL.md` 作业手册，外加任意数量的脚本、模板与参考资料。技能遵循**渐进式披露**（progressive disclosure）原则——系统提示词里只出现技能的名称、描述和目录路径，模型判断需要时才读取完整手册并按手册指挥沙箱执行脚本。
 
 与 [MCP 工具](mcp-tools.md)的分工：MCP 是"程序化的原子能力"（一次调用一个函数），技能是"知识化的工作流"（教模型组合 bash、文件工具和 MCP 完成复杂任务）。办公全家桶（Word/Excel/PPT/PDF）正是从 MCP 形态迁移为技能形态的典型——各技能自带 CLI 引擎在沙箱内执行。
 
@@ -25,11 +25,11 @@
 | 来源 | 目录 | 优先级 | 说明 |
 |---|---|---|---|
 | built-in | `src/backend/skill_bundles/default/` | 0 | 随仓库内置，始终启用 |
-| user | `~/.hugagent/skills/`（`HUGAGENT_USER_SKILLS_DIR`） | 50 | 文件系统用户技能 |
-| admin | `/app/storage/admin_skills/`（`HUGAGENT_ADMIN_SKILLS_DIR`） | 75 | 管理台管理（DB 存储 + 物化） |
-| project | `.hugagent/skills/`（`HUGAGENT_PROJECT_SKILLS_DIR`） | 100 | 项目级覆盖 |
+| user | `~/.sumc/skills/`（`SUMC_USER_SKILLS_DIR`） | 50 | 文件系统用户技能 |
+| admin | `/app/storage/admin_skills/`（`SUMC_ADMIN_SKILLS_DIR`） | 75 | 管理台管理（DB 存储 + 物化） |
+| project | `.sumc/skills/`（`SUMC_PROJECT_SKILLS_DIR`） | 100 | 项目级覆盖 |
 
-每个来源都可用 `HUGAGENT_DISABLE_{ADMIN,USER,PROJECT}_SKILLS=1` 单独禁用。
+每个来源都可用 `SUMC_DISABLE_{ADMIN,USER,PROJECT}_SKILLS=1` 单独禁用。
 
 ## skill_bundles 分层：default 与 marketplace
 

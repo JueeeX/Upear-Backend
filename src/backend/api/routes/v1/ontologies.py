@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
 from api.deps import require_admin, require_ontology_governance, user_can_manage_ontology_governance
@@ -336,7 +336,7 @@ async def get_ontology_metrics(db: Session = Depends(get_db)):
             "acceptance_rate": round(counts["approved"] / decided, 4) if decided else None,
         }
 
-    cutoff = datetime.utcnow() - timedelta(days=30)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
     daily: dict[str, Counter] = defaultdict(Counter)
     recent_events = (
         db.query(OntologyEnforcementEvent.decision, OntologyEnforcementEvent.created_at)
@@ -680,8 +680,8 @@ async def review_ontology_draft(
         raise BadRequestError("该演进草案已经完成审核，不能重复修改裁决")
     row.review_status = "approved" if body.approved else "rejected"
     row.reviewer_comment = body.comment
-    row.reviewed_at = datetime.utcnow()
-    row.updated_at = datetime.utcnow()
+    row.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return success_response(data={"draft_id": row.draft_id, "review_status": row.review_status})
 

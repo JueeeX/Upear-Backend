@@ -1,7 +1,7 @@
 """Deterministic unit check of self_verify's auto-routing: verify.sh exists -> script (rule) decides; absent -> LLM evaluator decides.
 
 Stubs out the sandbox and LLM, only verifying evaluate_iteration's routing and verdict. <1s, does not touch real infrastructure.
-Run: docker exec hugagent-backend python -m scripts._loop_evaluator_route_unit
+Run: docker exec sumc-backend python -m scripts._loop_evaluator_route_unit
 """
 import asyncio
 

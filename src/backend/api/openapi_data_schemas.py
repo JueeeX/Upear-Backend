@@ -175,6 +175,32 @@ DATA_COMPONENTS: Dict[str, Dict[str, Any]] = {
             "updated_at": {"type": "string", "format": "date-time"},
         },
     },
+    "KBDocumentSecurity": {
+        "type": "object",
+        "properties": {
+            "tenant_bound": {"type": "boolean"},
+            "provenance": {
+                "type": "object",
+                "properties": {
+                    "source_type": {"type": "string"},
+                    "checksum_sha256": {"type": ["string", "null"]},
+                },
+            },
+            "content_check": {
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string"},
+                    "file_type_validation": {"type": "string"},
+                    "malware_scan": {"type": "string"},
+                    "prompt_injection_scan": {"type": "string"},
+                },
+            },
+            "indexing_identity": {
+                "type": "object",
+                "properties": {"bound": {"type": "boolean"}},
+            },
+        },
+    },
     "KBDocumentItem": {
         "type": "object",
         "properties": {
@@ -187,6 +213,7 @@ DATA_COMPONENTS: Dict[str, Dict[str, Any]] = {
             "storage_key": {"type": "string"},
             "uploaded_at": {"type": "string", "format": "date-time"},
             "indexing_status": {"type": "string"},
+            "security": {"$ref": "#/components/schemas/KBDocumentSecurity"},
         },
     },
     "KBDocumentDetail": {
@@ -199,6 +226,7 @@ DATA_COMPONENTS: Dict[str, Dict[str, Any]] = {
             "mime_type": {"type": "string"},
             "uploaded_at": {"type": "string", "format": "date-time"},
             "content": {"type": "string"},
+            "security": {"$ref": "#/components/schemas/KBDocumentSecurity"},
         },
     },
     "KBChunkItem": {

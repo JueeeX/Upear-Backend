@@ -124,7 +124,7 @@ def build_oauth_provider(
     actual_storage = storage or OAuthBundleStorage(bundle)
     metadata_raw = bundle.get("client_metadata") or {
         "redirect_uris": ["http://localhost/oauth/callback"],
-        "client_name": "HugAgentOS MCP Client",
+        "client_name": "SUMC MCP Client",
         "grant_types": ["authorization_code", "refresh_token"],
         "response_types": ["code"],
     }
@@ -349,7 +349,7 @@ async def _run_flow(flow: OAuthInstallFlow) -> None:
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],
             scope=" ".join(method.get("scopes") or []) or None,
-            client_name="HugAgentOS MCP Client",
+            client_name="SUMC MCP Client",
         )
         storage = OAuthBundleStorage(
             {

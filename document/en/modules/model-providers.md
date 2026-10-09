@@ -2,7 +2,7 @@
 
 > Last updated: 2026-06-11
 
-HugAgentOS talks to any large-language-model endpoint that speaks the **OpenAI-compatible protocol** (vLLM, Ollama, DashScope, DeepSeek, API gateways, …). Model configuration is database-driven: administrators register *model providers* in the Config console and bind them to *roles* (main reasoning, summarization, embeddings, …); everything flows through `ModelConfigService` with a 30-second TTL cache, so configuration changes take effect without a restart. The `MODEL_URL` / `API_KEY` / `BASE_MODEL_NAME` environment variables remain only as compatibility fallbacks and for injection into MCP subprocesses.
+SUMC talks to any large-language-model endpoint that speaks the **OpenAI-compatible protocol** (vLLM, Ollama, DashScope, DeepSeek, API gateways, …). Model configuration is database-driven: administrators register *model providers* in the Config console and bind them to *roles* (main reasoning, summarization, embeddings, …); everything flows through `ModelConfigService` with a 30-second TTL cache, so configuration changes take effect without a restart. The `MODEL_URL` / `API_KEY` / `BASE_MODEL_NAME` environment variables remain only as compatibility fallbacks and for injection into MCP subprocesses.
 
 ## Configuring models: providers + roles
 

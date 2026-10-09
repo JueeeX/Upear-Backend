@@ -2,7 +2,7 @@
 
 > Last updated: 2026-08-02
 
-HugAgentOS's tool ecosystem is built on [MCP (Model Context Protocol)](https://modelcontextprotocol.io): every category of external capability (internet search, web fetching, database queries, chart generation, ...) is an independent MCP server, all running inside a dedicated `mcp` container that the backend reaches over the streamable-http transport. This design has three payoffs:
+SUMC's tool ecosystem is built on [MCP (Model Context Protocol)](https://modelcontextprotocol.io): every category of external capability (internet search, web fetching, database queries, chart generation, ...) is an independent MCP server, all running inside a dedicated `mcp` container that the backend reaches over the streamable-http transport. This design has three payoffs:
 
 - **Server-level pluggability** — enabling/disabling a capability is one catalog entry or one toggle in the admin console, never a code change;
 - **Failure isolation** — a crashed tool process is restarted by the launcher without touching the backend;

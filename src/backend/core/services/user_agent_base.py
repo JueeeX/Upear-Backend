@@ -89,6 +89,7 @@ class UserAgentBaseService:
             data.pop("ontology_tags", incoming_extra.get("ontology_tags") or []) or []
         )
         incoming_extra["ontology_tags"] = ontology_tags
+        self._normalize_agent_card(incoming_extra)
         data["extra_config"] = incoming_extra
         ensure_ontology_build_valid(
             self.db,
@@ -162,6 +163,7 @@ class UserAgentBaseService:
             or []
         )
         incoming_extra["ontology_tags"] = ontology_tags
+        self._normalize_agent_card(incoming_extra)
         if "extra_config" in data or ontology_tags != list(
             current_extra.get("ontology_tags") or []
         ):
@@ -528,6 +530,20 @@ class UserAgentBaseService:
         return OntologyService(self.db).list_asset_tag_options("subagent")
 
     # ── Helpers ───────────────────────────────────────────────────────
+
+    @staticmethod
+    def _normalize_agent_card(extra_config: Dict[str, Any]) -> None:
+        if "agent_card" not in extra_config:
+            return
+        if extra_config["agent_card"] is None:
+            extra_config.pop("agent_card")
+            return
+        from orchestration.subagents.fsm_contracts import ContractError, normalize_agent_card
+
+        try:
+            extra_config["agent_card"] = normalize_agent_card(extra_config["agent_card"])
+        except (ContractError, TypeError, ValueError) as exc:
+            raise ValueError(f"agent_card: {exc}") from exc
 
     def _validate_create_scope(
         self, user_id: Optional[str], owner_type: str, scope_id: Optional[str]

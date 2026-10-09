@@ -1,7 +1,7 @@
 """Plan mode business logic — CRUD for plans and steps."""
 
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from sqlalchemy.orm import Session
@@ -25,6 +25,7 @@ class PlanService:
         description: str = "",
         task_input: str,
         steps: List[Dict[str, Any]],
+        extra_data: Optional[Dict[str, Any]] = None,
     ) -> Plan:
         """Create a plan with its steps."""
         plan_id = f"plan_{uuid.uuid4().hex[:16]}"
@@ -37,12 +38,13 @@ class PlanService:
             status="draft",
             total_steps=len(steps),
             completed_steps=0,
+            extra_data=dict(extra_data or {}),
         )
         self.db.add(plan)
 
         for i, s in enumerate(steps):
             step = PlanStep(
-                step_id=s.get("step_id") or f"step_{uuid.uuid4().hex[:16]}",
+                step_id=f"{plan_id}_step_{i + 1}",
                 plan_id=plan_id,
                 step_order=i + 1,
                 title=s["title"],
@@ -84,7 +86,7 @@ class PlanService:
         for k, v in kwargs.items():
             if hasattr(plan, k):
                 setattr(plan, k, v)
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(plan)
         return plan
@@ -124,7 +126,7 @@ class PlanService:
         # Create new steps
         for i, s in enumerate(steps):
             step = PlanStep(
-                step_id=s.get("step_id") or f"step_{uuid.uuid4().hex[:16]}",
+                step_id=f"{plan_id}_step_{i + 1}",
                 plan_id=plan_id,
                 step_order=i + 1,
                 title=s["title"],
@@ -137,7 +139,7 @@ class PlanService:
             self.db.add(step)
 
         plan.total_steps = len(steps)
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(plan)
         return plan
@@ -164,6 +166,17 @@ class PlanService:
         # Include agent name map if stored in plan metadata
         if isinstance(extra, dict) and extra.get("agent_name_map"):
             result["agent_name_map"] = extra["agent_name_map"]
+        if isinstance(extra, dict):
+            for key in (
+                "fsm",
+                "fsm_runtime",
+                "fsm_validation",
+                "plan_hash",
+                "agent_registry_hash",
+                "agent_registry",
+            ):
+                if key in extra:
+                    result[key] = extra[key]
         return result
 
     @staticmethod
@@ -199,6 +212,17 @@ class PlanService:
         automation-triggered plan execution (routing/automation_scheduler.py);
         drives the frontend PlanCard(mode="complete") rendering.
         """
+        extra = plan.extra_data if isinstance(plan.extra_data, dict) else {}
+        fsm_snapshot = {}
+        if extra.get("fsm"):
+            fsm_snapshot = {
+                "fsm": extra["fsm"],
+                "fsm_runtime": extra.get("fsm_runtime"),
+                "fsm_validation": extra.get("fsm_validation"),
+                "plan_hash": extra.get("plan_hash"),
+                "agent_registry_hash": extra.get("agent_registry_hash"),
+                "agent_registry": extra.get("agent_registry"),
+            }
         return {
             "mode": "complete",
             "title": plan.title,
@@ -220,4 +244,5 @@ class PlanService:
             "completed_steps": completed_steps,
             "total_steps": total_steps,
             "result_text": result_text,
+            **fsm_snapshot,
         }

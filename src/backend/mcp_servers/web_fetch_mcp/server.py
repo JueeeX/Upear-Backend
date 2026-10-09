@@ -11,7 +11,7 @@ from typing import Any, Dict
 
 from mcp.server import FastMCP
 
-mcp = FastMCP("hugagent-web-fetch")
+mcp = FastMCP("sumc-web-fetch")
 
 
 @mcp.tool()

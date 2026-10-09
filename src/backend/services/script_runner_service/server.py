@@ -34,7 +34,7 @@ except ImportError:  # Windows does not provide the POSIX resource module.
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("script-runner")
 
-app = FastAPI(title="HugAgentOS Script Runner", docs_url=None, redoc_url=None)
+app = FastAPI(title="SUMC Script Runner", docs_url=None, redoc_url=None)
 
 # ── Configuration ──
 MAX_TIMEOUT = int(os.getenv("SCRIPT_MAX_TIMEOUT", "120"))
@@ -43,7 +43,7 @@ MAX_MEMORY_MB = int(os.getenv("SCRIPT_MAX_MEMORY_MB", "256"))
 # Workspace root. In the Docker sidecar this stays the container-absolute
 # ``/workspace`` (a mounted tmpfs). In the no-Docker local profile the runner is
 # a plain host subprocess, so the CLI points it at a real host dir such as
-# ``~/.hugagent/workspace`` via ``SCRIPT_RUNNER_WORKSPACE``. Everything under here
+# ``~/.sumc/workspace`` via ``SCRIPT_RUNNER_WORKSPACE``. Everything under here
 # is created on first use; ``_validate_workspace_path`` confines writes to it.
 WORKSPACE_ROOT = os.getenv("SCRIPT_RUNNER_WORKSPACE", "/workspace")
 MAX_OUTPUT_BYTES = 1024 * 1024  # 1MB
@@ -197,7 +197,7 @@ INTERPRETERS = {
     # Use the running venv on local Windows/macOS/Linux installations.  A bare
     # ``python3`` is not installed on a standard Windows machine.
     "python": [sys.executable, "-u"],
-    "bash": [_BASH_EXECUTABLE or "hugagent-git-bash-not-installed"],
+    "bash": [_BASH_EXECUTABLE or "sumc-git-bash-not-installed"],
     "javascript": [shutil.which("node") or "node"],
 }
 
@@ -267,7 +267,7 @@ _LOCAL_SKILL_CLI_IDS = ("word-editing", "excel-editing", "ppt-design", "pdf-edit
 def _local_safe_path_entries() -> list[str]:
     """Return trusted executable directories for the no-Docker runner.
 
-    The quick installer runs the backend from ``~/.hugagent/venv`` while the
+    The quick installer runs the backend from ``~/.sumc/venv`` while the
     subprocess sandbox intentionally starts from a clean PATH. Include that
     venv explicitly so skill shims use the same Python dependencies as the
     server, then expose each materialized built-in Office CLI without copying
@@ -760,7 +760,7 @@ async def _execute_subprocess(cmd: list, stdin_data: str, timeout: int, cwd: str
                 isinstance(e, FileNotFoundError)
                 and os.name == "nt"
                 and cmd
-                and Path(str(cmd[0])).stem.lower() in {"bash", "hugagent-git-bash-not-installed"}
+                and Path(str(cmd[0])).stem.lower() in {"bash", "sumc-git-bash-not-installed"}
             ):
                 detail = "Windows 本机未找到 Bash；请安装 Git for Windows 后重启桌面客户端"
             return {"stdout": "", "stderr": detail, "exit_code": -1}

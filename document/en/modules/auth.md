@@ -2,7 +2,7 @@
 
 > Last updated: July 21, 2026
 
-The authentication and permission system in HugAgentOS covers three independent tracks: **end-user authentication** (local accounts / mock SSO / enterprise SSO / personal API keys), **administrative credentials** (the `ADMIN_TOKEN` and `CONFIG_TOKEN` Bearer tokens), and **resource-level permissions** (fine-grained access control over team files, projects, and chat shares). The implementation lives in `src/backend/core/auth/`, with the FastAPI dependency-injection entry points in `src/backend/api/deps.py`.
+The authentication and permission system in SUMC covers three independent tracks: **end-user authentication** (local accounts / mock SSO / enterprise SSO / personal API keys), **administrative credentials** (the `ADMIN_TOKEN` and `CONFIG_TOKEN` Bearer tokens), and **resource-level permissions** (fine-grained access control over team files, projects, and chat shares). The implementation lives in `src/backend/core/auth/`, with the FastAPI dependency-injection entry points in `src/backend/api/deps.py`.
 
 The Community Edition (CE) is built around a single-user / single-tenant model; organization-scale capabilities such as teams, invite codes, and enterprise SSO belong to the **Enterprise Edition (EE)** and are double-gated by the route registry (`api/routes/v1/__init__.py`) and license feature flags — see [Editions & Licensing](../editions/overview.md).
 
@@ -64,7 +64,7 @@ ontology validation.
   `users_shadow.metadata`. Refreshing or signing in again doesn't repeat a
   completed setup flow.
 
-The terminal-based `hugagent onboard` command already configures the account
+The terminal-based `sumc onboard` command already configures the account
 and model. After it finishes successfully, it writes the same completion
 marker so the browser doesn't repeat the setup.
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.db.models import Artifact, UserFolder
@@ -214,7 +214,7 @@ class UserFolderService:
             return FolderResult(False, "同级已有同名文件夹")
 
         folder.name = cleaned
-        folder.updated_at = datetime.utcnow()
+        folder.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
 
         self.audit.create(
@@ -277,7 +277,7 @@ class UserFolderService:
             return FolderResult(False, "目标位置已有同名文件夹")
 
         folder.parent_folder_id = new_parent_id
-        folder.updated_at = datetime.utcnow()
+        folder.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
 
         self.audit.create(
@@ -318,7 +318,7 @@ class UserFolderService:
             return FolderResult(False, "文件夹不存在"), 0
 
         ids_to_delete = self._collect_descendants(folder_id)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         affected = (
             self.db.query(Artifact)
@@ -396,7 +396,7 @@ class UserFolderService:
                 return FolderResult(False, "目标文件夹不存在")
 
         artifact.user_folder_id = target_folder_id
-        artifact.updated_at = datetime.utcnow()
+        artifact.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
 
         self.audit.create(

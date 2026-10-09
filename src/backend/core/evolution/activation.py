@@ -616,6 +616,33 @@ def materialise_skill_candidate(
                 rules_only=rules_only,
             )
 
+        # SafeHarness checkpoint before anything reaches the runtime. The body
+        # is LLM-written from conversation-derived evidence, so this is where a
+        # stored injection would resurface as agent-readable instructions.
+        # Fail-closed: a block (or an unusable judge) aborts materialisation.
+        from core.evolution.content_gate import inspect_materialisation_content
+
+        gate = inspect_materialisation_content(
+            content,
+            context={
+                "tenant_id": tenant_id,
+                "run_id": candidate_id,
+                "trace_id": candidate_id,
+                "agent_id": f"evolution:{approver}",
+            },
+        )
+        if not gate.allowed:
+            logger.warning(
+                "[activation] candidate %s blocked by content gate: %s (%s)",
+                candidate_id,
+                gate.reason_code,
+                gate.detail,
+            )
+            raise ActivationError(
+                "content_blocked",
+                f"技能内容未通过 SafeHarness 注入检查（{gate.reason_code}），拒绝物化",
+            )
+
         previous = _capture_previous(db, skill_id)
 
         # One release in flight per asset. Two concurrent ramps on the same skill

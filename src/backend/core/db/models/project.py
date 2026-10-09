@@ -45,9 +45,9 @@ class Project(ProjectEditionFields, Base):
     icon_color = Column(String(20))
     pinned = Column(Boolean, nullable=False, default=False)
     extra_data = Column("metadata", JSONType, default={})
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_activity_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    last_activity_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     deleted_at = Column(TIMESTAMP(timezone=True))
 
     __table_args__ = (
@@ -72,6 +72,6 @@ class ProjectFavorite(Base):
     user_id = Column(
         String(64), ForeignKey("users_shadow.user_id", ondelete="CASCADE"), primary_key=True
     )
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (Index("idx_project_favorites_user", "user_id"),)

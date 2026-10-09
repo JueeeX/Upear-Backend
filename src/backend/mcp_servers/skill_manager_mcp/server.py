@@ -17,7 +17,7 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from mcp_servers.skill_manager_mcp import impl
 
-mcp = FastMCP("hugagent-skill-manager")
+mcp = FastMCP("sumc-skill-manager")
 
 _HDR_USER = "x-current-user-id"
 

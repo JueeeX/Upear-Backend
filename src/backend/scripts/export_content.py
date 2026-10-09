@@ -30,7 +30,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     print("=" * 50)
-    print("HugAgentOS 数据导出")
+    print("SUMC 数据导出")
     print("=" * 50)
 
     # ── 1. Release notes ─────────────────────────────────────────────────
@@ -268,7 +268,7 @@ def main() -> None:
             catalog_export["catalog_overrides"] = overrides
             print(f"     catalog_overrides: {len(overrides)} 条")
 
-        catalog_export["exported_at"] = datetime.utcnow().isoformat() + "Z"
+        catalog_export["exported_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z"
 
         catalog_file = output_dir / f"catalog_snapshot_{timestamp}.json"
         _write_json(catalog_file, catalog_export)

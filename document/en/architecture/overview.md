@@ -2,7 +2,7 @@
 
 > Last updated: 2026-07-19
 
-HugAgentOS is an enterprise-grade AgentOS with both a lightweight local profile and a fully containerized production profile. A React single-page application provides the user experience, an async FastAPI service runs the backend, AgentScope 2.0's ReActAgent supplies the agent runtime, independent MCP (Model Context Protocol) processes expose tools, and pluggable sandbox providers isolate code execution. The platform ships in two editions — an open-source Community Edition (CE) and a commercial Enterprise Edition (EE) — built from a single codebase and separated by three runtime seams: the router registry, the table-creation boundary, and license feature gates (see [Editions](../editions/overview.md)).
+SUMC is an enterprise-grade AgentOS with both a lightweight local profile and a fully containerized production profile. A React single-page application provides the user experience, an async FastAPI service runs the backend, AgentScope 2.0's ReActAgent supplies the agent runtime, independent MCP (Model Context Protocol) processes expose tools, and pluggable sandbox providers isolate code execution. The platform ships in two editions — an open-source Community Edition (CE) and a commercial Enterprise Edition (EE) — built from a single codebase and separated by three runtime seams: the router registry, the table-creation boundary, and license feature gates (see [Editions](../editions/overview.md)).
 
 This page describes the system from five angles: the layered architecture, the ontology-grounded enterprise trust plane, the full lifecycle of one chat request, the container topology, and the key design decisions. For deeper dives, see [Backend Architecture](./backend.md), [Frontend Architecture](./frontend.md), and the [Data Model](./data-model.md).
 
@@ -71,7 +71,7 @@ Dependencies point strictly downward: `api → orchestration → core`, and with
 
 ## Ontology-Grounded Enterprise Trust Plane
 
-HugAgentOS extends the runtime into a trustworthy enterprise AgentOS by treating
+SUMC extends the runtime into a trustworthy enterprise AgentOS by treating
 domain ontology as an executable control plane rather than only a knowledge
 store. A versioned Domain Pack can progress from controlled concepts and
 relationships to invariants, Action contracts, workflows, roles, permissions,
@@ -189,17 +189,17 @@ The frontend's `src/frontend/src/hooks/useStreaming.ts` dispatches on `type` and
 
 | Service | Container | Ports | Notes |
 |---|---|---|---|
-| `frontend` | hugagent-frontend | `3002:80` | Nginx: static assets + `/api` reverse proxy |
-| `backend` | hugagent-backend | `3001` | FastAPI main service |
-| `mcp` | hugagent-mcp | dedicated internal ports | 9 MCP servers as long-running streamable-http processes (7 general CE tools plus 2 EE industry tools) |
-| `postgres` | hugagent-postgres | `5432` | Primary database |
-| `redis` | hugagent-redis | `6379` | Sessions / caching |
-| `script-runner` (profile `script_runner`) | hugagent-script-runner | internal | Lightweight script-execution sidecar (no DB/secret access) |
-| `opensandbox` + `opensandbox-config-init` (profile `opensandbox`) | hugagent-opensandbox | internal | Persistent sandbox (Enterprise Edition, EE) |
-| `etcd` / `minio` / `milvus` (profile `mem0`) | hugagent-etcd etc. | internal | L2 vector-memory infrastructure |
-| `neo4j` (profile `mem0`) | hugagent-neo4j | `7474/7687` | L3 graph memory (optional) |
+| `frontend` | sumc-frontend | `3002:80` | Nginx: static assets + `/api` reverse proxy |
+| `backend` | sumc-backend | `3001` | FastAPI main service |
+| `mcp` | sumc-mcp | dedicated internal ports | 9 MCP servers as long-running streamable-http processes (7 general CE tools plus 2 EE industry tools) |
+| `postgres` | sumc-postgres | `5432` | Primary database |
+| `redis` | sumc-redis | `6379` | Sessions / caching |
+| `script-runner` (profile `script_runner`) | sumc-script-runner | internal | Lightweight script-execution sidecar (no DB/secret access) |
+| `opensandbox` + `opensandbox-config-init` (profile `opensandbox`) | sumc-opensandbox | internal | Persistent sandbox (Enterprise Edition, EE) |
+| `etcd` / `minio` / `milvus` (profile `mem0`) | sumc-etcd etc. | internal | L2 vector-memory infrastructure |
+| `neo4j` (profile `mem0`) | sumc-neo4j | `7474/7687` | L3 graph memory (optional) |
 
-All services share the `hugagent-network` network; named volumes such as `postgres_data` persist across rebuilds. See [Docker Compose deployment](../deployment/docker-compose.md) for details.
+All services share the `sumc-network` network; named volumes such as `postgres_data` persist across rebuilds. See [Docker Compose deployment](../deployment/docker-compose.md) for details.
 
 ## Key Design Decisions
 

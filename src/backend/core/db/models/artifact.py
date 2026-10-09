@@ -54,8 +54,8 @@ class Artifact(ArtifactEditionFields, Base):
     summary = Column(Text, nullable=True)
     parsed_at = Column(TIMESTAMP(timezone=True), nullable=True)
     parse_error = Column(Text, nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     deleted_at = Column(TIMESTAMP(timezone=True))
 
     # Relationships
@@ -88,5 +88,5 @@ class ContentBlock(Base):
 
     id = Column(String(64), primary_key=True)  # e.g. 'docs_updates', 'docs_capabilities'
     payload = Column(JSONType, nullable=False, default=[])
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_by = Column(String(64), nullable=True)

@@ -4,7 +4,7 @@
 
 面向**个人单机尝鲜**与**二次开发体验**的极简部署方式：一条命令装好，终端引导设管理员、配模型，随后单进程起服务并打开浏览器。全程**零 Docker、零 PostgreSQL、零 Redis**。
 
-技术形态：单进程 uvicorn（同时托管前端静态资源与 API）+ SQLite + 进程内 fakeredis + 子进程 MCP / 沙箱。数据全部落在 `~/.hugagent/`。
+技术形态：单进程 uvicorn（同时托管前端静态资源与 API）+ SQLite + 进程内 fakeredis + 子进程 MCP / 沙箱。数据全部落在 `~/.sumc/`。
 
 > ⚠️ **定位说明**：本方式是**单进程单用户**形态，为个人试用与开发体验而设，**不适合多人协作或生产**。团队 / 生产请用 [Docker Compose 部署](docker-compose.md)。两种形态并存，互不影响。
 
@@ -31,20 +31,20 @@
 在任意目录运行公开安装器：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash
 ```
 
 安装脚本会：
 
 1. 校验 Python ≥ 3.11、Node.js ≥ 20、npm、Git，以及 Linux 需要源码构建 `ripgrep` 时所需的 Rust；
-2. 把 HugAgentOS 克隆或快进更新到 `~/.hugagent/source`；
+2. 把 SUMC 克隆或快进更新到 `~/.sumc/source`；
 3. 检测可选的 LibreOffice；缺失时说明不可用能力并询问是否立即安装，跳过或安装失败不会阻断其余功能；
-4. 在 `~/.hugagent/venv` 创建虚拟环境（检测到 [uv](https://github.com/astral-sh/uv) 时使用 uv，否则使用 `python -m venv`），并自动重建上次中断留下的不完整环境；
-5. 安装 `requirements.txt`、`hugagent` 控制台命令、内置 Agent Skills 的 Python/Node.js 依赖，以及可选的本地知识库依赖；
+4. 在 `~/.sumc/venv` 创建虚拟环境（检测到 [uv](https://github.com/astral-sh/uv) 时使用 uv，否则使用 `python -m venv`），并自动重建上次中断留下的不完整环境；
+5. 安装 `requirements.txt`、`sumc` 控制台命令、内置 Agent Skills 的 Python/Node.js 依赖，以及可选的本地知识库依赖；
 6. 把前端构建到 `src/frontend/dist`；
 7. 进入交互式首次配置向导。
 
-> 把命令加入 PATH 方便日常使用：`export PATH="$HOME/.hugagent/venv/bin:$PATH"`。
+> 把命令加入 PATH 方便日常使用：`export PATH="$HOME/.sumc/venv/bin:$PATH"`。
 
 ## 首次引导（onboard）
 
@@ -56,11 +56,11 @@ curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh
 
 配好的对话模型会一次指派给全部 7 个对话角色。除此之外还有两类可单独配置的模型（都可跳过）：
 
-**第 2b 步（可选）· 向量 / 索引模型（embedding）**——用于**自建向量知识库**检索与 L2 记忆向量化。填 embedding 端点（`base_url` / 模型名 / `api_key`）。直接回车可跳过，但知识库和永久记忆都会保持关闭；之后可在网页「设置 → 模型服务」补配并指派 embedding 角色。向量存储用嵌入式 **Milvus Lite**（单文件落 `~/.hugagent/milvus.db`，无需服务端）。
+**第 2b 步（可选）· 向量 / 索引模型（embedding）**——用于**自建向量知识库**检索与 L2 记忆向量化。填 embedding 端点（`base_url` / 模型名 / `api_key`）。直接回车可跳过，但知识库和永久记忆都会保持关闭；之后可在网页「设置 → 模型服务」补配并指派 embedding 角色。向量存储用嵌入式 **Milvus Lite**（单文件落 `~/.sumc/milvus.db`，无需服务端）。
 
 **第 2c 步（可选）· 重排模型（reranker）**——对知识库混合检索结果做重排增强，检索更准。填 reranker 端点（`base_url` / 模型名 / `api_key`），直接回车跳过（不配则检索照常、只是不重排）。
 
-> HugAgentOS 共有 9 个模型角色：7 个对话角色（主智能体 / 摘要 / 追问 / 记忆 / 图表 / 计划 / 代码执行，共用上面的对话模型）+ 向量（embedding）+ 重排（reranker）。onboard 覆盖全部三类；登录后还可在网页「设置 → 系统管理 → 模型服务」为单个角色指派不同模型。
+> SUMC 共有 9 个模型角色：7 个对话角色（主智能体 / 摘要 / 追问 / 记忆 / 图表 / 计划 / 代码执行，共用上面的对话模型）+ 向量（embedding）+ 重排（reranker）。onboard 覆盖全部三类；登录后还可在网页「设置 → 系统管理 → 模型服务」为单个角色指派不同模型。
 
 **第 3 步 · 插件初始化**——全新安装会自动安装并启用
 `automation`（定时任务）、`skill-manager`（技能管理）和 `sites`
@@ -78,7 +78,7 @@ curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh
 引导末尾会打印**本机能力概览**（Node.js / pandoc / LibreOffice 是否就绪，对应 React 建站 / Word 转换 / PPT 和 Word 在线预览），随后自动起服务并打开 `http://127.0.0.1:3001/`。
 
 > **警告：** 服务默认只监听 `127.0.0.1`。若服务器确实需要接受远程连接，请使用
-> `hugagent serve --host 0.0.0.0 --port 3001 --no-browser`，并先配置强管理员密码、
+> `sumc serve --host 0.0.0.0 --port 3001 --no-browser`，并先配置强管理员密码、
 > 防火墙和 HTTPS。不要在不受信任的网络中直接暴露服务。
 
 ### 非交互安装（自动化 / CI）
@@ -86,7 +86,7 @@ curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh
 `onboard` 支持旁路参数，用于脚本化安装：
 
 ```bash
-hugagent onboard \
+sumc onboard \
   --username admin --password '<强密码>' \
   --model-base-url https://api.deepseek.com/v1 \
   --model-api-key '<your-key>' --model-name deepseek-chat \
@@ -111,15 +111,15 @@ hugagent onboard \
 ## 日常使用
 
 ```bash
-hugagent            # 已初始化 → 起服务并打开浏览器；未初始化 → 自动进引导
-hugagent serve      # 显式起服务（--host 改监听地址，--port 改端口，--no-browser 不开浏览器）
-hugagent onboard    # 重跑引导 / 改配置
-hugagent doctor     # 环境自检（Python 版本、端口占用、数据目录、前端构建、依赖等）
+sumc            # 已初始化 → 起服务并打开浏览器；未初始化 → 自动进引导
+sumc serve      # 显式起服务（--host 改监听地址，--port 改端口，--no-browser 不开浏览器）
+sumc onboard    # 重跑引导 / 改配置
+sumc doctor     # 环境自检（Python 版本、端口占用、数据目录、前端构建、依赖等）
 ```
 
 ## 数据目录
 
-所有状态集中在 `~/.hugagent/`（可用环境变量 `HUGAGENT_HOME` 改位置）：
+所有状态集中在 `~/.sumc/`（可用环境变量 `SUMC_HOME` 改位置）：
 
 | 路径 | 内容 |
 |---|---|
@@ -130,7 +130,7 @@ hugagent doctor     # 环境自检（Python 版本、端口占用、数据目录
 | `node/` | PPT/PDF 等 Agent Skills 使用的本地 Node.js 包与 Chromium |
 | `logs/` | 后端日志 |
 
-> 卸载即删除 `~/.hugagent/` 目录（数据一并清除）。
+> 卸载即删除 `~/.sumc/` 目录（数据一并清除）。
 
 ## 能力边界
 
@@ -138,7 +138,7 @@ hugagent doctor     # 环境自检（Python 版本、端口占用、数据目录
 
 **开箱可用**
 - **核心对话 + ReAct 工具编排 + 计划模式 + 断线续播 + 引用标注**。
-- **代码执行（bash / Python）**：沙箱以宿主子进程执行（无容器隔离），使用受限环境变量、执行超时和进程组回收兜底；文件工具（读/写/编辑）与产物暂存（`sandbox_put/get_artifact`）均落在 `~/.hugagent/workspace/`。信任边界是「用户在自己机器上跑自己的助手」，与多租户服务器不同。
+- **代码执行（bash / Python）**：沙箱以宿主子进程执行（无容器隔离），使用受限环境变量、执行超时和进程组回收兜底；文件工具（读/写/编辑）与产物暂存（`sandbox_put/get_artifact`）均落在 `~/.sumc/workspace/`。信任边界是「用户在自己机器上跑自己的助手」，与多租户服务器不同。
 - **内置技能**（word / excel / ppt / pdf 编辑等 5 个）：安装时同步到工作区，沙箱可直接调用其脚本。
 - **内置工具型 MCP**：互联网搜索 / 网页抓取 / 批量执行 / 知识库检索等——服务本身正常运行（部分需配置对应外部服务或密钥才有数据，见下）。
 - **数据可视化（图表）**：安装脚本会装 matplotlib；装上即可用。
@@ -151,8 +151,8 @@ hugagent doctor     # 环境自检（Python 版本、端口占用、数据目录
   启动时会经过工具列表校验，本地地址统一使用 `127.0.0.1`。
 
 **需额外条件**
-- **对话建站的 React 工程构建**：装 `sites` 插件后即支持——onboard 把 React 工程模板铺入 `~/.hugagent/site-template/`，首次建站时按需 `npm install`。**需宿主装有 Node.js ≥ 20 + npm**；缺则只能手写静态站点。建站链路的 `/workspace` 路径已参数化到本地工作区（静态站与 Docker 版一致）。
-- **办公文档转换与预览**：PPT/Word 在线预览和 Office 转 PDF 需要 LibreOffice。一键安装器检测到缺失时会说明影响并询问是否安装；选择跳过不影响文档生成、下载和其它核心功能。非交互安装可设 `HUGAGENT_INSTALL_LIBREOFFICE=1` 自动安装，或设为 `0` 明确跳过。Word 的其它转换还会用到 `pandoc`，Excel 读写仍可走 openpyxl。
+- **对话建站的 React 工程构建**：装 `sites` 插件后即支持——onboard 把 React 工程模板铺入 `~/.sumc/site-template/`，首次建站时按需 `npm install`。**需宿主装有 Node.js ≥ 20 + npm**；缺则只能手写静态站点。建站链路的 `/workspace` 路径已参数化到本地工作区（静态站与 Docker 版一致）。
+- **办公文档转换与预览**：PPT/Word 在线预览和 Office 转 PDF 需要 LibreOffice。一键安装器检测到缺失时会说明影响并询问是否安装；选择跳过不影响文档生成、下载和其它核心功能。非交互安装可设 `SUMC_INSTALL_LIBREOFFICE=1` 自动安装，或设为 `0` 明确跳过。Word 的其它转换还会用到 `pandoc`，Excel 读写仍可走 openpyxl。
 - **PDF / Word 文件解析入库**：PDF 需配置外部解析服务（onboard 第 4 步填 API URL，或 `FILE_PARSER_API_URL`）；Word 需宿主 `pandoc` / `libreoffice`。Excel / CSV / PPTX / 文本为进程内解析、开箱可用。
 **不可用**
 - **L3 图谱记忆**：需 Neo4j，无嵌入式替代。
@@ -166,14 +166,14 @@ hugagent doctor     # 环境自检（Python 版本、端口占用、数据目录
 
 | 现象 | 处理 |
 |---|---|
-| 起服务报端口被占用 | `hugagent serve --port <其他端口>`；或先 `hugagent doctor` 查占用 |
+| 起服务报端口被占用 | `sumc serve --port <其他端口>`；或先 `sumc doctor` 查占用 |
 | 网页打开是一段 JSON 而非应用 | 前端未构建：`cd src/frontend && npm run build`，或设 `FRONTEND_DIST_DIR` 指向已构建的 `dist` |
-| 登录报模型不可用 | 重跑 `hugagent onboard` 重配模型（引导会实测连通性） |
-| 启动日志反复出现 `AllocTimestamp` / `Method not implemented` | 停止当前服务并重新运行公开一键安装器。安装器会把 PyMilvus 与 Milvus Lite 校准到兼容版本，不会删除 `~/.hugagent/milvus.db`。 |
-| 想换模型 / 改配置 | 重跑 `hugagent onboard`，或登录后到「设置 → 系统管理 → 模型服务 / 服务配置」调整 |
-| PPT/Word 预览提示 LibreOffice 未安装 | 重新运行一键安装器并在提示时选择安装；Debian/Ubuntu 也可执行 `sudo apt-get update && sudo apt-get install -y libreoffice-impress libreoffice-writer libreoffice-calc`，然后重启 HugAgentOS |
-| 技能执行反复出现 `fork: Resource temporarily unavailable` | 停止当前服务，重新运行公开安装器完成升级，再启动 `hugagent`。旧版本若留下子进程，先检查当前用户的进程，必要时注销当前登录会话后重试。 |
-| 环境是否就绪 | `hugagent doctor` 一次性自检 |
+| 登录报模型不可用 | 重跑 `sumc onboard` 重配模型（引导会实测连通性） |
+| 启动日志反复出现 `AllocTimestamp` / `Method not implemented` | 停止当前服务并重新运行公开一键安装器。安装器会把 PyMilvus 与 Milvus Lite 校准到兼容版本，不会删除 `~/.sumc/milvus.db`。 |
+| 想换模型 / 改配置 | 重跑 `sumc onboard`，或登录后到「设置 → 系统管理 → 模型服务 / 服务配置」调整 |
+| PPT/Word 预览提示 LibreOffice 未安装 | 重新运行一键安装器并在提示时选择安装；Debian/Ubuntu 也可执行 `sudo apt-get update && sudo apt-get install -y libreoffice-impress libreoffice-writer libreoffice-calc`，然后重启 SUMC |
+| 技能执行反复出现 `fork: Resource temporarily unavailable` | 停止当前服务，重新运行公开安装器完成升级，再启动 `sumc`。旧版本若留下子进程，先检查当前用户的进程，必要时注销当前登录会话后重试。 |
+| 环境是否就绪 | `sumc doctor` 一次性自检 |
 
 ## 相关源码
 

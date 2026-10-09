@@ -1,13 +1,15 @@
-"""Single-tenant knowledge-base authorization for the community edition."""
+"""Tenant-scoped knowledge-base authorization."""
 
 from __future__ import annotations
 
-from typing import Dict, List, Literal, Set
+import re
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 from sqlalchemy.orm import Session
 
 KBLevel = Literal["none", "view", "edit", "admin"]
 _RANK = {"none": 0, "view": 1, "edit": 2, "admin": 3}
+_IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,255}")
 
 
 def has_kb_permission(current: str, required: str) -> bool:
@@ -26,29 +28,58 @@ def level_to_caps(level: str) -> Dict[str, bool]:
     }
 
 
-def _is_super_admin(db: Session, user_id: str) -> bool:
+def resolve_user_kb_context(db: Session, user_id: str) -> Optional[Tuple[str, str]]:
+    """Return explicit tenant and role metadata; never synthesize an authority scope."""
     from core.db.models import UserShadow
 
-    row = db.query(UserShadow.extra_data).filter(UserShadow.user_id == user_id).first()
-    metadata = row[0] if row and isinstance(row[0], dict) else {}
-    return metadata.get("role") == "super_admin"
+    if not user_id:
+        return None
+    shadow = db.get(UserShadow, str(user_id))
+    metadata = shadow.extra_data if shadow and isinstance(shadow.extra_data, dict) else {}
+    tenant_id = metadata.get("tenant_id")
+    role = metadata.get("role")
+    if not isinstance(tenant_id, str) or _IDENTIFIER.fullmatch(tenant_id.strip()) is None:
+        return None
+    if not isinstance(role, str) or _IDENTIFIER.fullmatch(role.strip()) is None:
+        return None
+    return tenant_id.strip(), role.strip()
+
+
+def resolve_space_kb_tenant_id(db: Session, space: Any) -> Optional[str]:
+    """Resolve a space tenant from authoritative metadata or its legacy owner identity."""
+    metadata = space.extra_data if isinstance(getattr(space, "extra_data", None), dict) else {}
+    tenant_id = metadata.get("tenant_id")
+    binding = metadata.get("tenant_binding")
+    if (
+        isinstance(binding, dict)
+        and binding.get("version") == 1
+        and binding.get("source") == "authoritative_user_context"
+        and isinstance(tenant_id, str)
+        and _IDENTIFIER.fullmatch(tenant_id.strip()) is not None
+    ):
+        return tenant_id.strip()
+    owner_context = resolve_user_kb_context(db, str(getattr(space, "user_id", "")))
+    return owner_context[0] if owner_context else None
 
 
 def get_accessible_local_kb_levels(db: Session, user_id: str) -> Dict[str, KBLevel]:
     from core.db.models import KBSpace
 
-    if not user_id:
+    context = resolve_user_kb_context(db, user_id)
+    if context is None:
         return {}
-    is_admin = _is_super_admin(db, user_id)
+    tenant_id, role = context
+    is_admin = role == "super_admin"
     rows = (
-        db.query(KBSpace.kb_id, KBSpace.visibility, KBSpace.user_id)
+        db.query(KBSpace)
         .filter(KBSpace.deleted_at.is_(None))
         .all()
     )
     return {
-        kb_id: "admin" if is_admin or owner == user_id else "view"
-        for kb_id, visibility, owner in rows
-        if is_admin or owner == user_id or is_shared_visibility(visibility)
+        space.kb_id: "admin" if is_admin or space.user_id == user_id else "view"
+        for space in rows
+        if resolve_space_kb_tenant_id(db, space) == tenant_id
+        and (is_admin or space.user_id == user_id or is_shared_visibility(space.visibility))
     }
 
 
@@ -79,4 +110,6 @@ __all__ = [
     "is_shared_visibility",
     "level_to_caps",
     "resolve_local_kb_level",
+    "resolve_space_kb_tenant_id",
+    "resolve_user_kb_context",
 ]

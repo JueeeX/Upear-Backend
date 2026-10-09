@@ -14,7 +14,7 @@ from typing import Any, Dict, List
 
 from mcp.server import FastMCP
 
-mcp = FastMCP("hugagent-batch-runner")
+mcp = FastMCP("sumc-batch-runner")
 
 
 @mcp.tool()

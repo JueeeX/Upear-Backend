@@ -1,7 +1,7 @@
 # Community vs. Enterprise Edition
 > Last updated: 2026-07-22
 
-HugAgentOS is distributed under an **open-core** model, following the established practice of open-source agent platforms such as Dify and FastGPT:
+SUMC is distributed under an **open-core** model, following the established practice of open-source agent platforms such as Dify and FastGPT:
 
 - **Community Edition (CE)** — open source and free. A single person on a single machine gets a fully self-contained platform: complete chat, knowledge-base RAG, sub-agents, general-purpose tools, automation, batch execution, data canvas, and three-layer personal memory.
 - **Enterprise Edition (EE)** — adds the **organization-scale** capabilities on top of CE: team collaboration, SSO, audit & compliance, billing, industry data tools, admin consoles, and white-labeling. Licensed by annual subscription via an offline license file.
@@ -16,7 +16,7 @@ This repository (the main repo) is the single development source of truth for th
 python scripts/build_ce.py        # generates dist/ce/ (the CE derived tree)
 ```
 
-EE-only code is **physically absent** from the derived tree (the whitelist iron rule). CE and EE share the `HugAgentOS` display brand and retain `hugagent` as the technical identifier; see [CE Build Pipeline](build-ce.md) for derivation details.
+EE-only code is **physically absent** from the derived tree (the whitelist iron rule). CE and EE share the `SUMC` display brand and retain `sumc` as the technical identifier; see [CE Build Pipeline](build-ce.md) for derivation details.
 
 ```
 Main repo (EE, this repository)

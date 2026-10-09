@@ -7,7 +7,7 @@ decomposition, reviewer, sandbox read/write and git, feeds only fixed verdicts, 
 all-passed completed / a single requirement exhausting its attempts blocked→budget_exhausted / done rejected
 by the second review not flipping the card. Completes in <1s.
 
-Run: docker exec hugagent-backend python -m scripts._loop_convergence_unit
+Run: docker exec sumc-backend python -m scripts._loop_convergence_unit
 """
 import asyncio
 

@@ -71,8 +71,8 @@ class ScheduledTask(Base):
     description = Column(Text, default="")
     extra_data = Column("metadata", JSONType, default={})
     sidebar_activated = Column(Boolean, default=False, nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     user = relationship("UserShadow")
@@ -162,7 +162,7 @@ class PersonaDistillJob(Base):
     saved_skill_id = Column(String(100))  # AdminSkill.skill_id after confirmed persistence
     cost_usd = Column(Numeric(8, 4), default=0)
     error = Column(Text)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     started_at = Column(TIMESTAMP(timezone=True))
     finished_at = Column(TIMESTAMP(timezone=True))
 
@@ -199,8 +199,8 @@ class BatchPlan(Base):
     max_retries = Column(Integer, nullable=False, default=2)
     status = Column(String(20), nullable=False, default="pending")
     progress = Column(JSONType, default=dict)  # {done, success, failed}
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     expires_at = Column(TIMESTAMP(timezone=True))  # +24h, cleaned up periodically
 
     __table_args__ = (

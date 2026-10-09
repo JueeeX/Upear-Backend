@@ -11,7 +11,7 @@ from typing import Any, Dict
 
 from mcp.server import FastMCP
 
-mcp = FastMCP("hugagent-generate-chart-tool")
+mcp = FastMCP("sumc-generate-chart-tool")
 
 
 @mcp.tool()

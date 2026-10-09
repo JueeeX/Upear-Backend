@@ -4,7 +4,7 @@
 
 > **适用场景**：团队 / 生产的**标准部署形态**，多用户、全功能。个人单机尝鲜可用更轻的 [无 Docker 一键安装](quick-install.md)。
 
-HugAgentOS 的全部服务由根目录 `docker-compose.yml` 一个文件编排，按 profiles 分为常驻核心服务、互斥的沙箱 sidecar（`script_runner` / `opensandbox`）和可选的记忆基础设施（`mem0`）。本文给出完整服务拓扑、卷与持久化、profiles 用法及改代码后的 rebuild 流程。
+SUMC 的全部服务由根目录 `docker-compose.yml` 一个文件编排，按 profiles 分为常驻核心服务、互斥的沙箱 sidecar（`script_runner` / `opensandbox`）和可选的记忆基础设施（`mem0`）。本文给出完整服务拓扑、卷与持久化、profiles 用法及改代码后的 rebuild 流程。
 
 ## 服务拓扑
 
@@ -12,11 +12,11 @@ HugAgentOS 的全部服务由根目录 `docker-compose.yml` 一个文件编排�
 
 | 服务 | 容器名 | 镜像 / 构建 | 端口（宿主→容器） | 作用 |
 |---|---|---|---|---|
-| `postgres` | hugagent-postgres | `postgres:15-alpine` | `${POSTGRES_HOST_PORT:-5432}:5432` | 主关系库（业务数据、content_blocks、用量日志） |
-| `redis` | hugagent-redis | `redis:7-alpine` | `${REDIS_HOST_PORT:-6380}:6379` | 会话存储、流式 follower（Redis Streams）、限流 |
-| `backend` | hugagent-backend | `docker/Dockerfile`（target `production`） | `${BACKEND_HOST_PORT:-3001}:${BACKEND_PORT:-3001}` | FastAPI 应用；启动时自动跑 alembic 迁移 |
-| `mcp` | hugagent-mcp | `docker/Dockerfile.mcp` | 无对外端口 | CE 启动 9 个通用 MCP；EE 另启动数据库查询等商业 MCP。backend 经 `http://mcp:91XX/mcp/` 调用 |
-| `frontend` | hugagent-frontend | `src/frontend/Dockerfile` | `${FRONTEND_PORT:-3002}:80` | nginx 托管前端静态资源 + `/api` 反代到 backend |
+| `postgres` | sumc-postgres | `postgres:15-alpine` | `${POSTGRES_HOST_PORT:-5432}:5432` | 主关系库（业务数据、content_blocks、用量日志） |
+| `redis` | sumc-redis | `redis:7-alpine` | `${REDIS_HOST_PORT:-6380}:6379` | 会话存储、流式 follower（Redis Streams）、限流 |
+| `backend` | sumc-backend | `docker/Dockerfile`（target `production`） | `${BACKEND_HOST_PORT:-3001}:${BACKEND_PORT:-3001}` | FastAPI 应用；启动时自动跑 alembic 迁移 |
+| `mcp` | sumc-mcp | `docker/Dockerfile.mcp` | 无对外端口 | CE 启动 9 个通用 MCP；EE 另启动数据库查询等商业 MCP。backend 经 `http://mcp:91XX/mcp/` 调用 |
+| `frontend` | sumc-frontend | `src/frontend/Dockerfile` | `${FRONTEND_PORT:-3002}:80` | nginx 托管前端静态资源 + `/api` 反代到 backend |
 
 `BACKEND_PORT` 是容器内的监听端口，nginx、MCP 和健康检查都依赖它，通常保持 `3001`。如果宿主机端口已被占用，只调整 `BACKEND_HOST_PORT`、`POSTGRES_HOST_PORT` 或 `REDIS_HOST_PORT`，不要改容器内端口。例如可将后端公开到 `13003`，同时保持容器内的 `3001`。
 
@@ -29,18 +29,18 @@ CE 在空数据库首次启动时会全局安装并启用 `automation`、
 
 | 服务 | profile | 容器名 | 镜像 / 构建 | 作用 |
 |---|---|---|---|---|
-| `script-runner` | `script_runner` | hugagent-script-runner | `docker/Dockerfile.script-runner` | 轻量沙箱：1 GB 内存 / 1 CPU / read-only rootfs + tmpfs，技能目录只读挂载到 `/workspace/skills` |
-| `opensandbox-config-init` | `opensandbox` | hugagent-opensandbox-config-init | `alpine:3.19` | 一次性 init：把 `docker/opensandbox-config.toml.tpl` 中的 `@@HOST_REPO_PATH@@` / `@@HOST_STORAGE_PATH@@` 渲染进 named volume `opensandbox_config` |
-| `opensandbox` | `opensandbox` | hugagent-opensandbox | `opensandbox/server:v0.1.13` | 持久沙箱控制器（商业版 EE 能力）：经宿主 `docker.sock` 按需起停 sandbox 容器，Jupyter kernel 维持跨轮上下文；对外调试端口 `${OPENSANDBOX_PORT:-8910}:8080` |
+| `script-runner` | `script_runner` | sumc-script-runner | `docker/Dockerfile.script-runner` | 轻量沙箱：1 GB 内存 / 1 CPU / read-only rootfs + tmpfs，技能目录只读挂载到 `/workspace/skills` |
+| `opensandbox-config-init` | `opensandbox` | sumc-opensandbox-config-init | `alpine:3.19` | 一次性 init：把 `docker/opensandbox-config.toml.tpl` 中的 `@@HOST_REPO_PATH@@` / `@@HOST_STORAGE_PATH@@` 渲染进 named volume `opensandbox_config` |
+| `opensandbox` | `opensandbox` | sumc-opensandbox | `opensandbox/server:v0.1.13` | 持久沙箱控制器（商业版 EE 能力）：经宿主 `docker.sock` 按需起停 sandbox 容器，Jupyter kernel 维持跨轮上下文；对外调试端口 `${OPENSANDBOX_PORT:-8910}:8080` |
 
 ### mem0 记忆基础设施（profile `mem0`，可选）
 
 | 服务 | 容器名 | 镜像 | 端口 | 作用 |
 |---|---|---|---|---|
-| `etcd` | hugagent-etcd | `quay.io/coreos/etcd:v3.5.5` | 内部 | Milvus 元数据存储 |
-| `minio` | hugagent-minio | `minio/minio:RELEASE.2023-03-13...` | 内部 | Milvus 对象存储 |
-| `milvus` | hugagent-milvus | `milvusdb/milvus:v2.5.4` | `19530`、`9091` | 向量库（L2 向量记忆、自建知识库检索） |
-| `neo4j` | hugagent-neo4j | `neo4j:5.15-community` | `7474`、`7687` | 图数据库（L3 知识图谱记忆，可选） |
+| `etcd` | sumc-etcd | `quay.io/coreos/etcd:v3.5.5` | 内部 | Milvus 元数据存储 |
+| `minio` | sumc-minio | `minio/minio:RELEASE.2023-03-13...` | 内部 | Milvus 对象存储 |
+| `milvus` | sumc-milvus | `milvusdb/milvus:v2.5.4` | `19530`、`9091` | 向量库（L2 向量记忆、自建知识库检索） |
+| `neo4j` | sumc-neo4j | `neo4j:5.15-community` | `7474`、`7687` | 图数据库（L3 知识图谱记忆，可选） |
 
 ### 依赖关系
 
@@ -56,7 +56,7 @@ mcp ──depends_on──► postgres (healthy)
 milvus ──depends_on──► etcd (healthy) + minio (healthy)
 ```
 
-所有服务接在同一 bridge 网络 `hugagent-network`，容器间用 service 名互访（如 `http://backend:3001`、`http://mcp:9102/mcp/`、`http://milvus:19530`）。每个容器统一应用 json-file 日志轮转（50 MB × 5 = 单容器 250 MB 封顶），防止日志写满磁盘。
+所有服务接在同一 bridge 网络 `sumc-network`，容器间用 service 名互访（如 `http://backend:3001`、`http://mcp:9102/mcp/`、`http://milvus:19530`）。每个容器统一应用 json-file 日志轮转（50 MB × 5 = 单容器 250 MB 封顶），防止日志写满磁盘。
 
 ## 卷与持久化
 
@@ -132,8 +132,8 @@ docker-compose up -d --build frontend
 ```bash
 cd src/frontend
 npm run build
-docker cp dist/. hugagent-frontend:/usr/share/nginx/html/
-docker exec hugagent-frontend nginx -s reload
+docker cp dist/. sumc-frontend:/usr/share/nginx/html/
+docker exec sumc-frontend nginx -s reload
 ```
 
 ### 前后端都改了
@@ -151,7 +151,7 @@ docker-compose build --no-cache backend frontend
 docker-compose up -d backend frontend
 ```
 
-> 验证容器内代码已更新：`docker exec hugagent-backend grep '<新代码关键串>' /app/src/backend/<文件>`。「改了没生效」90% 是 cached layer 没拉到新代码。
+> 验证容器内代码已更新：`docker exec sumc-backend grep '<新代码关键串>' /app/src/backend/<文件>`。「改了没生效」90% 是 cached layer 没拉到新代码。
 
 > **说明：** 首次构建会下载钉钉、飞书、邮件和浏览器渲染等可选工具。
 > 每项下载都有重试与总超时；若某个可选源持续不可用，核心后端与 Python/bash
@@ -168,7 +168,7 @@ backend 容器入口脚本自动迁移，常规部署无需手工操作：
 
 ```bash
 # 容器内执行迁移
-docker exec hugagent-backend alembic upgrade head
+docker exec sumc-backend alembic upgrade head
 
 # 生成新迁移（本地，改完 core/db/models.py 后）
 make migrate-new msg="describe change"

@@ -41,7 +41,7 @@ import os
 import re
 import uuid
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -687,7 +687,7 @@ def install_marketplace_skill(
         ontology_tags=list(tags),
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     existing = db.query(AdminSkill).filter(AdminSkill.skill_id == install_id).first()
     if existing is not None:
         # Owner conflict: cannot overwrite a public skill or another user's private skill (admin reinstalling a global one is allowed)
@@ -940,7 +940,7 @@ def _upsert_admin_submission(
     snapshot_files = dict(extra_files)
     # Credential files are never distributed with the market snapshot (same as community listing).
     snapshot_files.pop(SECRETS_FILENAME, None)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     existing = (
         db.query(MarketplaceSubmission)
         .filter(
@@ -1239,7 +1239,7 @@ def submit_to_marketplace(
                 ensure_ascii=False,
             )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     sub = MarketplaceSubmission(
         submission_id=f"mksub_{uuid.uuid4().hex[:16]}",
         slug=_derive_slug(db, skill_id, owner_user_id),
@@ -1348,8 +1348,8 @@ def review_submission(
     sub.review_note = (review_note or "").strip()
     if approve and (category or "").strip():
         sub.category = _validate_category(category)
-    sub.reviewed_at = datetime.utcnow()
-    sub.updated_at = datetime.utcnow()
+    sub.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    sub.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     logger.info(
         "marketplace_submission_reviewed: id=%s slug=%s status=%s",

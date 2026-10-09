@@ -2,7 +2,7 @@
 
 > 最后更新：2026-07-21 ｜ [English](../../en/deployment/README.md)
 
-HugAgentOS 支持多种部署方式，从「个人单机零依赖尝鲜」到「团队生产」再到「内网离线交付」。本页帮你**选对方式**，各方式的完整步骤见对应文档。
+SUMC 支持多种部署方式，从「个人单机零依赖尝鲜」到「团队生产」再到「内网离线交付」。本页帮你**选对方式**，各方式的完整步骤见对应文档。
 
 ## 选择部署方式
 
@@ -26,7 +26,7 @@ HugAgentOS 支持多种部署方式，从「个人单机零依赖尝鲜」到「
 - **桌面端离线本机模式**：运行对应平台的完整安装包并选择本机模式。首次启动直接校验并解压
   随包私有 Python 和锁定依赖，启动回环地址服务并进入登录；无需 Docker、系统 Python 或首次
   联网构建。定位是单进程单用户。
-- **无 Docker 一键安装**：Linux/macOS 上最快的命令行路径。运行 `curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh | bash`，安装器会创建管理员、配置模型、启动服务并打开浏览器。数据保存在 `~/.hugagent/`。**单进程单用户**，适合个人试用与开发，不适合多人或生产环境。
+- **无 Docker 一键安装**：Linux/macOS 上最快的命令行路径。运行 `curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash`，安装器会创建管理员、配置模型、启动服务并打开浏览器。数据保存在 `~/.sumc/`。**单进程单用户**，适合个人试用与开发，不适合多人或生产环境。
 - **Docker Compose**：推荐的标准部署。全部服务由一个 `docker-compose.yml` 编排（PostgreSQL + Redis + 后端 + MCP + 前端 + 沙箱），支持多用户、持久沙箱、分层记忆等全部能力。
 - **离线生产部署（EE）**：面向无法在线拉镜像的隔离环境，在联网侧打镜像 tarball，拷到生产侧 `docker load` + `compose up`。属商业版交付范畴。
 

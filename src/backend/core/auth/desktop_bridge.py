@@ -4,7 +4,7 @@
 桌面壳（Tauri）把云端身份带给本机后端，本机端不再有独立的账号密码。信任链：
 
   本机后端由桌面壳孵化，只监听 127.0.0.1，且孵化时注入一次性随机
-  ``HUGAGENT_DESKTOP_BRIDGE_SECRET``（存于用户配置目录，不进日志）。
+  ``SUMC_DESKTOP_BRIDGE_SECRET``（存于用户配置目录，不进日志）。
   桌面壳的 Rust 反代对「路由到本机」的请求注入两个头：
 
     X-Desktop-Bridge:       <secret>            —— 证明请求来自本机壳（恒定时比较）
@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 logger = get_logger(__name__)
 
-BRIDGE_SECRET_ENV = "HUGAGENT_DESKTOP_BRIDGE_SECRET"
+BRIDGE_SECRET_ENV = "SUMC_DESKTOP_BRIDGE_SECRET"
 BRIDGE_SECRET_HEADER = "x-desktop-bridge"
 BRIDGE_USER_HEADER = "x-desktop-bridge-user"
 

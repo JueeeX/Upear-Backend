@@ -1,4 +1,4 @@
-"""API layer for HugAgentOS."""
+"""API layer for SUMC."""
 
 from .app import app
 

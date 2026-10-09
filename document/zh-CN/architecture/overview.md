@@ -2,7 +2,7 @@
 
 > 最后更新：2026-07-19
 
-HugAgentOS 是一个面向企业的 AgentOS，同时提供轻量本地运行形态和全容器化生产形态。前端为 React 单页应用，后端为 FastAPI 异步服务，智能体底座为 AgentScope 2.0 的 ReActAgent，工具生态通过 MCP（Model Context Protocol）以独立进程提供，代码执行落在可插拔的沙箱驱动上。平台以「开源社区版（CE）+ 商业版（EE）」双形态发行，两版共用一套代码，通过路由注册表、建表边界与 license 能力位三道接缝裁剪（详见 [版本与授权](../editions/overview.md)）。
+SUMC 是一个面向企业的 AgentOS，同时提供轻量本地运行形态和全容器化生产形态。前端为 React 单页应用，后端为 FastAPI 异步服务，智能体底座为 AgentScope 2.0 的 ReActAgent，工具生态通过 MCP（Model Context Protocol）以独立进程提供，代码执行落在可插拔的沙箱驱动上。平台以「开源社区版（CE）+ 商业版（EE）」双形态发行，两版共用一套代码，通过路由注册表、建表边界与 license 能力位三道接缝裁剪（详见 [版本与授权](../editions/overview.md)）。
 
 本文从五个视角描述系统：分层架构、本体驱动的企业可信控制平面、一次对话请求的完整生命周期、容器拓扑、关键设计决策。更深入的模块拆解见 [后端架构](./backend.md)、[前端架构](./frontend.md) 与 [数据模型](./data-model.md)。
 
@@ -68,7 +68,7 @@ HugAgentOS 是一个面向企业的 AgentOS，同时提供轻量本地运行形�
 
 ## 领域本体驱动的企业可信控制平面
 
-HugAgentOS 将领域本体作为可执行的控制平面，而不只是一个知识库，
+SUMC 将领域本体作为可执行的控制平面，而不只是一个知识库，
 从而把智能体运行时扩展为面向企业的可信 AgentOS。版本化的领域包
 （Domain Pack）可从受控概念和关系，逐步延伸到不变式、Action 契约、
 工作流、角色、权限和证据要求，让技能、编排和记忆三个引擎使用同一套
@@ -178,17 +178,17 @@ RAG 则提供支撑决策所需的文档与证据。
 
 | 服务 | 容器名 | 端口 | 说明 |
 |---|---|---|---|
-| `frontend` | hugagent-frontend | `3002:80` | Nginx：静态资源 + `/api` 反代 |
-| `backend` | hugagent-backend | `3001` | FastAPI 主服务 |
-| `mcp` | hugagent-mcp | 内部独立端口 | 9 个 MCP 服务器常驻进程（streamable-http；CE 7 个通用工具，EE 另含 2 个行业工具） |
-| `postgres` | hugagent-postgres | `5432` | 主数据库 |
-| `redis` | hugagent-redis | `6379` | 会话 / 缓存 |
-| `script-runner`（profile `script_runner`） | hugagent-script-runner | 内部 | 轻量脚本执行 sidecar（无 DB/密钥访问权） |
-| `opensandbox` + `opensandbox-config-init`（profile `opensandbox`） | hugagent-opensandbox | 内部 | 持久沙箱（商业版 EE） |
-| `etcd` / `minio` / `milvus`（profile `mem0`） | hugagent-etcd 等 | 内部 | L2 向量记忆基础设施 |
-| `neo4j`（profile `mem0`） | hugagent-neo4j | `7474/7687` | L3 图谱记忆（可选） |
+| `frontend` | sumc-frontend | `3002:80` | Nginx：静态资源 + `/api` 反代 |
+| `backend` | sumc-backend | `3001` | FastAPI 主服务 |
+| `mcp` | sumc-mcp | 内部独立端口 | 9 个 MCP 服务器常驻进程（streamable-http；CE 7 个通用工具，EE 另含 2 个行业工具） |
+| `postgres` | sumc-postgres | `5432` | 主数据库 |
+| `redis` | sumc-redis | `6379` | 会话 / 缓存 |
+| `script-runner`（profile `script_runner`） | sumc-script-runner | 内部 | 轻量脚本执行 sidecar（无 DB/密钥访问权） |
+| `opensandbox` + `opensandbox-config-init`（profile `opensandbox`） | sumc-opensandbox | 内部 | 持久沙箱（商业版 EE） |
+| `etcd` / `minio` / `milvus`（profile `mem0`） | sumc-etcd 等 | 内部 | L2 向量记忆基础设施 |
+| `neo4j`（profile `mem0`） | sumc-neo4j | `7474/7687` | L3 图谱记忆（可选） |
 
-所有服务挂在同一 `hugagent-network` 网络；`postgres_data` 等具名卷跨重建持久化。部署细节见 [Docker Compose 部署](../deployment/docker-compose.md)。
+所有服务挂在同一 `sumc-network` 网络；`postgres_data` 等具名卷跨重建持久化。部署细节见 [Docker Compose 部署](../deployment/docker-compose.md)。
 
 ## 关键设计决策
 

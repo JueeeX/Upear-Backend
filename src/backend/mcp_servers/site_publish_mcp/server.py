@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 from mcp.server.fastmcp import Context, FastMCP
 from mcp_servers.site_publish_mcp import impl
 
-mcp = FastMCP("hugagent-site-publish")
+mcp = FastMCP("sumc-site-publish")
 
 _HDR_USER = "x-current-user-id"
 _HDR_CHAT = "x-chat-id"

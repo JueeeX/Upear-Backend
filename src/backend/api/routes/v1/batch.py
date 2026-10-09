@@ -20,7 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -189,7 +189,7 @@ async def confirm_plan(
     if body.max_retries is not None:
         plan.max_retries = body.max_retries
     plan.status = CONFIRMED
-    plan.updated_at = datetime.utcnow()
+    plan.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(plan)
     return success_response(data=_plan_to_dict(plan))
@@ -212,7 +212,7 @@ async def cancel_plan(
         raise HTTPException(status_code=404, detail="计划不存在或已过期")
     _ensure_owner(plan, user)
     plan.status = CANCELLED
-    plan.updated_at = datetime.utcnow()
+    plan.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     # Interrupt the in-flight runner task too. Without this the runner
     # only checks plan.status between items, so a long-running LLM call
@@ -291,7 +291,7 @@ async def cancel_and_resume(
     # Mark cancelled (idempotent; orchestrator polls this on each item).
     if plan.status not in _TERMINAL_STATUSES:
         plan.status = CANCELLED
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
 
     chat_id = plan.chat_id

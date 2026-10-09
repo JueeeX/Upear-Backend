@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 from core.auth.backend import UserContext, get_current_user
 from core.content.kb_processing import vectorise_document_background
+from core.auth.kb_permissions import resolve_user_kb_context
 from core.db.engine import get_db
 from core.db.models import Artifact, ChatMessage, ChatSession, KBDocument, KBSpace
 from core.db.repository import ArtifactRepository
@@ -455,6 +456,9 @@ async def add_artifact_to_knowledge_base(
         return success_response(data=document, message="该文件已在目标知识库中")
 
     try:
+        kb_context = resolve_user_kb_context(db, uid)
+        if kb_context is None:
+            raise PermissionError("Authoritative KB tenant context is unavailable")
         artifact = ArtifactRepository(db).get_by_id(artifact_id)
         if artifact is None:
             return error_response(message="资源不存在或无权限", code=404, status_code=404)
@@ -466,6 +470,7 @@ async def add_artifact_to_knowledge_base(
             document_id=document["document_id"],
             kb_id=payload.kb_id,
             user_id=uid,
+            tenant_id=kb_context[0],
             title=document["title"],
             file_bytes=file_bytes,
             mime_type=artifact.mime_type or "application/octet-stream",

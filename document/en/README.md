@@ -1,15 +1,15 @@
-# HugAgentOS Documentation
+# SUMC Documentation
 
 > Last updated: 2026-07-21 | [简体中文](../zh-CN/README.md)
 
-HugAgentOS is an enterprise-grade AI agent platform: a FastAPI backend, a React frontend, and an AgentScope 2.0 agent runtime, fully containerized with Docker and shipped in an open-core model as a **Community Edition (CE)** and an **Enterprise Edition (EE)**. This tree is the complete product documentation for operators, users, and integrators.
+SUMC is an enterprise-grade AI agent platform: a FastAPI backend, a React frontend, and an AgentScope 2.0 agent runtime, fully containerized with Docker and shipped in an open-core model as a **Community Edition (CE)** and an **Enterprise Edition (EE)**. This tree is the complete product documentation for operators, users, and integrators.
 
 ## Getting Started
 
 | Document | Description |
 |------|------|
 | [Introduction](getting-started/introduction.md) | What it is, feature overview, CE/EE at a glance, tech stack and architecture |
-| [Quick Start](getting-started/quick-start.md) | Run HugAgentOS with the one-command installer or Docker Compose |
+| [Quick Start](getting-started/quick-start.md) | Run SUMC with the one-command installer or Docker Compose |
 | [Build a Domain Ontology Quickly](getting-started/domain-ontology-quickstart.md) | Validate, publish, test, and bind tools with a minimal Domain Pack |
 
 ## Deployment

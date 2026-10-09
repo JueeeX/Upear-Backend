@@ -28,7 +28,7 @@ async def health_check():
     """
     return HealthResponse(
         status="healthy",
-        service="hugagent",
+        service="sumc",
         timestamp=datetime.now().isoformat(),
     )
 

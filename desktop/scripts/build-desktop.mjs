@@ -15,7 +15,7 @@ validateDesktopBuildTarget(tauriArgs);
 const cli = join(desktopDir, "node_modules", "@tauri-apps", "cli", "tauri.js");
 const result = spawnSync(process.execPath, [cli, "build", ...tauriArgs], {
   cwd: desktopDir,
-  env: { ...process.env, HUGAGENT_DESKTOP_BUNDLE: flavor },
+  env: { ...process.env, SUMC_DESKTOP_BUNDLE: flavor },
   stdio: "inherit",
   shell: false,
 });

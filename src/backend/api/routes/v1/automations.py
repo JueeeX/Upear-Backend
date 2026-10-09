@@ -13,6 +13,7 @@ from core.db.engine import get_db
 from core.infra.responses import success_response, created_response
 from core.services.automation_service import AutomationService
 from core.infra.logging import get_logger
+from core.safeharness_capabilities import reject_uncontrolled_mutation
 
 logger = get_logger(__name__)
 
@@ -70,6 +71,7 @@ async def create_automation(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """创建一个定时自动化任务。支持 prompt / plan 两种任务类型，需提供合法的 cron 表达式；plan 类型还需校验 plan_id 归属。"""
     # Validate cron expression
     if not croniter.is_valid(req.cron_expression):
@@ -171,6 +173,7 @@ async def update_automation(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """更新自动化任务的名称、描述、cron 表达式、任务内容等字段；若改 cron 会校验合法性，无更新字段返回 400。"""
     if req.cron_expression and not croniter.is_valid(req.cron_expression):
         raise HTTPException(status_code=400, detail="无效的 cron 表达式")
@@ -221,6 +224,7 @@ async def delete_automation(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """删除指定自动化任务及其运行历史记录。"""
     svc = AutomationService(db)
     deleted = svc.delete_task(task_id, user.user_id)
@@ -235,6 +239,7 @@ async def pause_automation(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """暂停一个处于活跃状态的自动化任务，任务不存在或不可暂停时返回 400。"""
     svc = AutomationService(db)
     task = svc.pause_task(task_id, user.user_id)
@@ -249,6 +254,7 @@ async def resume_automation(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """恢复一个已暂停的自动化任务，任务不存在或不可恢复时返回 400。"""
     svc = AutomationService(db)
     task = svc.resume_task(task_id, user.user_id)
@@ -264,6 +270,7 @@ async def trigger_automation(
     db: Session = Depends(get_db),
 ):
     """立即手动触发一次自动化任务执行（异步），仅 active / paused 状态可触发。"""
+    reject_uncontrolled_mutation()
     svc = AutomationService(db)
     task = svc.get_task(task_id, user.user_id)
     if not task:

@@ -9,11 +9,29 @@ from __future__ import annotations
 
 import os
 import tempfile
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from dotenv import dotenv_values
+
+
+def _apply_legacy_sumc_environment() -> None:
+    used = False
+    for name, value in list(os.environ.items()):
+        if name.startswith("HUGAGENT_"):
+            os.environ.setdefault("SUMC_" + name.removeprefix("HUGAGENT_"), value)
+            used = True
+    if used:
+        warnings.warn(
+            "HUGAGENT_* environment variables are deprecated; use SUMC_*.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+
+_apply_legacy_sumc_environment()
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 
@@ -213,12 +231,12 @@ class DatabaseSettings:
     # repo root / src/backend
     url: str = field(
         default_factory=lambda: _env(
-            "DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/hugagent.db"
+            "DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/sumc.db"
         )
     )
     sqlite_fallback_url: str = field(
         default_factory=lambda: _env(
-            "SQLITE_FALLBACK_URL", f"sqlite:///{tempfile.gettempdir()}/hugagent_dev.db"
+            "SQLITE_FALLBACK_URL", f"sqlite:///{tempfile.gettempdir()}/sumc_dev.db"
         )
     )
     echo: bool = field(default_factory=lambda: _bool(_env("DB_ECHO", "false")))
@@ -260,7 +278,7 @@ class MemorySettings:
     neo4j_url: str = field(default_factory=lambda: _env("NEO4J_URL", "bolt://neo4j:7687"))
     neo4j_username: str = field(default_factory=lambda: _env("NEO4J_USERNAME", "neo4j"))
     neo4j_password: str = field(
-        default_factory=lambda: _env("NEO4J_PASSWORD", "hugagent_neo4j_2026")
+        default_factory=lambda: _env("NEO4J_PASSWORD", "sumc_neo4j_2026")
     )
 
     # ── Layered memory additions ─────────────────────────────────
@@ -738,14 +756,14 @@ class SandboxSettings:
     cube_pool_min_idle: int = field(
         default_factory=lambda: _int(_env("CUBE_POOL_MIN_IDLE", "2"), 2)
     )
-    # Sandbox owner tag: written into metadata["hugagent-owner"], used so the
+    # Sandbox owner tag: written into metadata["sumc-owner"], used so the
     # startup orphan sweep only recognizes this environment's sandboxes.
     # CubeMaster (MVP) does not honor the sandbox TTL; a backend restart loses
     # session/pool in-memory state and orphaned sandboxes linger on the node.
     # At startup, sandboxes of this environment are listed by this tag and
     # orphans not in the registry are cleaned. When multiple environments share
-    # the same cube node, **each must set a unique value** (e.g. hugagent-dev /
-    # hugagent-test / hugagent-test), otherwise the sweep would kill other
+    # the same cube node, **each must set a unique value** (e.g. sumc-dev /
+    # sumc-test / sumc-test), otherwise the sweep would kill other
     # environments' sandboxes. Empty: metadata still writes "backend", but the
     # startup orphan sweep is **disabled** (the safe default on shared nodes).
     cube_owner_tag: str = field(default_factory=lambda: _env("CUBE_OWNER_TAG", "").strip())
@@ -793,7 +811,7 @@ class SandboxSettings:
         default_factory=lambda: _env("CUBE_BUILD_CTX_DIR", "/opt/cube-build").strip()
     )
     cube_build_image_tag: str = field(
-        default_factory=lambda: _env("CUBE_BUILD_IMAGE_TAG", "hugagent-cube-sandbox:latest").strip()
+        default_factory=lambda: _env("CUBE_BUILD_IMAGE_TAG", "sumc-cube-sandbox:latest").strip()
     )
     cube_build_registry: str = field(
         default_factory=lambda: _env("CUBE_BUILD_REGISTRY", "127.0.0.1:5000").strip()
@@ -862,11 +880,50 @@ class GatewaySettings:
 
 
 @dataclass(frozen=True)
+class SafeHarnessBFFSettings:
+    """Server-only connection to the loopback SafeHarness Admin UI."""
+
+    admin_ui_url: str = field(
+        default_factory=lambda: _env("SAFEHARNESS_BFF_ADMIN_UI_URL", "").strip().rstrip("/")
+    )
+    ui_access_token: str = field(
+        default_factory=lambda: _env("SAFEHARNESS_BFF_UI_ACCESS_TOKEN", "").strip()
+    )
+    mutation_key: str = field(
+        default_factory=lambda: _env("SAFEHARNESS_BFF_MUTATION_KEY", "").strip()
+    )
+    timeout_seconds: float = field(
+        default_factory=lambda: _float(_env("SAFEHARNESS_BFF_TIMEOUT_SECONDS", "5"), 5.0)
+    )
+    max_response_bytes: int = field(
+        default_factory=lambda: _int(
+            _env("SAFEHARNESS_BFF_MAX_RESPONSE_BYTES", str(1024 * 1024)),
+            1024 * 1024,
+        )
+    )
+
+
+@dataclass(frozen=True)
+class SafeHarnessProtectedChatSettings:
+    """Explicit opt-in for the optional SafeHarness LangGraph backend."""
+
+    enabled: bool = field(
+        default_factory=lambda: _bool(_env("SAFEHARNESS_PROTECTED_CHAT_ENABLED", "false"))
+    )
+    system_prompt: str = field(
+        default_factory=lambda: _env("SAFEHARNESS_PROTECTED_CHAT_SYSTEM_PROMPT", "").strip()
+    )
+
+
+@dataclass(frozen=True)
 class BrandingSettings:
     """Single source of brand defaults — the in-code fallback stays neutral; deployment branding comes from env / the content_blocks DB seed."""
 
     product_name: str = field(
         default_factory=lambda: _env("BRAND_PRODUCT_NAME", "智能体平台").strip()
+    )
+    product_subtitle: str = field(
+        default_factory=lambda: _env("BRAND_PRODUCT_SUBTITLE", "AI 智能助手").strip()
     )
     org_name: str = field(default_factory=lambda: _env("BRAND_ORG_NAME", "").strip())
     powered_by_visible: bool = field(
@@ -920,6 +977,10 @@ class AppSettings:
     sandbox: SandboxSettings = field(default_factory=SandboxSettings)
     edition: EditionSettings = field(default_factory=EditionSettings)
     gateway: GatewaySettings = field(default_factory=GatewaySettings)
+    safeharness: SafeHarnessBFFSettings = field(default_factory=SafeHarnessBFFSettings)
+    safeharness_protected_chat: SafeHarnessProtectedChatSettings = field(
+        default_factory=SafeHarnessProtectedChatSettings
+    )
     branding: BrandingSettings = field(default_factory=BrandingSettings)
 
 

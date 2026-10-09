@@ -10,7 +10,7 @@ it and the assistant message id is pre-allocated by the run executor, so history
 can be reconstructed without back-filling a new column across the whole codebase.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.db.engine import Base
 from sqlalchemy import (
@@ -78,7 +78,7 @@ class EvolutionEpisode(Base):
     event_count = Column(Integer, default=0, nullable=False)
     started_at = Column(TIMESTAMP(timezone=True))
     completed_at = Column(TIMESTAMP(timezone=True))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         # One run yields exactly one episode; the assembler is idempotent and
@@ -121,7 +121,7 @@ class EvolutionTraceEvent(Base):
     # itself stays in whichever table already owns it.
     payload_ref = Column(String(256), default="")
 
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         UniqueConstraint("message_id", "seq", name="uq_evolution_events_msg_seq"),
@@ -170,9 +170,9 @@ class EvolutionCandidate(Base):
     approved_by = Column(String(64))
     approved_at = Column(TIMESTAMP(timezone=True))
 
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     updated_at = Column(
-        TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow
+        TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     __table_args__ = (
@@ -227,9 +227,9 @@ class EvolutionRelease(Base):
     rollback_kind = Column(String(16))
 
     approved_by = Column(String(64))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     updated_at = Column(
-        TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow
+        TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     __table_args__ = (
@@ -273,7 +273,7 @@ class EvolutionEvaluation(Base):
     p_value = Column(Float)
     sample_size = Column(Integer)
 
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         Index("idx_evolution_evaluations_candidate", "candidate_id", "eval_type", "created_at"),
@@ -306,9 +306,9 @@ class EvolutionAgentProfile(Base):
     is_active = Column(Boolean, default=False, nullable=False)
 
     created_by = Column(String(64), default="evolution")
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     updated_at = Column(
-        TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False
     )
 
     __table_args__ = (
@@ -334,7 +334,7 @@ class EvolutionEvidencePack(Base):
     scope = Column(JSONType, default=dict)
     pack = Column(JSONType, nullable=False)
     support = Column(JSONType, default=dict)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         UniqueConstraint("pack_hash", name="uq_evolution_evidence_packs_hash"),
@@ -363,7 +363,7 @@ class EvolutionCreditDecision(Base):
     features = Column(JSONType, default=dict)
     explanation = Column(Text, default="")
     assigner_version = Column(String(32), default="")
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         Index("idx_evolution_credit_selected", "selected", "created_at"),
@@ -390,7 +390,7 @@ class EvolutionPromotionLink(Base):
     target_kind = Column(String(24), nullable=False)
     target_id = Column(String(160), nullable=False)
     candidate_id = Column(String(64), index=True)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         # One fact, one row — re-materialising must not duplicate the lineage.
@@ -434,7 +434,7 @@ class EvolutionMemoryOp(Base):
     reason = Column(Text, default="")
 
     status = Column(String(24), nullable=False, default="applied")
-    applied_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+    applied_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     reverted_at = Column(TIMESTAMP(timezone=True))
 
     __table_args__ = (

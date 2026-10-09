@@ -7,7 +7,7 @@ See internal design docs.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import desc
@@ -101,7 +101,7 @@ class ChannelConnectionRepository:
         item = self.get_by_id(channel_id)
         if not item:
             return
-        item.last_event_at = datetime.utcnow()
+        item.last_event_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
 
     def delete(self, channel_id: str) -> bool:

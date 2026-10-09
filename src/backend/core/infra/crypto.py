@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # Local-dev fallback key: used only when neither EMAIL_SECRET_KEY nor ADMIN_TOKEN is configured; emits a warning.
 # In production always configure EMAIL_SECRET_KEY (or at least ADMIN_TOKEN), otherwise moving/reinstalling machines makes old ciphertext undecryptable.
-_DEV_FALLBACK = "hugagent-email-dev-secret-please-override"
+_DEV_FALLBACK = "sumc-email-dev-secret-please-override"
 _warned = False
 
 

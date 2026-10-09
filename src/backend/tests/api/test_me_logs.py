@@ -7,7 +7,7 @@ the Python side, independent of SQLite/PG dialect).
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi import HTTPException
@@ -23,7 +23,7 @@ def _ctx(user_id: str) -> UserContext:
 @pytest.fixture
 def seeded(db_session):
     """One tool log for each of two users + one subagent tree for alice + two chat messages for alice."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     db_session.add_all(
         [
             ToolCallLog(id="t_alice", user_id="alice", tool_name="internet_search",

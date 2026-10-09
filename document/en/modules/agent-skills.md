@@ -2,7 +2,7 @@
 
 > Last updated: 2026-06-11
 
-A skill is HugAgentOS's standard vehicle for "teaching the model a workflow": one skill = one directory whose core is a `SKILL.md` playbook with YAML frontmatter, plus any number of scripts, templates and reference assets. Skills follow **progressive disclosure** — the system prompt only carries each skill's name, description and directory path; the model reads the full playbook on demand and then drives the sandbox to execute the skill's scripts.
+A skill is SUMC's standard vehicle for "teaching the model a workflow": one skill = one directory whose core is a `SKILL.md` playbook with YAML frontmatter, plus any number of scripts, templates and reference assets. Skills follow **progressive disclosure** — the system prompt only carries each skill's name, description and directory path; the model reads the full playbook on demand and then drives the sandbox to execute the skill's scripts.
 
 Division of labour with [MCP tools](mcp-tools.md): MCP servers are *programmatic atomic capabilities* (one call, one function), skills are *knowledge-encoded workflows* (teaching the model to compose bash, file tools and MCP calls into complex jobs). The office suite (Word/Excel/PPT/PDF) is the canonical example of a capability migrated from MCP form to skill form — each skill vendors its own CLI engine and runs inside the sandbox.
 
@@ -25,11 +25,11 @@ Parsing and data structures live in `core/agent_skills/registry.py`: `AgentSkill
 | Source | Directory | Priority | Notes |
 |---|---|---|---|
 | built-in | `src/backend/skill_bundles/default/` | 0 | Ships with the repo, always on |
-| user | `~/.hugagent/skills/` (`HUGAGENT_USER_SKILLS_DIR`) | 50 | Filesystem user skills |
-| admin | `/app/storage/admin_skills/` (`HUGAGENT_ADMIN_SKILLS_DIR`) | 75 | Managed via the admin console (DB-stored + materialized) |
-| project | `.hugagent/skills/` (`HUGAGENT_PROJECT_SKILLS_DIR`) | 100 | Project-level overrides |
+| user | `~/.sumc/skills/` (`SUMC_USER_SKILLS_DIR`) | 50 | Filesystem user skills |
+| admin | `/app/storage/admin_skills/` (`SUMC_ADMIN_SKILLS_DIR`) | 75 | Managed via the admin console (DB-stored + materialized) |
+| project | `.sumc/skills/` (`SUMC_PROJECT_SKILLS_DIR`) | 100 | Project-level overrides |
 
-Each source can be disabled individually via `HUGAGENT_DISABLE_{ADMIN,USER,PROJECT}_SKILLS=1`.
+Each source can be disabled individually via `SUMC_DISABLE_{ADMIN,USER,PROJECT}_SKILLS=1`.
 
 ## skill_bundles layering: default vs marketplace
 

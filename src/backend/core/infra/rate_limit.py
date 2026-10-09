@@ -1,5 +1,5 @@
 """
-Rate limiting and circuit breaker for HugAgentOS.
+Rate limiting and circuit breaker for SUMC.
 
 This module provides:
 - Rate limiting using slowapi

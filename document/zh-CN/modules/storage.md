@@ -2,7 +2,7 @@
 
 > 最后更新：2026-06-11
 
-HugAgentOS 把所有持久化文件——用户上传、AI 生成产物（artifact）、知识库文档、导出报表——统一收敛到一个**存储后端抽象**之上。通过 `STORAGE_TYPE` 环境变量在三种实现之间切换：本地文件系统（社区版默认）、S3 兼容对象存储、阿里云 OSS（云存储属商业版 EE，能力位 `cloud_storage`）。业务代码只面向协议编程，更换后端零侵入。
+SUMC 把所有持久化文件——用户上传、AI 生成产物（artifact）、知识库文档、导出报表——统一收敛到一个**存储后端抽象**之上。通过 `STORAGE_TYPE` 环境变量在三种实现之间切换：本地文件系统（社区版默认）、S3 兼容对象存储、阿里云 OSS（云存储属商业版 EE，能力位 `cloud_storage`）。业务代码只面向协议编程，更换后端零侵入。
 
 ## 协议与工厂
 
@@ -74,7 +74,7 @@ OSS_ENDPOINT=https://oss-cn-hangzhou.aliyuncs.com   # 必填
 OSS_BUCKET=your-bucket                              # 必填
 OSS_ACCESS_KEY_ID=...                               # 必填
 OSS_ACCESS_KEY_SECRET=...                           # 必填
-OSS_KEY_PREFIX=hugagent/        # 可选，bucket 内统一前缀
+OSS_KEY_PREFIX=sumc/        # 可选，bucket 内统一前缀
 OSS_PRESIGNED_URL_EXPIRY=900
 ```
 

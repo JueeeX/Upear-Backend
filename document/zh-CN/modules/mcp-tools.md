@@ -2,7 +2,7 @@
 
 > 最后更新：2026-08-02
 
-HugAgentOS 的工具生态构建在 [MCP（Model Context Protocol）](https://modelcontextprotocol.io) 之上：每一类外部能力（联网搜索、网页抓取、数据库查询、图表生成……）都是一个独立的 MCP Server，统一运行在专用的 `mcp` 容器中，后端通过 streamable-http 协议连接调用。这种设计带来三点好处：
+SUMC 的工具生态构建在 [MCP（Model Context Protocol）](https://modelcontextprotocol.io) 之上：每一类外部能力（联网搜索、网页抓取、数据库查询、图表生成……）都是一个独立的 MCP Server，统一运行在专用的 `mcp` 容器中，后端通过 streamable-http 协议连接调用。这种设计带来三点好处：
 
 - **插拔粒度在 Server 级**——启用/禁用一个能力只需改一行 catalog 配置或在管理台开关，无需改代码；
 - **故障隔离**——单个工具崩溃由 launcher 自动重启，不影响后端主进程；

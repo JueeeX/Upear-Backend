@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
-export const CE_EDITION_MARKER = ".hugagent-edition";
+export const CE_EDITION_MARKER = ".sumc-edition";
 
 function git(repoRoot, args, options = {}) {
   const result = spawnSync("git", args, {

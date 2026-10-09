@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="./src/frontend/public/home/hugagentos-logo.png" alt="HugAgentOS logo" width="800" />
+  <img src="./src/frontend/public/home/sumc-logo.png" alt="SUMC logo" width="800" />
 </p>
 
 <p align="center">
-  <strong>HugAgentOS: The Enterprise AgentOS for Ontology-Grounded Trustworthy Reasoning</strong>
+  <strong>SUMC: The Enterprise AgentOS for Ontology-Grounded Trustworthy Reasoning</strong>
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/poster.png" alt="HugAgentOS capability overview poster" width="100%" />
+  <img src="./assets/poster.png" alt="SUMC capability overview poster" width="100%" />
 </p>
 
 <p align="center">
@@ -26,8 +26,8 @@
 
 <!-- Keep these stable launch URLs so they can go live without another README redesign. -->
 <p align="center">
-  <a href="https://hugagentos.com">Website</a> ·
-  <a href="https://app.hugagentos.com">Try HugAgentOS online</a>
+  <a href="https://sumc.com">Website</a> ·
+  <a href="https://app.sumc.com">Try SUMC online</a>
 </p>
 
 <p align="center">
@@ -48,7 +48,7 @@
   </a>
 </p>
 
-HugAgentOS is an enterprise-grade AgentOS that treats domain ontology as a
+SUMC is an enterprise-grade AgentOS that treats domain ontology as a
 control plane for agent reasoning, decisions, and actions. Its open-source
 Community Edition combines agentic chat, private knowledge-base RAG,
 sub-agents, MCP tools, Agent Skills, sandboxed execution, long-term memory,
@@ -74,13 +74,13 @@ platforms without a compatible prebuilt `ripgrep` wheel, you also need the
 current stable Rust toolchain. You don't need Docker, PostgreSQL, or Redis.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash
 ```
 
-The installer clones HugAgentOS into `~/.hugagent/source`, creates an isolated
+The installer clones SUMC into `~/.sumc/source`, creates an isolated
 Python environment, installs the dependencies, builds the web application, and
 opens the first-run wizard. Follow the prompts to create an administrator and
-connect an OpenAI-compatible or local model. HugAgentOS then opens at
+connect an OpenAI-compatible or local model. SUMC then opens at
 [http://127.0.0.1:3001](http://127.0.0.1:3001).
 
 A fresh data directory creates exactly one local administrator. The initial
@@ -90,14 +90,14 @@ first sign-in. CE does not provide self-service registration.
 > [!WARNING]
 > The one-click server listens on `127.0.0.1` by default. If you need remote
 > access to a server, run
-> `hugagent serve --host 0.0.0.0 --port 3001 --no-browser`, and configure a
+> `sumc serve --host 0.0.0.0 --port 3001 --no-browser`, and configure a
 > strong administrator password, a firewall, and HTTPS first. Don't expose the
 > service directly on an untrusted network.
 
-Start HugAgentOS again at any time with this command:
+Start SUMC again at any time with this command:
 
 ```bash
-~/.hugagent/venv/bin/hugagent
+~/.sumc/venv/bin/sumc
 ```
 
 > [!NOTE]
@@ -117,7 +117,7 @@ Docker Engine or Docker Desktop, and Docker Compose v2.
 
 ```bash
 git clone https://github.com/ZJU-REAL/HugAgentOS.git
-cd HugAgentOS
+cd SUMC
 cp .env.example .env
 mkdir -p data/storage
 docker compose up -d --build
@@ -135,7 +135,7 @@ production configuration, and rebuild workflows, read the
 
 ## From answers to outcomes
 
-HugAgentOS isn't another wrapper around a chat box. It puts the context,
+SUMC isn't another wrapper around a chat box. It puts the context,
 execution environment, and artifact management an agent needs into one task
 flow.
 
@@ -168,7 +168,7 @@ flow.
 
 ## Enterprise trust through domain ontology
 
-HugAgentOS uses domain ontology as an executable control plane, not only as a
+SUMC uses domain ontology as an executable control plane, not only as a
 knowledge store. Controlled concepts, relationships, invariants, action
 contracts, roles, and permissions give the skill, memory, and orchestration
 engines one shared business language.
@@ -279,16 +279,16 @@ during the first run.
 
 ## Architecture
 
-HugAgentOS separates user channels, agent workflows, reusable capability
+SUMC separates user channels, agent workflows, reusable capability
 engines, ontology contracts, data governance, and infrastructure into clear
 layers. Action contracts connect the ontology layer to planning, validation,
 and gated execution, while security and platform governance span the complete
 stack.
 
-![HugAgentOS layered architecture in English](./assets/hugagentos-architecture-en.svg)
+![SUMC layered architecture in English](./assets/sumc-architecture-en.svg)
 
 > [!NOTE]
-> The diagram shows the complete HugAgentOS product architecture. Some
+> The diagram shows the complete SUMC product architecture. Some
 > governance, collaboration, gateway, and persistent-sandbox capabilities are
 > available only in Enterprise Edition.
 
@@ -384,7 +384,7 @@ Don't open a public Issue for a security vulnerability. Follow
 
 ## License
 
-HugAgentOS Community Edition is licensed under Apache License 2.0 with
+SUMC Community Edition is licensed under Apache License 2.0 with
 supplementary terms. The terms restrict operating the software as a competing
 multi-tenant SaaS offering and require the UI's Powered-by attribution to
 remain visible. [LICENSE](./LICENSE) and [NOTICE](./NOTICE) define the complete

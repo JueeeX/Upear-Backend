@@ -4457,10 +4457,10 @@ async function main() {
 
   const pres = new PptxGenJS();
   pres.layout = "LAYOUT_16x9";
-  pres.author = String(spec.author || "HugAgentOS");
+  pres.author = String(spec.author || "SUMC");
   pres.subject = String(spec.subject || spec.title || "Presentation");
   pres.title = String(spec.title || "Presentation");
-  pres.company = "HugAgentOS";
+  pres.company = "SUMC";
   pres.lang = "zh-CN";
 
   const layouts = renderSlides(pres, spec.slides, theme, fonts);

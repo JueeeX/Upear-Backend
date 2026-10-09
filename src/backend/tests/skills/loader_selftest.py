@@ -37,13 +37,13 @@ def test_config_default_sources():
 def test_config_env_override():
     """Test environment variable overrides for skill directories."""
     # Save original env
-    orig_user = os.environ.get("HUGAGENT_USER_SKILLS_DIR")
-    orig_project = os.environ.get("HUGAGENT_PROJECT_SKILLS_DIR")
+    orig_user = os.environ.get("SUMC_USER_SKILLS_DIR")
+    orig_project = os.environ.get("SUMC_PROJECT_SKILLS_DIR")
 
     try:
         # Set custom paths
-        os.environ["HUGAGENT_USER_SKILLS_DIR"] = "/custom/user/skills"
-        os.environ["HUGAGENT_PROJECT_SKILLS_DIR"] = "/custom/project/skills"
+        os.environ["SUMC_USER_SKILLS_DIR"] = "/custom/user/skills"
+        os.environ["SUMC_PROJECT_SKILLS_DIR"] = "/custom/project/skills"
 
         sources = get_default_skill_sources()
         user_src = sources[1]
@@ -56,14 +56,14 @@ def test_config_env_override():
     finally:
         # Restore original env
         if orig_user is None:
-            os.environ.pop("HUGAGENT_USER_SKILLS_DIR", None)
+            os.environ.pop("SUMC_USER_SKILLS_DIR", None)
         else:
-            os.environ["HUGAGENT_USER_SKILLS_DIR"] = orig_user
+            os.environ["SUMC_USER_SKILLS_DIR"] = orig_user
 
         if orig_project is None:
-            os.environ.pop("HUGAGENT_PROJECT_SKILLS_DIR", None)
+            os.environ.pop("SUMC_PROJECT_SKILLS_DIR", None)
         else:
-            os.environ["HUGAGENT_PROJECT_SKILLS_DIR"] = orig_project
+            os.environ["SUMC_PROJECT_SKILLS_DIR"] = orig_project
 
 
 def test_loader_builtin_skills():

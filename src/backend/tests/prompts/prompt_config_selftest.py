@@ -17,7 +17,7 @@ from prompts.prompt_runtime import build_system_prompt
 
 
 # Anchor on a **structural marker** rather than brand wording: the product name in
-# the prompt's first line varies by build (main repo HugAgentOS / neutralized in the CE
+# the prompt's first line varies by build (main repo SUMC / neutralized in the CE
 # derived tree), so a brand word would mismatch on both sides and leak the brand into
 # the CE tree. "## 防幻觉约束" comes from the 10_constraints part, proving multiple
 # parts are loaded and concatenated, and stays constant across brands.

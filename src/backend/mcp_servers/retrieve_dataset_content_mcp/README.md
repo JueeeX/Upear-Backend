@@ -1,6 +1,6 @@
 # retrieve_dataset_content MCP Server
 
-Standalone **stdio MCP server** exposing HugAgentOS tool:
+Standalone **stdio MCP server** exposing SUMC tool:
 
 - Tool: `retrieve_dataset_content(dataset_id: str, query: str, top_k: int = 10, score_threshold: float = 0.4, search_method: str = "hybrid_search", reranking_enable: bool = False, weights: float = 0.6) -> list`
 

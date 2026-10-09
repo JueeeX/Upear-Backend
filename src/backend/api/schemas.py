@@ -45,6 +45,10 @@ class ChatRequest(BaseModel):
         description="用户端模型切换选择的模型供应商 ID；仅在后台开关开启且供应商为 active chat 时生效",
         max_length=64,
     )
+    safeharness_protected: Optional[bool] = Field(
+        default=None,
+        description="Persist the per-session SafeHarness protection preference.",
+    )
     chat_mode: Optional[ChatMode] = Field(
         default=None,
         description=(

@@ -34,12 +34,12 @@ tools before you start.
 Run the public installer from any directory:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash
 ```
 
 The installer downloads the latest Community Edition to
-`~/.hugagent/source`, creates an isolated environment at
-`~/.hugagent/venv`, installs the dependencies, and builds the web application.
+`~/.sumc/source`, creates an isolated environment at
+`~/.sumc/venv`, installs the dependencies, and builds the web application.
 It then starts the interactive setup wizard.
 
 ### Complete the first-run setup
@@ -48,21 +48,21 @@ Use the terminal wizard to create an administrator account and configure your
 chat model. Embedding, reranker, file-parser, and internet-search services are
 optional and can be added later.
 
-After setup, HugAgentOS starts automatically and opens
+After setup, SUMC starts automatically and opens
 [http://127.0.0.1:3001](http://127.0.0.1:3001).
 
-### Start HugAgentOS again
+### Start SUMC again
 
 Run the installed command whenever you want to start the application again:
 
 ```bash
-~/.hugagent/venv/bin/hugagent
+~/.sumc/venv/bin/sumc
 ```
 
 You can add the command to your shell path:
 
 ```bash
-export PATH="$HOME/.hugagent/venv/bin:$PATH"
+export PATH="$HOME/.sumc/venv/bin:$PATH"
 ```
 
 ## Option 2: Docker Compose
@@ -72,7 +72,7 @@ Install Git, Docker Engine or Docker Desktop, and Docker Compose v2, then run:
 
 ```bash
 git clone https://github.com/ZJU-REAL/HugAgentOS.git
-cd HugAgentOS
+cd SUMC
 cp .env.example .env
 mkdir -p data/storage
 docker compose up -d --build

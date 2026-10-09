@@ -1,5 +1,5 @@
 <!--
-  Thanks for contributing to HugAgentOS! 感谢贡献！
+  Thanks for contributing to SUMC! 感谢贡献！
 
   ⚠️ IMPORTANT — this is a GENERATED community mirror. 重要说明：本仓库是生成镜像。
   PRs are accepted ONLY for:  document/**, examples/**, README*.md, and other

@@ -4,7 +4,7 @@
 
 > **When to use**: **air-gapped environments** (government intranets and the like) that cannot pull images online — image tarball offline delivery. Part of the Enterprise Edition service scope. For connected environments, use [Docker Compose](docker-compose.md).
 
-Air-gapped environments (government intranets and the like) cannot pull images online, so HugAgentOS ships an offline delivery flow: build image tarballs on a connected machine → copy them across → `docker load` + `compose up` on the production side. Offline deployment and professional implementation are part of the Enterprise Edition service scope (see [Edition Comparison](../editions/overview.md)). This document follows the actual scripts under `docker/`.
+Air-gapped environments (government intranets and the like) cannot pull images online, so SUMC ships an offline delivery flow: build image tarballs on a connected machine → copy them across → `docker load` + `compose up` on the production side. Offline deployment and professional implementation are part of the Enterprise Edition service scope (see [Edition Comparison](../editions/overview.md)). This document follows the actual scripts under `docker/`.
 
 ## Flow overview
 
@@ -16,7 +16,7 @@ scripts/deploy/deploy_prepare.sh
   ├─ auto-selects the package tier by diff
   │    infra/deps changed → save_pack.sh (full pack)
   │    app code only      → save_pack_app.sh (app pack)
-  └─ outputs docker/hugagent-*-<sha>-<ts>.tar.gz
+  └─ outputs docker/sumc-*-<sha>-<ts>.tar.gz
             + matching .manifest.txt
                     │
                 scp copy               ┌─ offline_deployment.sh (full)
@@ -49,7 +49,7 @@ What the script does:
 2. Picks the tier from the before/after merge diff:
    - touches `docker-compose.yml` / `Dockerfile*` / `requirements*.txt` / `opensandbox-config.toml` / `.env.example` / `alembic/` → **full pack** (`save_pack.sh`)
    - touches only `src/backend/`, `src/frontend/`, `mcp_servers/`, `configs/`, `prompts/` → **app pack** (`save_pack_app.sh`)
-3. Produces `docker/hugagent-images-<sha>-<ts>.tar.gz` (full) or `docker/hugagent-app-images-<sha>-<ts>.tar.gz` (app), plus a `.manifest.txt` (image list + digests + sizes).
+3. Produces `docker/sumc-images-<sha>-<ts>.tar.gz` (full) or `docker/sumc-app-images-<sha>-<ts>.tar.gz` (app), plus a `.manifest.txt` (image list + digests + sizes).
 
 ### save_pack.sh — full pack contents
 
@@ -57,11 +57,11 @@ Prerequisite: all self-built images already `docker compose build`-ed and all up
 
 | Category | Images |
 |---|---|
-| Self-built (required) | `hugagent-backend:latest`, `hugagent-mcp:latest`, `hugagent-frontend:latest` |
+| Self-built (required) | `sumc-backend:latest`, `sumc-mcp:latest`, `sumc-frontend:latest` |
 | Core infrastructure (required) | `postgres:15-alpine`, `redis:7-alpine` |
 | opensandbox profile (required) | `opensandbox/server:v0.1.13`, `opensandbox/execd:v1.0.15`, `opensandbox/egress:v1.0.10`, `opensandbox/code-interpreter:v1.0.2` |
 | mem0 profile (required) | `quay.io/coreos/etcd:v3.5.5`, `minio/minio:RELEASE.2023-03-13T19-46-17Z`, `milvusdb/milvus:v2.5.4`, `neo4j:5.15-community` |
-| Optional (included when present locally) | `hugagent-script-runner:latest`, `hugagent-opensandbox-custom:latest` |
+| Optional (included when present locally) | `sumc-script-runner:latest`, `sumc-opensandbox-custom:latest` |
 
 ### save_pack_app.sh — incremental app pack
 
@@ -72,13 +72,13 @@ For releases that only touch application code (no Dockerfile / requirements / co
 The deployment directory on the production machine must match the layout the scripts expect: `offline_deployment*.sh` sits next to `docker-compose.yml`, with the tarballs in its `docker/` subdirectory (when run without arguments, the scripts pick the **newest** tarball there):
 
 ```
-/opt/hugagent-deploy/
+/opt/sumc-deploy/
 ├── docker-compose.yml
 ├── .env                        # production config (HOST_STORAGE_PATH, tokens, model endpoint, ...)
 ├── offline_deployment.sh       # copied out of the repo's docker/ directory
 ├── offline_deployment_app.sh
 └── docker/
-    └── hugagent-images-<sha>-<ts>.tar.gz
+    └── sumc-images-<sha>-<ts>.tar.gz
 ```
 
 ### Full release
@@ -94,17 +94,17 @@ Internally: `gzip -dc <pkg> | docker load`, then
 docker compose -f docker-compose.yml up -d --no-build --force-recreate --remove-orphans
 ```
 
-(`COMPOSE_PROJECT_NAME=hugagent`; docker compose v2 and docker-compose v1 are auto-detected.)
+(`COMPOSE_PROJECT_NAME=sumc`; docker compose v2 and docker-compose v1 are auto-detected.)
 
 ### Incremental app release
 
 ```bash
-bash offline_deployment_app.sh                   # auto-picks the newest hugagent-app-images-*.tar.gz
+bash offline_deployment_app.sh                   # auto-picks the newest sumc-app-images-*.tar.gz
 ```
 
 After `docker load` it only runs `up -d --no-build --force-recreate backend frontend`.
 
-> ⚠️ Note: the app pack **contains a fresh `hugagent-mcp` image**, but `offline_deployment_app.sh` only recreates the backend and frontend containers. If the release changed code under `src/backend/mcp_servers/`, add one manual step:
+> ⚠️ Note: the app pack **contains a fresh `sumc-mcp` image**, but `offline_deployment_app.sh` only recreates the backend and frontend containers. If the release changed code under `src/backend/mcp_servers/`, add one manual step:
 > ```bash
 > docker compose -f docker-compose.yml up -d --no-build --force-recreate mcp
 > ```
@@ -138,8 +138,8 @@ Copy `prompts_snapshot_<ts>.json` to the production machine together with the im
 Prerequisite: the production backend image already includes the `POST /v1/content/prompts/import` endpoint (`src/backend/api/routes/v1/content.py`). Once the new backend is up:
 
 ```bash
-docker cp prompts_snapshot_<ts>.json hugagent-backend:/tmp/
-docker exec hugagent-backend curl -sS -X POST \
+docker cp prompts_snapshot_<ts>.json sumc-backend:/tmp/
+docker exec sumc-backend curl -sS -X POST \
   'http://localhost:3001/v1/content/prompts/import?overwrite=true' \
   -H "Authorization: Bearer <production ADMIN_TOKEN>" \
   -H 'Content-Type: application/json' \

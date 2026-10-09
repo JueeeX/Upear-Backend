@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 _PROBE_TIMEOUT_S = 10.0
 _ENC_PREFIX = "enc:v1:"
-_RUNTIME_SECRET_PREFIX = "__hugagent_runtime_secret__"
+_RUNTIME_SECRET_PREFIX = "__sumc_runtime_secret__"
 _URL_OVERRIDE_STORAGE_KEY = f"{_RUNTIME_SECRET_PREFIX}url"
 _QUERY_SECRET_STORAGE_PREFIX = f"{_RUNTIME_SECRET_PREFIX}query__"
 _OAUTH_BUNDLE_STORAGE_KEY = f"{_RUNTIME_SECRET_PREFIX}oauth_bundle"

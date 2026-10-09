@@ -5,7 +5,7 @@ No-script verification: the verdict comes from review_requirement opening the pr
 (worker writes a /workspace file, the reviewer reads /workspace of the same session); passing it proves the whole chain
 "worker -> reviewer sub-agent -> flip -> persist" works. Requires real LLM/sandbox.
 
-    docker exec hugagent-backend python /app/src/backend/scripts/_loop_integration_test.py
+    docker exec sumc-backend python /app/src/backend/scripts/_loop_integration_test.py
 """
 import asyncio
 

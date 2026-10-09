@@ -2,7 +2,7 @@
 
 > Last updated: 2026-07-28
 
-HugAgentOS ships **two independent management consoles**, aimed at content operations and system administration respectively:
+SUMC ships **two independent management consoles**, aimed at content operations and system administration respectively:
 
 | Entry | Frontend | Credential | Purpose |
 |---|---|---|---|

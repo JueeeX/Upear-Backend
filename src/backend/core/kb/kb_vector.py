@@ -1,6 +1,6 @@
 """Milvus vector store for private knowledge base.
 
-Collection: hugagent_kb_private
+Collection: sumc_kb_private
 - Stores both chunk rows (row_type='chunk') and question rows (row_type='question')
 - Child chunk vectors used for retrieval; parent chunk content fetched from PostgreSQL
 - User isolation enforced via user_id field in every query expression
@@ -17,7 +17,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-COLLECTION_NAME = "hugagent_kb_private"
+COLLECTION_NAME = "sumc_kb_private"
 
 # Milvus VARCHAR field capacity (**bytes**, not characters) —— the schema definition and the write truncation share the same
 # set of constants, to avoid changing max_length but forgetting the truncation and hitting "length exceeds max length" again.
@@ -310,7 +310,7 @@ def _collection_dense_dim(client, *, timeout: float | None = None) -> Optional[i
 
 
 def get_or_create_collection(*, timeout: float | None = None) -> None:
-    """Idempotently create hugagent_kb_private (hybrid retrieval schema) at the current embedding model's real dimension.
+    """Idempotently create sumc_kb_private (hybrid retrieval schema) at the current embedding model's real dimension.
 
     The dimension auto-follows the model: if an existing collection's dimension differs from the current model's output (meaning
     the embedding model was changed), it auto-drops and recreates —— old vectors come from another model and are inherently
@@ -402,7 +402,7 @@ def get_or_create_collection(*, timeout: float | None = None) -> None:
 
 
 def upsert_rows(rows: list[dict[str, Any]]) -> None:
-    """Upsert a batch of rows into hugagent_kb_private.
+    """Upsert a batch of rows into sumc_kb_private.
 
     Each row must include all schema fields. dense_embedding and sparse_embedding
     must be pre-computed by the caller (use embed_text / build_sparse_text).

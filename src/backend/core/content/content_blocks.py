@@ -11,9 +11,10 @@ from core.db.models import ContentBlock
 from sqlalchemy.orm import Session
 
 # Branding source of truth (seam C7): in-code defaults stay neutral; the concrete
-# brand (e.g. "HugAgentOS") is injected via env BRAND_PRODUCT_NAME / the deploy-time
+# brand (e.g. "SUMC") is injected via env BRAND_PRODUCT_NAME / the deploy-time
 # content_blocks DB seed.
 _BRAND_NAME = settings.branding.product_name
+_BRAND_SUBTITLE = settings.branding.product_subtitle
 
 DOCS_BLOCK_MAP = {
     "updates": "docs_updates",
@@ -53,12 +54,12 @@ class ContentSnapshotError(ValueError):
 DEFAULT_PAGE_CONFIG: dict[str, Any] = {
     "branding": {
         "product_name": _BRAND_NAME,
-        "product_subtitle": "AI 智能助手",
-        "logo_url": "/home/header.svg",
+        "product_subtitle": _BRAND_SUBTITLE,
+        "logo_url": "/icon.png",
         "favicon_url": "/icon.png",
         "page_title": _BRAND_NAME,
-        "hero_title": f"你好，我是{_BRAND_NAME}",
-        "hero_subtitle": "基于 AI 能力的场景化智能工作平台",
+        "hero_title": f"你好，我是 {_BRAND_NAME}",
+        "hero_subtitle": "面向智能体的安全管控工作平台",
         "disclaimer": "本平台生成内容由AI大模型生成，不构成任何建议；涉及业务决策请以权威信息为准。",
     },
     "navigation": {
@@ -279,7 +280,8 @@ def enforce_ce_branding(db: Session) -> bool:
     if row is None or not isinstance(row.payload, dict):
         return False
 
-    product_name = "HugAgentOS"
+    product_name = settings.branding.product_name
+    product_subtitle = settings.branding.product_subtitle
     payload = dict(row.payload)
     branding = dict(payload.get("branding") or {})
     navigation = dict(payload.get("navigation") or {})
@@ -289,7 +291,9 @@ def enforce_ce_branding(db: Session) -> bool:
 
     desired_branding = {
         "product_name": product_name,
-        "product_subtitle": "AI 智能助手",
+        "product_subtitle": product_subtitle,
+        "logo_url": "/icon.png",
+        "favicon_url": "/icon.png",
         "page_title": product_name,
         "hero_title": f"你好，我是 {product_name}",
     }

@@ -6,7 +6,7 @@ import XxxRepository`` keeps working unchanged.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import sqlalchemy as sa
@@ -101,7 +101,7 @@ class KBRepository:
         for key, value in update_data.items():
             setattr(space, key, value)
 
-        space.updated_at = datetime.utcnow()
+        space.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(space)
         return space

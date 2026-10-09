@@ -26,7 +26,7 @@ import logging
 import os
 import re
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -227,7 +227,7 @@ async def _build_connected_update(user_id: str) -> Dict[str, Any]:
         "corp_id": ident.get("corp_id"),
         "auth_bundle": bout.strip() if (brc == 0 and bout.strip()) else None,
         **_CLEAR_LOGIN,
-        "last_verified_at": datetime.utcnow(),
+        "last_verified_at": datetime.now(timezone.utc).replace(tzinfo=None),
         "last_error": None,
     }
 
@@ -345,7 +345,7 @@ async def _device_login_flow(user_id: str) -> None:
                         "login_verification_url": u,
                         "login_verification_url_complete": comp,
                         "login_user_code": c,
-                        "login_started_at": datetime.utcnow(),
+                        "login_started_at": datetime.now(timezone.utc).replace(tzinfo=None),
                         "last_error": None,
                     })
                     pushed = True
@@ -447,7 +447,7 @@ class DingTalkService:
         self.repo.update(user_id, {
             "status": "pending",
             **_CLEAR_LOGIN,
-            "login_started_at": datetime.utcnow(),
+            "login_started_at": datetime.now(timezone.utc).replace(tzinfo=None),
             "last_error": None,
         })
         # Start the background login task (manages its own independent DB session)

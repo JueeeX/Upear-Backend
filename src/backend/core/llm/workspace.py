@@ -36,7 +36,7 @@ class _WorkspaceState(TypedDict, total=False):
 
 
 _workspace_var: ContextVar[Optional[_WorkspaceState]] = ContextVar(
-    "hugagent_workspace_state", default=None,
+    "sumc_workspace_state", default=None,
 )
 
 

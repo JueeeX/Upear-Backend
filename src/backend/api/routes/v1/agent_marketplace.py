@@ -26,6 +26,7 @@ from core.auth.capabilities import resolve_user_capabilities
 from core.db.engine import get_db
 from core.infra.exceptions import AccessDeniedError
 from core.infra.responses import created_response, success_response
+from core.safeharness_capabilities import reject_uncontrolled_mutation
 from core.services import agent_market_service as am
 from core.services import marketplace_listing as ml
 
@@ -79,6 +80,7 @@ async def install_agent(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """把市场子智能体克隆为「仅自己可见可用」的私有子智能体（绑定的技能/工具随装）。需 ``can_add_agent`` 权限。"""
     _require_can_add_agent(str(user.user_id), db)
     ml.ensure_item_visible(db, ml.KIND_AGENT, body.slug, str(user.user_id), resource="marketplace_agent")
@@ -103,6 +105,7 @@ async def submit_agent(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     _require_can_add_agent(str(user.user_id), db)
     result = am.submit_to_marketplace(
         db,
@@ -130,5 +133,6 @@ async def withdraw_submission(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     am.withdraw_submission(db, submission_id, owner_user_id=str(user.user_id))
     return success_response(data={"id": submission_id, "message": "申请已撤回"})

@@ -2,7 +2,7 @@
 
 from typing import Any, Optional, Dict
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi.responses import JSONResponse, StreamingResponse
 
 
@@ -51,7 +51,7 @@ def success_response(
         "message": message,
         "data": data,
         "trace_id": trace_id or generate_trace_id(),
-        "timestamp": int(datetime.utcnow().timestamp() * 1000)
+        "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000)
     }
 
 
@@ -89,7 +89,7 @@ def error_response(
         "message": message,
         "data": data or {},
         "trace_id": trace_id or generate_trace_id(),
-        "timestamp": int(datetime.utcnow().timestamp() * 1000)
+        "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000)
     }
 
     return JSONResponse(

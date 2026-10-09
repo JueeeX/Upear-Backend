@@ -1,14 +1,14 @@
 //! 桌面客户端运行时配置。
 //!
-//! 解析优先级从高到低为：环境变量 `HUGAGENT_SERVER_BASE`、
+//! 解析优先级从高到低为：环境变量 `SUMC_SERVER_BASE`、
 //! `<应用配置目录>/server.json`、编译期默认值。把「服务器地址」做成运行时可配，
-//! 是为了一个 .exe 通吃 HugAgentOS / HugAgentOS / 私有化多环境（见桌面方案 §阶段二）。
+//! 是为了一个 .exe 通吃 SUMC / SUMC / 私有化多环境（见桌面方案 §阶段二）。
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 // 编译期默认后端地址：真源在 `brand.rs`（可用构建时环境变量 JX_DEFAULT_SERVER_BASE
-// 覆盖）。正式分发也可再用运行时 server.json / HUGAGENT_SERVER_BASE 覆盖。
+// 覆盖）。正式分发也可再用运行时 server.json / SUMC_SERVER_BASE 覆盖。
 use crate::brand::{DEFAULT_SERVER_BASE, DESKTOP_UPDATE_BASE};
 
 /// 桌面端使用远程服务，或由客户端托管本机 CE 单机服务。
@@ -124,7 +124,7 @@ impl AppConfig {
     /// 桌面整包更新源与业务服务地址解耦：远程模式默认跟随当前服务器；本机模式
     /// 使用构建时发布源，避免去 127.0.0.1 查询一个并不存在的安装包清单。
     pub fn update_base(&self) -> String {
-        if let Ok(value) = std::env::var("HUGAGENT_UPDATE_SERVER_BASE") {
+        if let Ok(value) = std::env::var("SUMC_UPDATE_SERVER_BASE") {
             let value = value.trim().trim_end_matches('/');
             if !value.is_empty() {
                 return value.to_string();
@@ -154,7 +154,7 @@ pub fn load(config_dir: &Path) -> AppConfig {
         }
     }
 
-    if let Ok(v) = std::env::var("HUGAGENT_SERVER_BASE") {
+    if let Ok(v) = std::env::var("SUMC_SERVER_BASE") {
         if !v.trim().is_empty() {
             cfg.server_base = v;
             cfg.deployment_mode = DeploymentMode::Remote;
@@ -194,7 +194,7 @@ pub fn save_server_base(config_dir: &Path, server_base: &str) -> Result<(), Stri
 /// deployment_mode）都不算已完成，首启会补一次初始化页（模式 / 地址已预填，
 /// 确认后不再询问）。由环境变量强制服务器地址时视作已配置，直接跳过选择页。
 pub fn is_provisioned(config_dir: &Path) -> bool {
-    if std::env::var("HUGAGENT_SERVER_BASE")
+    if std::env::var("SUMC_SERVER_BASE")
         .map(|v| !v.trim().is_empty())
         .unwrap_or(false)
     {
@@ -293,7 +293,7 @@ mod tests {
 
     fn temp_dir(name: &str) -> std::path::PathBuf {
         let path = std::env::temp_dir().join(format!(
-            "hugagent-desktop-config-{name}-{}",
+            "sumc-desktop-config-{name}-{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&path);

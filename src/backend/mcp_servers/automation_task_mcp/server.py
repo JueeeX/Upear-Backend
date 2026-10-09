@@ -17,7 +17,7 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from mcp_servers.automation_task_mcp import impl
 
-mcp = FastMCP("hugagent-automation-task")
+mcp = FastMCP("sumc-automation-task")
 
 _HDR_USER = "x-current-user-id"
 _HDR_CHANNEL = "x-channel-id"

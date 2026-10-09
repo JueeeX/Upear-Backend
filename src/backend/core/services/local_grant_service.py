@@ -2,7 +2,7 @@
 
 A desktop-local, single-user store of which host folders the agent is authorized
 to touch (beyond the default workspace root) and how each danger-command class is
-handled. Persisted as one JSON file under the local data dir (``~/.hugagent`` by
+handled. Persisted as one JSON file under the local data dir (``~/.sumc`` by
 default), so it survives restarts and is shared between the shell (which writes
 grants when the user authorizes a folder) and the backend (which reads them in
 the execution policy gate).
@@ -27,7 +27,7 @@ _DANGER_CATEGORIES = ("delete", "system_write", "network", "privilege")
 
 
 def _data_dir() -> Path:
-    return Path(os.getenv("HUGAGENT_HOME", str(Path.home() / ".hugagent"))).expanduser()
+    return Path(os.getenv("SUMC_HOME", str(Path.home() / ".sumc"))).expanduser()
 
 
 def _store_path() -> Path:

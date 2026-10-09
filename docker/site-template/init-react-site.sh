@@ -13,7 +13,7 @@
 set -euo pipefail
 
 # 工作区根：Docker 沙箱内固定 /workspace；无 Docker 本地档由 SCRIPT_RUNNER_WORKSPACE
-# 指向真实目录（如 ~/.hugagent/workspace）。模板/脚本路径全部相对它算，跟着环境走。
+# 指向真实目录（如 ~/.sumc/workspace）。模板/脚本路径全部相对它算，跟着环境走。
 WS="${SCRIPT_RUNNER_WORKSPACE:-/workspace}"
 TEMPLATE_DIR="${SITE_TEMPLATE_DIR:-${SITE_TEMPLATE_HOME:-/opt/site-template}/react-vite}"
 NODE_HOME_BASE="${SITE_NODE_BASE:-$WS/.site-node}"

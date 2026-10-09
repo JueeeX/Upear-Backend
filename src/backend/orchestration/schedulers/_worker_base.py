@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, List, Optional, Sequence, Tuple
 
 import pytz
@@ -97,7 +97,7 @@ def claim_next(
             return None
         setattr(row, status_field, running_value)
         if started_field and hasattr(row, started_field):
-            setattr(row, started_field, datetime.utcnow())
+            setattr(row, started_field, datetime.now(timezone.utc).replace(tzinfo=None))
         db.commit()
         return getattr(row, pk_field)
 
@@ -119,7 +119,7 @@ def recover_stale(
     the right default because the work is idempotent by construction — that is a
     precondition of using this base class, not an assumption about the caller.
     """
-    cutoff = datetime.utcnow() - timedelta(minutes=timeout_minutes)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=timeout_minutes)
     try:
         with SessionLocal() as db:
             stale = (

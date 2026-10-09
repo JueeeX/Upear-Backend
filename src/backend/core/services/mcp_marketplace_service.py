@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
@@ -57,7 +57,7 @@ def ensure_curated_market_items(db: Session) -> List[str]:
     """Seed credential-free official templates once, without resurrecting deletions."""
     seeded: List[str] = []
     updated = False
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     for definition in CURATED_MCP_MARKET_ITEMS:
         slug = str(definition["slug"])
         # Soft-deleted rows deliberately count as existing: an administrator's
@@ -138,7 +138,7 @@ def ensure_curated_market_items(db: Session) -> List[str]:
             tags=list(definition.get("tags") or []),
             icon=str(definition.get("icon") or ""),
             publisher_id=None,
-            publisher_name=str(definition.get("publisher_name") or "HugAgentOS"),
+            publisher_name=str(definition.get("publisher_name") or "SUMC"),
             source="admin",
             latest_version_id=version_id,
             status="active",
@@ -477,7 +477,7 @@ async def submit_to_marketplace(
         raise BadRequestError(message="MCP 未发现任何工具，不能申请上架")
     risk_level, risk_report = assess_mcp_risk(tools)
     template_url, auth_schema = _credential_free_connection(row)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     submission = McpMarketSubmission(
         submission_id=f"mcpsub_{uuid.uuid4().hex}",
         slug=_source_slug(db, row, owner_user_id),
@@ -573,8 +573,8 @@ def withdraw_submission(db: Session, submission_id: str, owner_user_id: str) -> 
     if row.status != "pending":
         raise BadRequestError(message="只有待审核申请可以撤回")
     row.status = "withdrawn"
-    row.deleted_at = datetime.utcnow()
-    row.updated_at = datetime.utcnow()
+    row.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
 
 
@@ -629,7 +629,7 @@ def _publish_snapshot(
         .first()
     ):
         raise BadRequestError(message=f"市场条目 {slug} 已存在版本 {version}，请提升版本号")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     # Include a soft-deleted row so a later reviewed version can resurrect the
     # same stable marketplace slug without colliding on the primary key.
     item = db.query(McpMarketItem).filter(McpMarketItem.slug == slug).first()
@@ -715,7 +715,7 @@ async def review_submission(
         not approve and row.status not in ("pending", "approved")
     ):
         raise BadRequestError(message="该申请当前状态不可审核")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if approve:
         source = (
             db.query(AdminMcpServer)
@@ -864,15 +864,15 @@ async def publish_admin_server(
                     owner_user_id=None,
                     status="active",
                     installed_by="admin",
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
         else:
             installation.slug = item.slug
             installation.version_id = item.latest_version_id
             installation.status = "active"
-            installation.updated_at = datetime.utcnow()
+            installation.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         for installation in (
             db.query(McpMarketInstallation)
@@ -1025,7 +1025,7 @@ async def install_market_item(
         require_https=user_install or item.source != "admin",
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     server_id = existing_server.server_id if existing_server else f"mmcp_{uuid.uuid4().hex[:20]}"
     candidate = AdminMcpServer(
         server_id=server_id,
@@ -1206,7 +1206,7 @@ def update_market_item(
         item.tags = list(dict.fromkeys(str(tag).strip() for tag in tags if str(tag).strip()))
     if icon is not None:
         item.icon = icon.strip() or None
-    item.updated_at = datetime.utcnow()
+    item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     installation_server_ids = [
         str(row[0])
@@ -1260,8 +1260,8 @@ def delete_market_item(
         )
         if source and (source.extra_config or {}).get("market_source_only"):
             db.delete(source)
-    item.deleted_at = datetime.utcnow()
-    item.updated_at = datetime.utcnow()
+    item.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     ml.set_listing_enabled(db, ml.KIND_MCP, slug, False, updated_by=updated_by)
     return {"slug": slug, "deleted": True}
@@ -1281,7 +1281,7 @@ def set_suspended(
     )
     if not item:
         raise ResourceNotFoundError("mcp_market_item", slug)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     item.status = "suspended" if suspended else "active"
     item.status_reason = (reason or "").strip() if suspended else None
     item.updated_at = now
@@ -1351,8 +1351,8 @@ async def revalidate_market_item(db: Session, slug: str) -> Dict[str, Any]:
         else:
             item.status = "active"
             item.status_reason = "个人端点将在安装时使用用户凭据验证"
-        item.last_verified_at = datetime.utcnow()
-        item.updated_at = datetime.utcnow()
+        item.last_verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         return _item_dict(item, version, installed=False)
     source = (
@@ -1365,23 +1365,23 @@ async def revalidate_market_item(db: Session, slug: str) -> Dict[str, Any]:
     if not source:
         item.status = "changed"
         item.status_reason = "原始 MCP 连接已不存在，无法继续验证"
-        item.last_verified_at = datetime.utcnow()
-        item.updated_at = datetime.utcnow()
+        item.last_verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         return _item_dict(item, version, installed=False)
     source_template_url, source_auth_schema = _credential_free_connection(source)
     if source.transport != version.transport or source_template_url.strip() != version.url.strip():
         item.status = "changed"
         item.status_reason = "原始 MCP 的连接地址或传输方式已变化，需发布新版本"
-        item.last_verified_at = datetime.utcnow()
-        item.updated_at = datetime.utcnow()
+        item.last_verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         return _item_dict(item, version, installed=False)
     if source_auth_schema != list(version.auth_schema or []):
         item.status = "changed"
         item.status_reason = "原始 MCP 的认证参数已变化，需发布新版本"
-        item.last_verified_at = datetime.utcnow()
-        item.updated_at = datetime.utcnow()
+        item.last_verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         return _item_dict(item, version, installed=False)
     try:
@@ -1405,7 +1405,7 @@ async def revalidate_market_item(db: Session, slug: str) -> Dict[str, Any]:
         else:
             item.status = "changed"
             item.status_reason = "远程工具或参数结构已变化，需发布新版本并重新审核"
-    item.last_verified_at = datetime.utcnow()
-    item.updated_at = datetime.utcnow()
+    item.last_verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    item.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return _item_dict(item, version, installed=False)

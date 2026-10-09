@@ -18,8 +18,8 @@ This reference is sourced from `.env.example` and `src/backend/core/config/setti
 | `MCP_OAUTH_PUBLIC_BASE_URL` | (empty) | Browser-visible API base for MCP OAuth callbacks; leave empty for the same-origin nginx/Vite `/api` proxy, or set a cross-origin base such as `https://app.example.com/api` | CE |
 | `ENV` / `ENVIRONMENT` | `dev` | Runtime environment (dev / staging / prod); affects log format and `.env.<ENV>` loading | CE |
 | `TZ` | `Asia/Shanghai` | Timezone for all containers | CE |
-| `SERVICE_NAME` | `hugagent` | Service name (logging / alerting identifier) | CE |
-| `HOST_STORAGE_PATH` | `/var/lib/hugagent-storage` | Host absolute path of the storage directory, bind-mounted into backend/mcp at `/app/storage`; **required**, enforced by compose | CE |
+| `SERVICE_NAME` | `sumc` | Service name (logging / alerting identifier) | CE |
+| `HOST_STORAGE_PATH` | `/var/lib/sumc-storage` | Host absolute path of the storage directory, bind-mounted into backend/mcp at `/app/storage`; **required**, enforced by compose | CE |
 | `HOST_REPO_PATH` | repo absolute path | Repository root on the host; used when the backend resolves compose-relative paths through docker.sock to rebuild sandbox images | CE |
 | `DOCKER_GID` | `999` | Host docker group GID granting the backend container access to `/var/run/docker.sock` (find with `stat -c '%g' /var/run/docker.sock`) | CE |
 | `COMPOSE_PROFILES` | `script_runner` | Compose profile selection (`script_runner` / `opensandbox`, append `,mem0` as needed); must match `SANDBOX_PROVIDER` | CE |
@@ -114,9 +114,9 @@ These variables are deployment-level fallbacks for the GitHub binding under `/ad
 
 | Variable | Default | Description | Edition |
 |---|---|---|---|
-| `DATABASE_URL` | assembled by compose as `postgresql://hugagent_user:${DB_PASSWORD}@postgres:5432/hugagent`; code fallback `sqlite:///./hugagent.db` | Primary DB connection string | CE |
-| `DB_PASSWORD` | `hugagent_dev_password` (compose default) | PostgreSQL password (change in production) | CE |
-| `SQLITE_FALLBACK_URL` | `sqlite:///./hugagent_dev.db` (code default) | SQLite fallback DB | CE |
+| `DATABASE_URL` | assembled by compose as `postgresql://sumc_user:${DB_PASSWORD}@postgres:5432/sumc`; code fallback `sqlite:///./sumc.db` | Primary DB connection string | CE |
+| `DB_PASSWORD` | `sumc_dev_password` (compose default) | PostgreSQL password (change in production) | CE |
+| `SQLITE_FALLBACK_URL` | `sqlite:///./sumc_dev.db` (code default) | SQLite fallback DB | CE |
 | `DB_ECHO` | `false` | SQLAlchemy SQL echo | CE |
 | `DB_POOL_SIZE` | `.env.example` 50; code default 20 | Connection-pool size | CE |
 | `DB_POOL_MAX_OVERFLOW` | `10` | Pool overflow limit | CE |
@@ -172,8 +172,8 @@ These variables are deployment-level fallbacks for the GitHub binding under `/ad
 | `COMPANY_API_URL` / `COMPANY_AUTH_TOKEN` | (empty) | Company-profile API | EE (industry tool) |
 | `BACKEND_INTERNAL_URL` | `http://backend:3001` | Internal address for MCP servers (e.g. batch_runner) to call back into the backend | CE |
 | `BACKEND_INTERNAL_TOKEN` | (**required for batch execution**) | MCP → backend callback token | CE |
-| `HUGAGENT_USER_SKILLS_DIR` / `HUGAGENT_PROJECT_SKILLS_DIR` | `~/.hugagent/skills` / `.hugagent/skills` | Skill directory overrides | CE |
-| `HUGAGENT_DISABLE_USER_SKILLS` / `HUGAGENT_DISABLE_PROJECT_SKILLS` | `0` | Disable user / project skills | CE |
+| `SUMC_USER_SKILLS_DIR` / `SUMC_PROJECT_SKILLS_DIR` | `~/.sumc/skills` / `.sumc/skills` | Skill directory overrides | CE |
+| `SUMC_DISABLE_USER_SKILLS` / `SUMC_DISABLE_PROJECT_SKILLS` | `0` | Disable user / project skills | CE |
 
 ## Sandbox
 
@@ -184,7 +184,7 @@ These variables are deployment-level fallbacks for the GitHub binding under `/ad
 | `SANDBOX_PROVIDER` | `script_runner` | `script_runner` / `opensandbox` / `cube` | CE (persistent sandboxes opensandbox/cube: EE) |
 | `SANDBOX_TOOLS_ENABLED` | `false` | Register the `bash` / `sandbox_put_artifact` / `sandbox_get_artifact` tools on the agent | CE |
 | `SANDBOX_MAX_CONCURRENT` | `4` | Concurrent sandbox executions per backend process (reserved) | CE |
-| `SANDBOX_RUNNER_URL` | `http://hugagent-script-runner:8900` | script_runner sidecar address | CE |
+| `SANDBOX_RUNNER_URL` | `http://sumc-script-runner:8900` | script_runner sidecar address | CE |
 | `SANDBOX_TOOLS_TIMEOUT` / `SANDBOX_TOOLS_MAX_TIMEOUT` | `30` / `120` | Default / maximum timeout per bash command (s) | CE |
 | `SANDBOX_TOOLS_MAX_MEMORY` | `256` | script_runner memory cap (MB) | CE |
 | `MYSPACE_WRITE_CONFIRM` | `true` (code default) | Sandbox writes to `/myspace` require out-of-band user confirmation | CE |
@@ -195,7 +195,7 @@ These variables are deployment-level fallbacks for the GitHub binding under `/ad
 |---|---|---|
 | `OPENSANDBOX_DOMAIN` | `http://opensandbox:8080` | OpenSandbox server address |
 | `OPENSANDBOX_API_KEY` | (empty = insecure mode) | Must be a strong random string in production |
-| `OPENSANDBOX_IMAGE` | `hugagent-opensandbox-custom:latest` (compose default; code fallback `opensandbox/code-interpreter:v1.0.2`) | Sandbox runtime image; the custom image pre-installs all project dependencies (`docker/Dockerfile.opensandbox`) |
+| `OPENSANDBOX_IMAGE` | `sumc-opensandbox-custom:latest` (compose default; code fallback `opensandbox/code-interpreter:v1.0.2`) | Sandbox runtime image; the custom image pre-installs all project dependencies (`docker/Dockerfile.opensandbox`) |
 | `OPENSANDBOX_DEFAULT_TIMEOUT_S` | `1800` | Sandbox TTL (s); destroyed when expired without renewal |
 | `OPENSANDBOX_READY_TIMEOUT_S` | `90` | Maximum wait for sandbox readiness (s) |
 | `OPENSANDBOX_REQUEST_TIMEOUT_S` | `120` | Per-HTTP-call timeout (s) |
@@ -227,7 +227,7 @@ These variables are deployment-level fallbacks for the GitHub binding under `/ad
 | `CUBE_SKILL_PREPUSH` / `CUBE_SKILL_PREPUSH_MAX_MB` / `CUBE_SKILL_PREPUSH_CONCURRENCY` | `true` / `20` / `3` | Skill tar-packaging prepush optimization |
 | `CUBE_NODE_SSH_HOST` / `PORT` / `USER` / `KEY` | falls back to `CUBE_NODE_IP` / `22` / `root` / `/home/appuser/.ssh/cube_node_key` | SSH config for the admin "apply dependencies" remote template rebuild |
 | `CUBE_NODE_SSH_KEY_HOST` | `/home/<user>/.ssh/id_rsa` | Host private-key path (mounted read-only by compose) |
-| `CUBE_BUILD_CTX_DIR` / `CUBE_BUILD_IMAGE_TAG` / `CUBE_BUILD_REGISTRY` | `/opt/cube-build` / `hugagent-cube-sandbox:latest` / `127.0.0.1:5000` | Node build context / image tag / local registry |
+| `CUBE_BUILD_CTX_DIR` / `CUBE_BUILD_IMAGE_TAG` / `CUBE_BUILD_REGISTRY` | `/opt/cube-build` / `sumc-cube-sandbox:latest` / `127.0.0.1:5000` | Node build context / image tag / local registry |
 | `CUBE_BUILD_WRITABLE_LAYER` / `CUBE_BUILD_CPU` / `CUBE_BUILD_MEMORY` | `8Gi` / `2000` / `4000` | create-from-image resource parameters |
 | `CUBE_BUILD_EXPOSE_PORTS` / `CUBE_BUILD_PROBE_PORT` / `CUBE_BUILD_PROBE_PATH` | `49983,49999` / `49999` / `/health` | Template ports and probe |
 | `CUBE_BUILD_TIMEOUT_S` / `CUBE_BUILD_REGISTER_TIMEOUT_S` | `1800` / `900` | Build / register timeouts (s) |
@@ -244,7 +244,7 @@ These variables are deployment-level fallbacks for the GitHub binding under `/ad
 | `MEMORY_MODEL_URL` / `MEMORY_API_KEY` / `MEMORY_MODEL_NAME` | fall back to the primary model | Dedicated extraction LLM (uses the primary model when unset) | CE |
 | `MILVUS_URL` / `MILVUS_TOKEN` | `http://milvus:19530` / (empty) | Vector DB | CE |
 | `NEO4J_URL` | `bolt://neo4j:7687` | Neo4j address | CE |
-| `NEO4J_USERNAME` / `NEO4J_PASSWORD` | `neo4j` / `hugagent_neo4j_2026` (compose default) | Neo4j credentials | CE |
+| `NEO4J_USERNAME` / `NEO4J_PASSWORD` | `neo4j` / `sumc_neo4j_2026` (compose default) | Neo4j credentials | CE |
 | `MEMORY_LAYERED_ENABLED` | `true` | Layered memory (L1 Profile / L2 Fact / L3 Graph); `false` reverts to flat mem0 | CE |
 | `MEMORY_AUDIT_ENABLED` | `true` | Memory audit-table writes (compliance trail) | EE |
 | `MEMORY_RETRIEVAL_BUDGET_MS` | `600` | Fact vector-retrieval budget (ms); on timeout only the Profile is injected | CE |

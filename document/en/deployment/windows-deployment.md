@@ -31,7 +31,7 @@ The local-service installer has the following requirements:
 
 Complete these steps for a personal local installation:
 
-1. Run the HugAgentOS NSIS `.exe` installer.
+1. Run the SUMC NSIS `.exe` installer.
 2. Select **Yes** when asked whether to install the Docker-free local service.
 3. Launch the desktop client and wait for resource extraction, dependency installation,
    and the health check to finish on the service setup page.
@@ -54,7 +54,7 @@ main window is restored from the tray.
 The runtime and data live under this directory:
 
 ```text
-%LOCALAPPDATA%\com.hugagent.desktop\local-server\
+%LOCALAPPDATA%\com.sumc.desktop\local-server\
   data\                    SQLite, storage, workspace, and persistent logs
   runtime\
     source\                CE server payload matching the desktop version
@@ -85,7 +85,7 @@ Use **File → Set server address…** to switch to a team server. Use
 
 ## Team deployment with Docker Desktop and WSL2
 
-HugAgentOS uses Linux container orchestration for standard team deployments. On a
+SUMC uses Linux container orchestration for standard team deployments. On a
 Windows host, run it through **Docker Desktop + WSL2**. Every service remains in a
 Linux container, and Windows acts only as the host. The following sections cover
 the differences from Linux deployment.
@@ -112,8 +112,8 @@ The repository and data directories must live on WSL2's ext4 filesystem (e.g. `/
 
 ```bash
 # inside WSL2 bash
-git clone <repo-url> ~/HugAgentOS
-cd ~/HugAgentOS
+git clone <repo-url> ~/SUMC
+cd ~/SUMC
 ```
 
 ### Line endings (CRLF)
@@ -132,15 +132,15 @@ On top of `.env.example`, pay special attention to these variables on Windows/WS
 
 | Variable | Windows/WSL2 value |
 |---|---|
-| `HOST_REPO_PATH` | Absolute repo path inside WSL2, e.g. `/home/<user>/HugAgentOS` |
-| `HOST_STORAGE_PATH` | Absolute path inside WSL2, e.g. `/home/<user>/hugagent-storage` (create it first) |
+| `HOST_REPO_PATH` | Absolute repo path inside WSL2, e.g. `/home/<user>/SUMC` |
+| `HOST_STORAGE_PATH` | Absolute path inside WSL2, e.g. `/home/<user>/sumc-storage` (create it first) |
 | `DOCKER_GID` | Run `stat -c '%g' /var/run/docker.sock` inside WSL2 and use the printed GID (under Docker Desktop it is usually not the default 999) |
 
 Before first deployment, create the storage directory and make it writable by the in-container user (UID 1000):
 
 ```bash
-mkdir -p ~/hugagent-storage
-sudo chown -R 1000:1000 ~/hugagent-storage
+mkdir -p ~/sumc-storage
+sudo chown -R 1000:1000 ~/sumc-storage
 ```
 
 ### Choosing a sandbox provider

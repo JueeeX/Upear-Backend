@@ -4,7 +4,7 @@
 
 > **适用场景**：政务 / 内网等**无法在线拉镜像的隔离环境**，镜像 tarball 离线交付。属商业版 EE 服务范畴。联网环境请用 [Docker Compose 部署](docker-compose.md)。
 
-政务 / 内网等隔离环境无法在线拉镜像，HugAgentOS 采用「联网侧打镜像 tarball → 拷贝 → 生产侧 `docker load` + `compose up`」的离线交付流程。离线部署与专业实施属于商业版服务范畴（见 [版本对比](../editions/overview.md)）。本文以 `docker/` 目录下实际脚本为准。
+政务 / 内网等隔离环境无法在线拉镜像，SUMC 采用「联网侧打镜像 tarball → 拷贝 → 生产侧 `docker load` + `compose up`」的离线交付流程。离线部署与专业实施属于商业版服务范畴（见 [版本对比](../editions/overview.md)）。本文以 `docker/` 目录下实际脚本为准。
 
 ## 流程总览
 
@@ -16,7 +16,7 @@ scripts/deploy/deploy_prepare.sh
   ├─ 按 diff 自动选档
   │    infra/依赖变更 → save_pack.sh（全量包）
   │    仅应用代码     → save_pack_app.sh（app 包）
-  └─ 产出 docker/hugagent-*-<sha>-<ts>.tar.gz
+  └─ 产出 docker/sumc-*-<sha>-<ts>.tar.gz
             + 同名 .manifest.txt
                     │
                 scp 拷贝                ┌─ offline_deployment.sh（全量）
@@ -49,7 +49,7 @@ bash scripts/deploy/deploy_prepare.sh --skip-merge   # 跳过 merge，对当前 
 2. 按 merge 前后 diff 自动选档：
    - 命中 `docker-compose.yml` / `Dockerfile*` / `requirements*.txt` / `opensandbox-config.toml` / `.env.example` / `alembic/` → **全量包**（`save_pack.sh`）
    - 仅命中 `src/backend/`、`src/frontend/`、`mcp_servers/`、`configs/`、`prompts/` → **app 包**（`save_pack_app.sh`）
-3. 产出 `docker/hugagent-images-<sha>-<ts>.tar.gz`（全量）或 `docker/hugagent-app-images-<sha>-<ts>.tar.gz`（app），附 `.manifest.txt`（镜像清单 + digest + 大小）。
+3. 产出 `docker/sumc-images-<sha>-<ts>.tar.gz`（全量）或 `docker/sumc-app-images-<sha>-<ts>.tar.gz`（app），附 `.manifest.txt`（镜像清单 + digest + 大小）。
 
 ### save_pack.sh —— 全量包内容
 
@@ -57,11 +57,11 @@ bash scripts/deploy/deploy_prepare.sh --skip-merge   # 跳过 merge，对当前 
 
 | 类别 | 镜像 |
 |---|---|
-| 自建（必备） | `hugagent-backend:latest`、`hugagent-mcp:latest`、`hugagent-frontend:latest` |
+| 自建（必备） | `sumc-backend:latest`、`sumc-mcp:latest`、`sumc-frontend:latest` |
 | 核心基础设施（必备） | `postgres:15-alpine`、`redis:7-alpine` |
 | opensandbox profile（必备） | `opensandbox/server:v0.1.13`、`opensandbox/execd:v1.0.15`、`opensandbox/egress:v1.0.10`、`opensandbox/code-interpreter:v1.0.2` |
 | mem0 profile（必备） | `quay.io/coreos/etcd:v3.5.5`、`minio/minio:RELEASE.2023-03-13T19-46-17Z`、`milvusdb/milvus:v2.5.4`、`neo4j:5.15-community` |
-| 可选（本地存在则带上） | `hugagent-script-runner:latest`、`hugagent-opensandbox-custom:latest` |
+| 可选（本地存在则带上） | `sumc-script-runner:latest`、`sumc-opensandbox-custom:latest` |
 
 ### save_pack_app.sh —— 应用增量包
 
@@ -72,13 +72,13 @@ bash scripts/deploy/deploy_prepare.sh --skip-merge   # 跳过 merge，对当前 
 生产机部署目录需与脚本约定的布局一致：`offline_deployment*.sh` 与 `docker-compose.yml` 同级，镜像包放在其 `docker/` 子目录（脚本不带参数时自动取该目录下**最新**的 tarball）：
 
 ```
-/opt/hugagent-deploy/
+/opt/sumc-deploy/
 ├── docker-compose.yml
 ├── .env                        # 生产配置（HOST_STORAGE_PATH、各 token、模型地址…）
 ├── offline_deployment.sh       # 从仓库 docker/ 拷出
 ├── offline_deployment_app.sh
 └── docker/
-    └── hugagent-images-<sha>-<ts>.tar.gz
+    └── sumc-images-<sha>-<ts>.tar.gz
 ```
 
 ### 全量上线
@@ -94,17 +94,17 @@ bash offline_deployment.sh <package_path>        # 或显式指定
 docker compose -f docker-compose.yml up -d --no-build --force-recreate --remove-orphans
 ```
 
-（`COMPOSE_PROJECT_NAME=hugagent`；docker compose v2 与 docker-compose v1 自动探测。）
+（`COMPOSE_PROJECT_NAME=sumc`；docker compose v2 与 docker-compose v1 自动探测。）
 
 ### 应用增量上线
 
 ```bash
-bash offline_deployment_app.sh                   # 自动取最新 hugagent-app-images-*.tar.gz
+bash offline_deployment_app.sh                   # 自动取最新 sumc-app-images-*.tar.gz
 ```
 
 内部 `docker load` 后仅 `up -d --no-build --force-recreate backend frontend`。
 
-> ⚠️ 注意：app 包里**含 `hugagent-mcp` 新镜像**，但 `offline_deployment_app.sh` 只重建 backend / frontend 两个容器。若本次发版改了 `src/backend/mcp_servers/` 代码，需手动补一句：
+> ⚠️ 注意：app 包里**含 `sumc-mcp` 新镜像**，但 `offline_deployment_app.sh` 只重建 backend / frontend 两个容器。若本次发版改了 `src/backend/mcp_servers/` 代码，需手动补一句：
 > ```bash
 > docker compose -f docker-compose.yml up -d --no-build --force-recreate mcp
 > ```
@@ -138,8 +138,8 @@ python src/backend/scripts/export_content.py \
 前提：生产 backend 镜像须已包含 `POST /v1/content/prompts/import` 接口（`src/backend/api/routes/v1/content.py`）。在新 backend 起好后：
 
 ```bash
-docker cp prompts_snapshot_<ts>.json hugagent-backend:/tmp/
-docker exec hugagent-backend curl -sS -X POST \
+docker cp prompts_snapshot_<ts>.json sumc-backend:/tmp/
+docker exec sumc-backend curl -sS -X POST \
   'http://localhost:3001/v1/content/prompts/import?overwrite=true' \
   -H "Authorization: Bearer <生产ADMIN_TOKEN>" \
   -H 'Content-Type: application/json' \

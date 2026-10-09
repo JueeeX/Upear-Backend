@@ -254,7 +254,7 @@ CURATED_MCP_MARKET_ITEMS: List[Dict[str, Any]] = [
             _tool("umodel_get_logs", "读取实体关联日志。"),
             _tool("umodel_search_traces", "检索调用链。"),
         ],
-        "install_notice": "阿里云官方明确不建议把配置了 AK/SK 的服务无保护暴露到公网。HugAgentOS 不直接收集云 AK/SK；这里只保存你个人的受保护 SSE 地址。部分智能分析工具可能产生 STAROps 费用。",
+        "install_notice": "阿里云官方明确不建议把配置了 AK/SK 的服务无保护暴露到公网。SUMC 不直接收集云 AK/SK；这里只保存你个人的受保护 SSE 地址。部分智能分析工具可能产生 STAROps 费用。",
         "docs_url": "https://help.aliyun.com/en/cms/cloudmonitor-2-0/use-cases/observable-mcp-service-access-to-implement-data-query-and-analysis",
     },
 ]

@@ -41,12 +41,10 @@ def _list_local_datasets(
         allowed = {item.strip() for item in (allowed_kb_ids or "").split(",") if item.strip()}
         user_id = (current_user_id or "").strip() or os.getenv("CURRENT_USER_ID", "").strip()
         with SessionLocal() as db:
+            accessible = get_accessible_local_kb_ids(db, user_id) if user_id else set()
+            allowed = allowed & accessible if allowed else accessible
             query = db.query(KBSpace).filter(KBSpace.deleted_at.is_(None))
-            if allowed:
-                query = query.filter(KBSpace.kb_id.in_(allowed))
-            elif user_id:
-                accessible = get_accessible_local_kb_ids(db, user_id)
-                query = query.filter(KBSpace.kb_id.in_(accessible or {"__none__"}))
+            query = query.filter(KBSpace.kb_id.in_(allowed or {"__none__"}))
             for space in query.all():
                 docs = (
                     db.query(KBDocument)

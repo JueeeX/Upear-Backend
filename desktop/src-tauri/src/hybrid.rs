@@ -2,7 +2,7 @@
 //!
 //! 职责：
 //!   1. **桥接秘密**：每个安装目录持久化一份随机秘密（`bridge.secret`），孵化本机后端
-//!      时注入 `HUGAGENT_DESKTOP_BRIDGE_SECRET` / `CONFIG_TOKEN`，反代对本机路由的请求
+//!      时注入 `SUMC_DESKTOP_BRIDGE_SECRET` / `CONFIG_TOKEN`，反代对本机路由的请求
 //!      凭它证明「来自本机壳」。
 //!   2. **云端身份传递**：登录云端后取 `/api/v1/me`，把 `{user_center_id, username, ...}`
 //!      编码为 base64 存进 `ProxyState.bridge_user`，反代随本机路由请求下发
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn bridge_secret_is_persistent_and_hex(){
-        let dir = std::env::temp_dir().join(format!("hugagent-bridge-secret-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("sumc-bridge-secret-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let first = load_or_create_bridge_secret(&dir);
         let second = load_or_create_bridge_secret(&dir);

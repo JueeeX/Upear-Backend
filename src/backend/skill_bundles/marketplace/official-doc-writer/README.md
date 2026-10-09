@@ -205,7 +205,7 @@ python scripts/install_fonts.py
 
 ## 作者
 
-- 作者: HugAgentOS Team
+- 作者: SUMC Team
 - 许可证: MIT
 
 ## 相关标准

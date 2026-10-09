@@ -144,7 +144,7 @@ chatStore 更新 → MessageBubble 重渲染
 
 - **开发**：`npm run dev`，Vite dev server 把 `/api` 代理到 `http://localhost:${BACKEND_PORT}`（`vite.config.ts`）；
 - **生产**：`docker-compose up -d --build frontend`——多阶段镜像内 `npm run build`，产物交给 Nginx，`VITE_API_BASE_URL` 作为构建参数烘焙进 bundle（默认 `/api`，由 Nginx 反代到 backend 容器）；
-- **快速热替**：本地 `npm run build` 后 `docker cp dist/. hugagent-frontend:/usr/share/nginx/html/` 并 reload Nginx（见 [前端开发指南](../development/frontend.md)）。
+- **快速热替**：本地 `npm run build` 后 `docker cp dist/. sumc-frontend:/usr/share/nginx/html/` 并 reload Nginx（见 [前端开发指南](../development/frontend.md)）。
 
 ## 相关源码
 

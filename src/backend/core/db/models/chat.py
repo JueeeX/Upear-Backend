@@ -58,8 +58,8 @@ class ChatSession(ChatSessionEditionFields, Base):
     # See internal design docs.
     channel_id = Column(String(64), nullable=True)
     external_conversation_id = Column(String(128), nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     last_message_at = Column(TIMESTAMP(timezone=True))
 
     # Relationships
@@ -121,7 +121,7 @@ class ChatMessage(Base):
     usage = Column(JSONType)
     error = Column(JSONType)
     extra_data = Column("metadata", JSONType, default={})
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     session = relationship("ChatSession", back_populates="messages")
@@ -201,8 +201,8 @@ class MessageFeedback(Base):
     )
     rating = Column(String(10), nullable=False)  # 'like' or 'dislike'
     comment = Column(Text, nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint("rating IN ('like', 'dislike')", name="message_feedback_rating_check"),

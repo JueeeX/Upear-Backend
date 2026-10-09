@@ -28,7 +28,7 @@ Windows x86_64 个人用户可以直接使用 NSIS 桌面安装包。安装包�
 
 按以下步骤完成个人单机安装：
 
-1. 运行 HugAgentOS 的 NSIS `.exe` 安装包。
+1. 运行 SUMC 的 NSIS `.exe` 安装包。
 2. 在“是否同时安装无 Docker 的本机服务”提示中选择“是”。
 3. 启动桌面客户端，等待服务设置页完成离线资源校验、解压、自检和健康检查。
 4. 使用首次启动生成的 `admin` / `admin` 登录，并按提示立即修改密码。
@@ -46,7 +46,7 @@ Windows x86_64 个人用户可以直接使用 NSIS 桌面安装包。安装包�
 数据与运行环境位于：
 
 ```text
-%LOCALAPPDATA%\com.hugagent.desktop\local-server\
+%LOCALAPPDATA%\com.sumc.desktop\local-server\
   data\                    SQLite、存储、工作区和持久日志
   releases\
     sources\<source-id>\   内容寻址的 CE 服务资源
@@ -75,7 +75,7 @@ Windows x86_64 个人用户可以直接使用 NSIS 桌面安装包。安装包�
 
 ## Docker Desktop + WSL2 团队部署
 
-HugAgentOS 的标准团队部署形态是 Linux 容器编排。在 Windows 主机上，使用
+SUMC 的标准团队部署形态是 Linux 容器编排。在 Windows 主机上，使用
 **Docker Desktop + WSL2**：全部服务仍以 Linux 容器运行，Windows 只是宿主。下面列出与
 Linux 部署的差异点和必要配置。
 
@@ -100,8 +100,8 @@ Linux 部署的差异点和必要配置。
 
 ```bash
 # 在 WSL2 bash 内
-git clone <repo-url> ~/HugAgentOS
-cd ~/HugAgentOS
+git clone <repo-url> ~/SUMC
+cd ~/SUMC
 ```
 
 ### 换行符（CRLF）
@@ -120,15 +120,15 @@ git config core.autocrlf input
 
 | 变量 | Windows/WSL2 取值 |
 |---|---|
-| `HOST_REPO_PATH` | 仓库在 WSL2 内的绝对路径，如 `/home/<user>/HugAgentOS` |
-| `HOST_STORAGE_PATH` | WSL2 内的绝对路径，如 `/home/<user>/hugagent-storage`（先创建目录） |
+| `HOST_REPO_PATH` | 仓库在 WSL2 内的绝对路径，如 `/home/<user>/SUMC` |
+| `HOST_STORAGE_PATH` | WSL2 内的绝对路径，如 `/home/<user>/sumc-storage`（先创建目录） |
 | `DOCKER_GID` | 在 WSL2 内执行 `stat -c '%g' /var/run/docker.sock` 取实际 GID（Docker Desktop 下通常不是默认的 999） |
 
 首次部署前创建存储目录并保证容器内用户（UID 1000）可写：
 
 ```bash
-mkdir -p ~/hugagent-storage
-sudo chown -R 1000:1000 ~/hugagent-storage
+mkdir -p ~/sumc-storage
+sudo chown -R 1000:1000 ~/sumc-storage
 ```
 
 ### 沙箱 provider 选择

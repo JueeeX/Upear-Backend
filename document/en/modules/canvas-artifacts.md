@@ -2,7 +2,7 @@
 
 > Last updated: July 29, 2026
 
-Files produced during conversations (AI-generated reports, charts, spreadsheets, code-execution outputs) are unified in HugAgentOS under the **Artifact** abstraction: the backend provides persistent storage with a permission-checked download channel, while the frontend offers two viewing / editing surfaces (the data canvas and My Space), plus one-click public share links. This page covers the whole pipeline: how artifacts are produced, where they are stored, where to view them, how to edit them, and how to share them.
+Files produced during conversations (AI-generated reports, charts, spreadsheets, code-execution outputs) are unified in SUMC under the **Artifact** abstraction: the backend provides persistent storage with a permission-checked download channel, while the frontend offers two viewing / editing surfaces (the data canvas and My Space), plus one-click public share links. This page covers the whole pipeline: how artifacts are produced, where they are stored, where to view them, how to edit them, and how to share them.
 
 Personal canvas editing, the artifact center, and chat sharing are all **Community Edition (CE)**; **real-time multi-user canvas collaboration** is Enterprise Edition (license feature `canvas_collab`), and cloud storage (S3 / OSS) is Enterprise Edition (`cloud_storage`).
 

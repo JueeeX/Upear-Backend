@@ -288,7 +288,7 @@ def register_bash(
                     return _resp_json(_blocked)
 
             # OS-level sandbox (tickets #09/#12): confine writes to the workspace
-            # + authorized folders. Opt-in (HUGAGENT_LOCAL_OS_SANDBOX=1); no-op
+            # + authorized folders. Opt-in (SUMC_LOCAL_OS_SANDBOX=1); no-op
             # otherwise, so it never breaks the default working setup.
             from core.sandbox.os_sandbox import os_sandbox_enabled, wrap_command
 

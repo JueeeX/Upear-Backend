@@ -18,8 +18,8 @@ docker-compose up -d --build frontend
 ```bash
 cd src/frontend
 npm run build
-docker cp dist/. hugagent-frontend:/usr/share/nginx/html/
-docker exec hugagent-frontend nginx -s reload
+docker cp dist/. sumc-frontend:/usr/share/nginx/html/
+docker exec sumc-frontend nginx -s reload
 ```
 
 Lint:
@@ -98,7 +98,7 @@ Error handling is centralized in `utils/apiError.ts`: `readErrorMessage()` parse
 
 1. Create `stores/xxxStore.ts`: define `interface XxxState` (state + actions) first, then `create<XxxState>((set, get) => ({...}))`;
 2. Add the export to `stores/index.ts`;
-3. Wrap async actions in try/catch with `set({ loading })`; persistable state writes localStorage in its setter (key naming follows the `hugagent_ui_*` style, see `storage.ts`);
+3. Wrap async actions in try/catch with `set({ loading })`; persistable state writes localStorage in its setter (key naming follows the `sumc_ui_*` style, see `storage.ts`);
 4. Subscribe in components via the hook form (prefer selectors: `useXxxStore((s) => s.field)`); read latest values inside event callbacks with `useXxxStore.getState()`.
 
 ## Edition gating (CE/EE)

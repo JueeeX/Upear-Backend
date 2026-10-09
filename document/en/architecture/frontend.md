@@ -144,7 +144,7 @@ The frontend's edition awareness is concentrated in two places:
 
 - **Development**: `npm run dev`; the Vite dev server proxies `/api` to `http://localhost:${BACKEND_PORT}` (`vite.config.ts`);
 - **Production**: `docker-compose up -d --build frontend` — a multi-stage image runs `npm run build` and hands the output to Nginx, with `VITE_API_BASE_URL` baked into the bundle as a build arg (default `/api`, reverse-proxied by Nginx to the backend container);
-- **Fast hot-swap**: build locally with `npm run build`, then `docker cp dist/. hugagent-frontend:/usr/share/nginx/html/` and reload Nginx (see the [Frontend Development Guide](../development/frontend.md)).
+- **Fast hot-swap**: build locally with `npm run build`, then `docker cp dist/. sumc-frontend:/usr/share/nginx/html/` and reload Nginx (see the [Frontend Development Guide](../development/frontend.md)).
 
 ## Related Source
 

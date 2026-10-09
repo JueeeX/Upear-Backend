@@ -4,7 +4,7 @@
 
 The simplest way to deploy, aimed at **personal single-machine trials** and **development experience**: one command installs everything, a terminal wizard sets the admin account and configures the model, then a single process starts the server and opens the browser. Zero **Docker, PostgreSQL, and Redis**.
 
-Technical shape: a single uvicorn process (serving both the frontend static assets and the API) + SQLite + in-process fakeredis + subprocess MCP / sandbox. All data lives under `~/.hugagent/`.
+Technical shape: a single uvicorn process (serving both the frontend static assets and the API) + SQLite + in-process fakeredis + subprocess MCP / sandbox. All data lives under `~/.sumc/`.
 
 > ⚠️ **Positioning**: this is a **single-process, single-user** form built for personal trials and development. It is **not suitable for multi-user collaboration or production** — use [Docker Compose](docker-compose.md) for those. The two forms coexist and do not affect each other.
 
@@ -31,20 +31,20 @@ Technical shape: a single uvicorn process (serving both the frontend static asse
 Run the public installer from any directory:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash
 ```
 
 The installer will:
 
 1. Verify Python ≥ 3.11, Node.js ≥ 20, npm, Git, and Rust when the Linux platform must build `ripgrep` from source;
-2. Clone or fast-forward HugAgentOS at `~/.hugagent/source`;
+2. Clone or fast-forward SUMC at `~/.sumc/source`;
 3. Detect optional LibreOffice and, when it is missing, explain the unavailable features and ask whether to install it; skipping it or a failed install doesn't block the remaining features;
-4. Create a virtual environment at `~/.hugagent/venv` (using [uv](https://github.com/astral-sh/uv) when available, or `python -m venv` otherwise), and rebuild an incomplete environment left by an interrupted run;
-5. Install `requirements.txt`, the `hugagent` console command, the built-in Agent Skills Python and Node.js dependencies, and optional local knowledge-base dependencies;
+4. Create a virtual environment at `~/.sumc/venv` (using [uv](https://github.com/astral-sh/uv) when available, or `python -m venv` otherwise), and rebuild an incomplete environment left by an interrupted run;
+5. Install `requirements.txt`, the `sumc` console command, the built-in Agent Skills Python and Node.js dependencies, and optional local knowledge-base dependencies;
 6. Build the frontend at `src/frontend/dist`;
 7. Enter the interactive first-run wizard.
 
-> Add the command to your PATH for daily use: `export PATH="$HOME/.hugagent/venv/bin:$PATH"`.
+> Add the command to your PATH for daily use: `export PATH="$HOME/.sumc/venv/bin:$PATH"`.
 
 ## First-run wizard (onboard)
 
@@ -56,11 +56,11 @@ The wizard runs entirely in the terminal, in order:
 
 The chat model is assigned to all 7 chat roles at once. Two more model types can be configured separately (both skippable):
 
-**Step 2b (optional) · Index / embedding model** — powers the **self-built vector knowledge base** retrieval and L2 memory vectorization. Provide an embedding endpoint (`base_url` / model name / `api_key`). You may press Enter to skip, but both the knowledge base and persistent memory remain disabled until an embedding provider is configured and assigned to the embedding role under Settings → Model Services. Vector storage uses embedded **Milvus Lite** (a single file at `~/.hugagent/milvus.db`, no server required).
+**Step 2b (optional) · Index / embedding model** — powers the **self-built vector knowledge base** retrieval and L2 memory vectorization. Provide an embedding endpoint (`base_url` / model name / `api_key`). You may press Enter to skip, but both the knowledge base and persistent memory remain disabled until an embedding provider is configured and assigned to the embedding role under Settings → Model Services. Vector storage uses embedded **Milvus Lite** (a single file at `~/.sumc/milvus.db`, no server required).
 
 **Step 2c (optional) · Reranker model** — re-ranks KB hybrid-search results for sharper retrieval. Provide a reranker endpoint (`base_url` / model name / `api_key`); press Enter to skip (retrieval still works, just without re-ranking).
 
-> HugAgentOS has 9 model roles: 7 chat roles (main agent / summarizer / follow-up / memory / chart / planning / code execution — all share the chat model above) + embedding + reranker. Onboard covers all three types; after logging in you can also assign a different model per role under Settings → System → Model Services.
+> SUMC has 9 model roles: 7 chat roles (main agent / summarizer / follow-up / memory / chart / planning / code execution — all share the chat model above) + embedding + reranker. Onboard covers all three types; after logging in you can also assign a different model per role under Settings → System → Model Services.
 
 **Step 3 · Plugin initialization** — a fresh installation automatically
 installs and enables `automation` (scheduled tasks), `skill-manager` (skill
@@ -82,7 +82,7 @@ At the end the wizard prints a **host-capability summary** (whether Node.js, pan
 
 > **Warning:** The server listens on `127.0.0.1` by default. If the server must
 > accept remote connections, run
-> `hugagent serve --host 0.0.0.0 --port 3001 --no-browser`, and configure a
+> `sumc serve --host 0.0.0.0 --port 3001 --no-browser`, and configure a
 > strong administrator password, a firewall, and HTTPS first. Don't expose the
 > service directly on an untrusted network.
 
@@ -91,7 +91,7 @@ At the end the wizard prints a **host-capability summary** (whether Node.js, pan
 `onboard` accepts bypass flags for scripted installs:
 
 ```bash
-hugagent onboard \
+sumc onboard \
   --username admin --password '<strong-password>' \
   --model-base-url https://api.deepseek.com/v1 \
   --model-api-key '<your-key>' --model-name deepseek-chat \
@@ -107,15 +107,15 @@ hugagent onboard \
 ## Daily use
 
 ```bash
-hugagent            # initialized → start server and open browser; not initialized → enter the wizard
-hugagent serve      # start explicitly (--host to change bind address, --port to change port)
-hugagent onboard    # re-run the wizard / change configuration
-hugagent doctor     # environment self-check (Python version, port availability, data dir, frontend build, deps, …)
+sumc            # initialized → start server and open browser; not initialized → enter the wizard
+sumc serve      # start explicitly (--host to change bind address, --port to change port)
+sumc onboard    # re-run the wizard / change configuration
+sumc doctor     # environment self-check (Python version, port availability, data dir, frontend build, deps, …)
 ```
 
 ## Data directory
 
-All state lives under `~/.hugagent/` (override the location with the `HUGAGENT_HOME` environment variable):
+All state lives under `~/.sumc/` (override the location with the `SUMC_HOME` environment variable):
 
 | Path | Contents |
 |---|---|
@@ -126,7 +126,7 @@ All state lives under `~/.hugagent/` (override the location with the `HUGAGENT_H
 | `node/` | Local Node.js packages and Chromium used by PPT and PDF Agent Skills |
 | `logs/` | Backend logs |
 
-> To uninstall, delete the `~/.hugagent/` directory (this removes all data).
+> To uninstall, delete the `~/.sumc/` directory (this removes all data).
 
 ## Capability boundaries
 
@@ -134,7 +134,7 @@ The no-Docker single-machine mode is built to be lightweight. Here is how it dif
 
 **Works out of the box**
 - **Core chat + ReAct tool orchestration + plan mode + reconnect replay + citations.**
-- **Code execution (bash / Python)**: the sandbox runs as a host subprocess (no container isolation), backed by a restricted environment, execution timeouts, and process-group cleanup; file tools (read/write/edit) and artifact staging (`sandbox_put/get_artifact`) all land under `~/.hugagent/workspace/`. The trust boundary is "a user running their own assistant on their own machine," different from a multi-tenant server.
+- **Code execution (bash / Python)**: the sandbox runs as a host subprocess (no container isolation), backed by a restricted environment, execution timeouts, and process-group cleanup; file tools (read/write/edit) and artifact staging (`sandbox_put/get_artifact`) all land under `~/.sumc/workspace/`. The trust boundary is "a user running their own assistant on their own machine," different from a multi-tenant server.
 - **Built-in skills** (the 5 word / excel / ppt / pdf editing skills): synced into the workspace at install time so the sandbox can run their scripts directly.
 - **Built-in tool MCPs**: internet search / web fetch / batch execution / KB retrieval, etc. — the servers run fine (some need a configured external service or key to return data, see below).
 - **Data visualization (charts)**: the installer installs matplotlib; works once present.
@@ -149,8 +149,8 @@ The no-Docker single-machine mode is built to be lightweight. Here is how it dif
   use `127.0.0.1`.
 
 **Needs extra conditions**
-- **React project build for conversational site-building**: supported once the `sites` plugin is installed — onboard provisions the React template into `~/.hugagent/site-template/` and runs `npm install` on first build. **Requires host Node.js ≥ 20 + npm**; without it only hand-written static sites are possible. The build chain's `/workspace` paths are parameterized to the local workspace (static sites match the Docker form).
-- **Office document conversion and preview**: PPT/Word online previews and Office-to-PDF conversion require LibreOffice. When it is missing, the one-command installer explains the impact and asks whether to install it. Skipping it doesn't affect document generation, downloads, or other core features. For non-interactive installs, set `HUGAGENT_INSTALL_LIBREOFFICE=1` to install it automatically or `0` to skip it explicitly. Other Word conversions also use `pandoc`, and Excel read/write still uses openpyxl.
+- **React project build for conversational site-building**: supported once the `sites` plugin is installed — onboard provisions the React template into `~/.sumc/site-template/` and runs `npm install` on first build. **Requires host Node.js ≥ 20 + npm**; without it only hand-written static sites are possible. The build chain's `/workspace` paths are parameterized to the local workspace (static sites match the Docker form).
+- **Office document conversion and preview**: PPT/Word online previews and Office-to-PDF conversion require LibreOffice. When it is missing, the one-command installer explains the impact and asks whether to install it. Skipping it doesn't affect document generation, downloads, or other core features. For non-interactive installs, set `SUMC_INSTALL_LIBREOFFICE=1` to install it automatically or `0` to skip it explicitly. Other Word conversions also use `pandoc`, and Excel read/write still uses openpyxl.
 - **PDF / Word file parsing on upload**: PDF needs an external parser service (set its API URL in onboard Step 4, or `FILE_PARSER_API_URL`); Word needs host `pandoc` / `libreoffice`. Excel / CSV / PPTX / text parse in-process and work out of the box.
 **Unavailable**
 - **L3 graph memory**: needs Neo4j, no embedded substitute.
@@ -164,14 +164,14 @@ The no-Docker single-machine mode is built to be lightweight. Here is how it dif
 
 | Symptom | Fix |
 |---|---|
-| Startup reports the port is in use | `hugagent serve --port <other-port>`; or run `hugagent doctor` first to check |
+| Startup reports the port is in use | `sumc serve --port <other-port>`; or run `sumc doctor` first to check |
 | The page shows JSON instead of the app | Frontend not built: `cd src/frontend && npm run build`, or set `FRONTEND_DIST_DIR` to a built `dist` |
-| Login reports the model is unavailable | Re-run `hugagent onboard` to reconfigure the model (the wizard tests connectivity) |
-| Startup logs repeatedly report `AllocTimestamp` / `Method not implemented` | Stop the service and rerun the public one-command installer. The installer reconciles PyMilvus and Milvus Lite to compatible versions without deleting `~/.hugagent/milvus.db`. |
-| Want to switch model / change config | Re-run `hugagent onboard`, or log in and adjust under Settings → System → Model Services / Service Config |
-| PPT/Word preview reports that LibreOffice isn't installed | Re-run the one-command installer and choose to install it when prompted. On Debian/Ubuntu, you can instead run `sudo apt-get update && sudo apt-get install -y libreoffice-impress libreoffice-writer libreoffice-calc`, then restart HugAgentOS. |
-| Skill execution repeatedly reports `fork: Resource temporarily unavailable` | Stop the current service, rerun the public installer to upgrade, and start `hugagent` again. If an older version left child processes behind, inspect processes owned by the current user and, when needed, sign out of the login session before retrying. |
-| Is the environment ready | `hugagent doctor` runs a one-shot self-check |
+| Login reports the model is unavailable | Re-run `sumc onboard` to reconfigure the model (the wizard tests connectivity) |
+| Startup logs repeatedly report `AllocTimestamp` / `Method not implemented` | Stop the service and rerun the public one-command installer. The installer reconciles PyMilvus and Milvus Lite to compatible versions without deleting `~/.sumc/milvus.db`. |
+| Want to switch model / change config | Re-run `sumc onboard`, or log in and adjust under Settings → System → Model Services / Service Config |
+| PPT/Word preview reports that LibreOffice isn't installed | Re-run the one-command installer and choose to install it when prompted. On Debian/Ubuntu, you can instead run `sudo apt-get update && sudo apt-get install -y libreoffice-impress libreoffice-writer libreoffice-calc`, then restart SUMC. |
+| Skill execution repeatedly reports `fork: Resource temporarily unavailable` | Stop the current service, rerun the public installer to upgrade, and start `sumc` again. If an older version left child processes behind, inspect processes owned by the current user and, when needed, sign out of the login session before retrying. |
+| Is the environment ready | `sumc doctor` runs a one-shot self-check |
 
 ## Related source
 

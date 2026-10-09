@@ -29,6 +29,7 @@ from core.infra.responses import created_response, success_response
 from core.services import marketplace_service as mk
 from core.services import marketplace_listing as ml
 from core.infra.exceptions import AccessDeniedError
+from core.safeharness_capabilities import reject_uncontrolled_mutation
 
 router = APIRouter(prefix="/v1/marketplace", tags=["Skill Marketplace"])
 logger = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ async def install_skill(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """把市场技能安装为「仅自己可见可用」的私有技能。需 ``can_add_skill`` 权限。
 
     市场技能由管理员策划（预置 / 管理员上传上架），其依赖由**管理员侧统一管理**——安装后
@@ -116,6 +118,7 @@ async def submit_skill(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """把自己的私有技能提交上架申请（内容快照），管理员审核通过后全员可安装。"""
     _require_can_add_skill(str(user.user_id), db)
     result = mk.submit_to_marketplace(
@@ -144,5 +147,6 @@ async def withdraw_submission(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     mk.withdraw_submission(db, submission_id, owner_user_id=str(user.user_id))
     return success_response(data={"id": submission_id, "message": "申请已撤回"})

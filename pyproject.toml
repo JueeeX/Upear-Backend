@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "hugagent"
+name = "sumc"
 version = "0.1.0"
 description = "Multi-agent platform with MCP integration (AgentScope 2.0)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "HugAgentOS Team"}
+    {name = "SUMC Team"}
 ]
 # Runtime deps are declared once in requirements.txt (the single source of
 # truth); read them dynamically so `pip install .` and the compose/venv paths
@@ -27,15 +27,16 @@ dev = [
     "mypy>=1.0.0",
 ]
 
-# Console entry for the no-Docker local profile: `hugagent` (onboard / serve /
+# Console entry for the no-Docker local profile: `sumc` (onboard / serve /
 # doctor). CE and EE share this technical identifier.
 [project.scripts]
-hugagent = "cli:main"
+sumc = "cli:main"
+hugagent = "cli:legacy_main"
 
 # ── Packaging: src/backend is the import root ────────────────────────────────
 # The project has always run with PYTHONPATH=src/backend (top-level `api`,
 # `core`, `orchestration`, … packages). Declare that so an editable/source
-# install exposes them and the `hugagent` console script resolves `cli:main`.
+# install exposes them and the `sumc` console script resolves `cli:main`.
 [tool.setuptools]
 package-dir = {"" = "src/backend"}
 py-modules = ["cli"]
@@ -76,7 +77,7 @@ skip_gitignore = true
 [tool.mypy]
 python_version = "3.11"
 # 缓存放树外，避免在仓库根堆出 .mypy_cache/（可被 MYPY_CACHE_DIR 覆盖）
-cache_dir = "/tmp/hugagent-mypy-cache"
+cache_dir = "/tmp/sumc-mypy-cache"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -84,7 +85,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 # 缓存放树外，避免在仓库根堆出 .pytest_cache/
-cache_dir = "/tmp/hugagent-pytest-cache"
+cache_dir = "/tmp/sumc-pytest-cache"
 testpaths = ["src/backend/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

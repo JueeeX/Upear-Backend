@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
@@ -50,7 +50,7 @@ def _mark_ready(db: Session, skill: AdminSkill) -> None:
         SkillDependencyRequest.skill_id == skill.skill_id,
         SkillDependencyRequest.status == "pending",
     ).update(
-        {"status": "satisfied", "satisfied_at": datetime.utcnow()},
+        {"status": "satisfied", "satisfied_at": datetime.now(timezone.utc).replace(tzinfo=None)},
         synchronize_session=False,
     )
 
@@ -162,7 +162,7 @@ def reject_pending(
         return False
     req.status = "rejected"
     req.reason = (reason or "").strip() or None
-    req.rejected_at = datetime.utcnow()
+    req.rejected_at = datetime.now(timezone.utc).replace(tzinfo=None)
     req.rejected_by = rejected_by
     skill = db.query(AdminSkill).filter(AdminSkill.skill_id == req.skill_id).first()
     if skill is not None:
@@ -203,7 +203,7 @@ async def verify_pending_after_rebuild(db: Session, run_id: str) -> dict[str, in
     if not rows:
         return {"satisfied": 0, "still_pending": 0}
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     satisfied = 0
     still_pending = 0
     for r in rows:

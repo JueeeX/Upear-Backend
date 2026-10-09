@@ -2,7 +2,7 @@
 
 > Last updated: 2026-06-11
 
-HugAgentOS ships three built-in mechanisms for turning a single instruction into repeatable or bulk productivity, all part of the **Community Edition (CE)**:
+SUMC ships three built-in mechanisms for turning a single instruction into repeatable or bulk productivity, all part of the **Community Edition (CE)**:
 
 | Capability | One-liner | Backend entry |
 |---|---|---|

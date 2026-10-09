@@ -1,7 +1,7 @@
 """User-related business logic."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Set
 
 from core.auth.account_policy import AccountCapacityExceeded, account_capacity_block_reason
@@ -42,7 +42,7 @@ class UserService:
             # Note: avatar_url is only updated when SSO returns a non-empty value——
             # the user may have set their own avatar in SettingsModal, and SSO returns
             # None in most scenarios; we must not overwrite the user's custom avatar with None.
-            update_data = {"username": username, "email": email, "last_sync_at": datetime.utcnow()}
+            update_data = {"username": username, "email": email, "last_sync_at": datetime.now(timezone.utc).replace(tzinfo=None)}
             if avatar_url:
                 update_data["avatar_url"] = avatar_url
             return self.repo.update(user.user_id, update_data)
@@ -60,7 +60,7 @@ class UserService:
                 "username": username,
                 "email": email,
                 "avatar_url": avatar_url,
-                "last_sync_at": datetime.utcnow(),
+                "last_sync_at": datetime.now(timezone.utc).replace(tzinfo=None),
             }
             user = self.repo.create(user_data)
 
@@ -98,7 +98,7 @@ class UserService:
         current = dict(user.extra_data) if user.extra_data else {}
         current.update(patch)
         user.extra_data = current
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
 
     def get_disabled_builtin_subagent_ids(self, user_id: str) -> Set[str]:

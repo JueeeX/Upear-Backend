@@ -30,7 +30,7 @@ import shutil
 import tempfile
 import zipfile
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
@@ -245,7 +245,7 @@ def _apply_skill(
             tool_names=list(meta.allowed_tools or []),
             ontology_tags=list(meta.tags or []),
         )
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     existing = db.query(AdminSkill).filter(AdminSkill.skill_id == skill_id).first()
     fields = dict(
         skill_content=content,
@@ -304,7 +304,7 @@ def _apply_mcp(
                 if item.get("name")
             },
         )
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     existing = db.query(AdminMcpServer).filter(AdminMcpServer.server_id == server_id).first()
     fields = dict(
         display_name=mc.display_name,
@@ -404,7 +404,7 @@ def _apply_normalized(
     import_report = {"imported": imported, "adapted": adapted, "dropped": np.dropped}
     component_ids = {"skills": skill_ids, "mcp": server_ids, "prompts": []}
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     existing = db.query(InstalledPlugin).filter(InstalledPlugin.install_id == install_id).first()
     fields = dict(
         slug=np.slug,
@@ -1307,7 +1307,7 @@ def publish_plugin_zip_to_market(
         )  # parse/validate; invalid input raises immediately, nothing persisted
     package_b64 = base64.b64encode(raw).decode("ascii")
     has_admin_config = bool(np.admin_config and (np.admin_config.get("fields")))
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     existing = _market_row(db, np.slug)
     fields = dict(
         name=np.name,

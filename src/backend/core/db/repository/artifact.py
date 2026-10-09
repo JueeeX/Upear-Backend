@@ -6,7 +6,7 @@ import XxxRepository`` keeps working unchanged.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from core.db.models import Artifact, ChatSession
@@ -58,7 +58,7 @@ class ArtifactRepository:
         )
         if not artifact:
             return False
-        artifact.deleted_at = datetime.utcnow()
+        artifact.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         return True
 
@@ -189,7 +189,7 @@ class ArtifactRepository:
         )
         if not artifact:
             return False
-        artifact.deleted_at = datetime.utcnow()
+        artifact.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         return True
 

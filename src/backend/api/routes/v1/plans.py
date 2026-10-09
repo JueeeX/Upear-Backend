@@ -1,6 +1,8 @@
 """Plan mode API routes — generate and execute structured plans."""
 
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
+import threading
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -9,6 +11,7 @@ from sqlalchemy.orm import Session
 from core.auth.backend import get_current_user, UserContext
 from core.chat.context import generate_smart_title
 from core.db.engine import get_db
+from core.db.models import Plan
 from core.infra.responses import success_response, sse_response
 from core.services.plan_service import PlanService
 from core.services.chat_service import ChatService
@@ -22,6 +25,7 @@ from core.infra.logging import get_logger
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/v1/plans", tags=["Plans"])
+_APPROVAL_CONSUME_LOCK = threading.Lock()
 
 
 # ── Request Schemas ────────────────────────────────────────────
@@ -73,6 +77,23 @@ class UpdatePlanRequest(BaseModel):
     status: Optional[str] = None
     title: Optional[str] = None
     steps: Optional[List[Dict[str, Any]]] = None
+
+
+class PlanApprovalDecisionRequest(BaseModel):
+    decision: Literal["approved", "rejected"]
+    run_id: str = Field(..., min_length=1, max_length=64)
+    state_id: str = Field(..., min_length=1, max_length=96)
+    plan_hash: str = Field(..., min_length=64, max_length=64)
+
+
+def _approval_expired(expires_at: Any) -> bool:
+    try:
+        parsed = datetime.fromisoformat(str(expires_at))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc) <= datetime.now(timezone.utc)
+    except (TypeError, ValueError):
+        return True
 
 
 # ── SSE Helpers ────────────────────────────────────────────────
@@ -204,6 +225,11 @@ async def generate_plan(
         fallback_model_name=req.model_name,
     )
 
+    # Load history before persisting this request. The planner checks the current
+    # task separately; including the just-saved copy here would inspect the same
+    # user input twice in one SafeHarness session.
+    session_messages = _load_chat_history(db, req.chat_id, user.user_id, req.history_messages)
+
     # On automatic entry into plan mode (enter_plan_mode), task_description is an
     # AI-expanded internal prompt and is NOT persisted as a user message — the original
     # user request and that main-agent turn are already in the same session history;
@@ -223,7 +249,6 @@ async def generate_plan(
             ),
         )
 
-    session_messages = _load_chat_history(db, req.chat_id, user.user_id, req.history_messages)
     logger.warning(
         "[plan-generate] chat_id=%s, loaded %d history messages", req.chat_id, len(session_messages)
     )
@@ -299,6 +324,9 @@ async def update_plan(
 
     # Replace steps if provided
     if req.steps is not None:
+        extra = plan.extra_data if isinstance(plan.extra_data, dict) else {}
+        if extra.get("fsm") and plan.status in {"approved", "running", "completed", "failed"}:
+            raise HTTPException(status_code=409, detail="已验证 FSM 不允许原地修改结构")
         svc.replace_steps(plan_id, req.steps)
 
     # Update scalar fields
@@ -316,6 +344,79 @@ async def update_plan(
 
     plan = svc.get_plan(plan_id, user.user_id)
     return success_response(data=PlanService.plan_to_dict(plan))
+
+
+@router.post("/{plan_id}/approvals/{approval_id}", summary="处理计划状态审批")
+async def decide_plan_approval(
+    plan_id: str,
+    approval_id: str,
+    req: PlanApprovalDecisionRequest,
+    user: UserContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Consume one FSM approval and start exactly one continuation run."""
+
+    # Row lock serializes database workers; this short process lock also closes the
+    # SQLite/in-process race where FOR UPDATE is a no-op. It is not a replacement
+    # for the database lock in multi-worker deployments.
+    with _APPROVAL_CONSUME_LOCK:
+        plan = (
+            db.query(Plan)
+            .filter(Plan.plan_id == plan_id, Plan.user_id == user.user_id)
+            .with_for_update()
+            .first()
+        )
+        if not plan:
+            raise HTTPException(status_code=404, detail="计划不存在")
+        extra = plan.extra_data if isinstance(plan.extra_data, dict) else {}
+        runtime = extra.get("fsm_runtime") if isinstance(extra.get("fsm_runtime"), dict) else {}
+        approval = runtime.get("approval") if isinstance(runtime.get("approval"), dict) else None
+        if not approval or approval.get("approval_id") != approval_id:
+            raise HTTPException(status_code=404, detail="审批不存在")
+        if approval.get("used"):
+            raise HTTPException(status_code=409, detail="审批已使用")
+        expired = _approval_expired(approval.get("expires_at"))
+        if any(
+            req_value != str(approval.get(key) or "")
+            for req_value, key in ((req.run_id, "run_id"), (req.state_id, "state_id"), (req.plan_hash, "plan_hash"))
+        ):
+            raise HTTPException(status_code=409, detail="审批绑定信息不匹配")
+
+        chat_id = extra.get("chat_id")
+        if not isinstance(chat_id, str) or not chat_id:
+            raise HTTPException(status_code=409, detail="计划缺少续跑会话")
+
+        effective_decision = "expired" if expired else req.decision
+        approval = {**approval, "used": True, "decision": effective_decision}
+        next_runtime = {**runtime, "status": "running", "approval": approval}
+        next_extra = {**extra, "fsm_runtime": next_runtime}
+        PlanService(db).update_plan(plan_id, extra_data=next_extra, status="running")
+
+    try:
+        from orchestration import chat_run_executor
+
+        session_messages = _load_chat_history(db, chat_id, user.user_id)
+        model_name = resolve_effective_chat_model_name() or "qwen"
+        run = await chat_run_executor.start_plan_execute_run(
+            plan_id=plan_id,
+            chat_id=chat_id,
+            user_id=user.user_id,
+            session_messages=session_messages,
+            model_name=model_name,
+            approval_decisions={req.state_id: effective_decision},
+        )
+    except Exception:
+        logger.exception("plan approval continuation failed: plan_id=%s", plan_id)
+        raise HTTPException(status_code=503, detail="审批续跑启动失败，审批已消费")
+
+    return success_response(
+        data={
+            "approval_id": approval_id,
+            "decision": effective_decision,
+            "expired": expired,
+            "run_id": run.run_id,
+        }
+    )
 
 
 @router.delete("/{plan_id}", summary="删除计划")

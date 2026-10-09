@@ -1,4 +1,4 @@
-"""MCP server configuration for HugAgentOS.
+"""MCP server configuration for SUMC.
 
 Every MCP server runs as a long-running streamable-http process inside the
 dedicated ``mcp`` Docker container. ``backend`` connects via

@@ -1,10 +1,10 @@
-# HugAgentOS 文档 / Documentation
+# SUMC 文档 / Documentation
 
 > 最后更新：2026-07-21
 
-HugAgentOS 是一个企业级 AI Agent 平台（FastAPI + React + AgentScope 2.0），以 open-core 模式提供 **开源社区版（CE）** 与 **商业版（EE）** 双形态。产品文档按语言分树维护：
+SUMC 是一个企业级 AI Agent 平台（FastAPI + React + AgentScope 2.0），以 open-core 模式提供 **开源社区版（CE）** 与 **商业版（EE）** 双形态。产品文档按语言分树维护：
 
-HugAgentOS is an enterprise-grade AI agent platform (FastAPI + React + AgentScope 2.0), shipped in an open-core model as a **Community Edition (CE)** and an **Enterprise Edition (EE)**. Product documentation is maintained per language:
+SUMC is an enterprise-grade AI agent platform (FastAPI + React + AgentScope 2.0), shipped in an open-core model as a **Community Edition (CE)** and an **Enterprise Edition (EE)**. Product documentation is maintained per language:
 
 | 语言 / Language | 入口 / Entry |
 |---|---|

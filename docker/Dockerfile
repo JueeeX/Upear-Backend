@@ -1,4 +1,4 @@
-# Multi-stage build for HugAgentOS backend
+# Multi-stage build for SUMC backend
 
 # Stage 1: Builder
 FROM python:3.11-slim AS builder
@@ -78,16 +78,30 @@ RUN if curl -fsSL --retry 2 --retry-delay 2 --retry-all-errors --connect-timeout
 # 后端取**独立的静态 Go 二进制**（GitHub release tarball），无需在 slim 镜像里装 node
 # ——沙箱镜像才用 npm 全局装。凭据落 $STORAGE/lark_cache/{uid}/，bind-mount 进沙盒。
 ARG LARK_CLI_VERSION=1.0.34
-RUN if curl -fsSL --retry 2 --retry-delay 2 --retry-all-errors --connect-timeout 15 --max-time 30 \
-        "https://github.com/larksuite/cli/releases/download/v${LARK_CLI_VERSION}/lark-cli-${LARK_CLI_VERSION}-linux-${TARGETARCH:-amd64}.tar.gz" \
-        -o /tmp/lark-cli.tar.gz; then \
-      tar -xzf /tmp/lark-cli.tar.gz -C /tmp && \
-      find /tmp -maxdepth 2 -name lark-cli -type f -exec mv {} /usr/local/bin/lark-cli \; && \
-      chmod +x /usr/local/bin/lark-cli && lark-cli --version; \
-    else \
-      echo "[backend] required lark-cli download failed; refusing to build a backend without Feishu login support" >&2; \
+# GitHub release 资产在国内网络经常超时（直连 ~30s 仅收到 ~1MB/7MB，导致构建失败）。
+# 依次尝试国内加速镜像（ghproxy.net → gh-proxy.com → gh.ddlc.top），全部失败再回退
+# GitHub 直连；镜像列表可用 --build-arg LARK_CLI_MIRRORS="..." 覆盖（空格分隔）。
+ARG LARK_CLI_MIRRORS="https://ghproxy.net/ https://gh-proxy.com/ https://gh.ddlc.top/"
+RUN set -eux; \
+    _base="https://github.com/larksuite/cli/releases/download/v${LARK_CLI_VERSION}/lark-cli-${LARK_CLI_VERSION}-linux-${TARGETARCH:-amd64}.tar.gz"; \
+    _ok=0; \
+    for _prefix in ${LARK_CLI_MIRRORS} ""; do \
+      _url="${_prefix}${_base}"; \
+      if curl -fsSL --retry 2 --retry-delay 2 --retry-all-errors --connect-timeout 15 --max-time 90 "${_url}" -o /tmp/lark-cli.tar.gz; then \
+        echo "[backend] lark-cli downloaded from ${_url}"; \
+        _ok=1; break; \
+      else \
+        echo "[backend] lark-cli download failed: ${_url}" >&2; \
+      fi; \
+    done; \
+    if [ "${_ok}" != "1" ]; then \
+      echo "[backend] required lark-cli download failed (all mirrors + GitHub direct); refusing to build a backend without Feishu login support" >&2; \
       exit 1; \
-    fi && rm -f /tmp/lark-cli.tar.gz
+    fi; \
+    tar -xzf /tmp/lark-cli.tar.gz -C /tmp && \
+    find /tmp -maxdepth 2 -name lark-cli -type f -exec mv {} /usr/local/bin/lark-cli \; && \
+    chmod +x /usr/local/bin/lark-cli && lark-cli --version; \
+    rm -f /tmp/lark-cli.tar.gz
 
 # himalaya（电子邮箱 CLI）—— 后端以子进程跑 per-user IMAP/SMTP 连通性校验
 # （himalaya folder list）。静态二进制（musl，static-pie），无运行时依赖。凭据是用户

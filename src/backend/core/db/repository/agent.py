@@ -1,6 +1,6 @@
 """Community repository for personal and administrator sub-agents."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from core.db.models import UserAgent
@@ -57,7 +57,7 @@ class UserAgentRepository:
             return None
         for key, value in data.items():
             setattr(agent, key, value)
-        agent.updated_at = datetime.utcnow()
+        agent.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(agent)
         return agent

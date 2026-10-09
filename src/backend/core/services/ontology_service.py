@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from core.config.display_names import TOOL_DISPLAY_NAMES
@@ -220,7 +220,7 @@ class OntologyService:
         if working_draft is None or working_draft.version_id != version_id:
             raise ResourceNotFoundError("ontology_working_draft", version_id)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         linked_candidates = (
             self.db.query(OntologyDraft).filter(OntologyDraft.pack_id == pack_id).all()
         )
@@ -658,7 +658,7 @@ def record_review_run(data: dict[str, Any]) -> None:
     try:
         payload = dict(data)
         payload.setdefault("review_id", f"ontor_{uuid.uuid4().hex[:16]}")
-        payload.setdefault("created_at", datetime.utcnow())
+        payload.setdefault("created_at", datetime.now(timezone.utc).replace(tzinfo=None))
         OntologyRepository(db).create_review(payload)
     except Exception:
         db.rollback()

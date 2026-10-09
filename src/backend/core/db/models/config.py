@@ -52,8 +52,8 @@ class ModelProvider(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     last_tested_at = Column(TIMESTAMP(timezone=True))
     last_test_status = Column(String(20))  # success / failure / null
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     role_assignments = relationship(
@@ -87,7 +87,7 @@ class SystemConfig(Base):
     description = Column(Text)
     group_key = Column(String(50), nullable=False)
     is_secret = Column(Boolean, default=False, nullable=False)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_by = Column(String(64))
 
     __table_args__ = (Index("idx_system_configs_group_key", "group_key"),)
@@ -104,7 +104,7 @@ class ModelRoleAssignment(Base):
         ForeignKey("model_providers.provider_id", ondelete="CASCADE"),
         nullable=False,
     )
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_by = Column(String(64))
 
     # Relationships

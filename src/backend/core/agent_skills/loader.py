@@ -11,7 +11,11 @@ logger = logging.getLogger(__name__)
 
 from .backends import CompositeBackend, DatabaseBackend, FilesystemBackend, SkillFileInfo
 from .binary_files import decode_binary, is_binary_value
-from .config import get_enabled_skill_sources, get_sandbox_skills_dir
+from .config import (
+    auto_detect_scripts_enabled,
+    get_enabled_skill_sources,
+    get_sandbox_skills_dir,
+)
 from .registry import (
     AgentSkillMetadata,
     AgentSkillSpec,
@@ -26,19 +30,12 @@ from .registry import (
 _SCRIPT_EXTENSIONS = {".py", ".js", ".sh", ".r", ".R"}
 
 
-def _auto_detect_scripts(
+def _script_candidates(
     extra_files: Dict[str, str],
     skill_info: "SkillFileInfo",
-) -> List[Dict]:
-    """Auto-detect executable scripts when _scripts.json is absent.
-
-    Scans extra_files (DB skills) or the skill directory (filesystem skills)
-    for files with known script extensions and returns a whitelist entry for
-    each one, so users don't need to manually create _scripts.json.
-    """
-    scripts: List[Dict] = []
-
-    # Collect candidate filenames
+) -> List[str]:
+    """Filenames with a script extension: DB extra_files plus, for filesystem
+    skills without extra_files, files sitting next to SKILL.md."""
     candidates: List[str] = []
 
     # From extra_files (DB skills)
@@ -60,9 +57,25 @@ def _auto_detect_scripts(
             ):
                 candidates.append(p.name)
 
-    # Build whitelist entries
+    return sorted(candidates)
+
+
+def _auto_detect_scripts(
+    extra_files: Dict[str, str],
+    skill_info: "SkillFileInfo",
+) -> List[Dict]:
+    """Auto-detect executable scripts when _scripts.json is absent.
+
+    Scans extra_files (DB skills) or the skill directory (filesystem skills)
+    for files with known script extensions and returns a whitelist entry for
+    each one, so users don't need to manually create _scripts.json.
+
+    Only called when :func:`config.auto_detect_scripts_enabled` is on — the
+    capability is opt-in because the whitelist it derives is a privilege.
+    """
     ext_to_lang = {".py": "python", ".js": "javascript", ".sh": "bash", ".r": "r", ".R": "r"}
-    for name in sorted(candidates):
+    scripts: List[Dict] = []
+    for name in _script_candidates(extra_files, skill_info):
         ext = Path(name).suffix.lower()
         scripts.append(
             {
@@ -71,7 +84,6 @@ def _auto_detect_scripts(
                 "timeout": 60,
             }
         )
-
     return scripts
 
 
@@ -80,8 +92,8 @@ class MultiSourceSkillLoader:
 
     This loader uses the backend abstraction layer to support loading skills from:
     - Built-in skills (skill_bundles/)
-    - User skills (~/.hugagent/skills/)
-    - Project skills (.hugagent/skills/)
+    - User skills (~/.sumc/skills/)
+    - Project skills (.sumc/skills/)
 
     Higher priority sources override lower priority sources for conflicting skill IDs.
     """
@@ -274,8 +286,11 @@ class MultiSourceSkillLoader:
                 except Exception as e:
                     logger.warning("Failed to parse _scripts.json for skill '%s': %s", skill_id, e)
 
-            # Auto-generate whitelist from .py files when _scripts.json is absent
-            if not executable_scripts:
+            # Auto-generate a whitelist only when explicitly enabled (default
+            # off): script files next to SKILL.md must not gain an execution
+            # grant just by being present. Explicit _scripts.json — an
+            # administrator-authored approval — is honored above, always.
+            if not executable_scripts and auto_detect_scripts_enabled():
                 auto_scripts = _auto_detect_scripts(ef, skill_info)
                 if auto_scripts:
                     executable_scripts = auto_scripts
@@ -284,6 +299,16 @@ class MultiSourceSkillLoader:
                         len(auto_scripts),
                         skill_id,
                         [s["name"] for s in auto_scripts],
+                    )
+            elif not executable_scripts:
+                unapproved = _script_candidates(ef, skill_info)
+                if unapproved:
+                    logger.warning(
+                        "Skill '%s' carries script file(s) %s but script auto-detection "
+                        "is disabled; they are NOT executable. Add an explicit "
+                        "_scripts.json to approve them.",
+                        skill_id,
+                        unapproved,
                     )
 
             # Add source information to skill_path

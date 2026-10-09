@@ -7,7 +7,7 @@ All functions are defensive: they return empty/None on failure so callers
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -153,7 +153,7 @@ def fetch_parsed_text(
             from core.content.artifact_summary import build_summary_from_text
 
             art.parsed_text = parsed
-            art.parsed_at = datetime.utcnow()
+            art.parsed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             art.parse_error = None
             if not art.summary:
                 try:

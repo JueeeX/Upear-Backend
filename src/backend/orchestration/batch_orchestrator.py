@@ -29,7 +29,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 from sqlalchemy.orm.attributes import flag_modified
@@ -128,7 +128,7 @@ def _set_status(plan_id: str, status: str) -> None:
         plan = _load_plan(db, plan_id)
         if plan:
             plan.status = status
-            plan.updated_at = datetime.utcnow()
+            plan.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             db.commit()
 
 
@@ -167,7 +167,7 @@ def _append_result(plan_id: str, result: Dict[str, Any]) -> Dict[str, int]:
         plan.progress = prog
         # SQLAlchemy needs a hint that the JSONB column was mutated.
         flag_modified(plan, "progress")
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         return {
             "done": prog["done"],
@@ -573,7 +573,7 @@ async def _run_until_done(plan_id: str, user_id: str) -> None:
         # Mark running on first launch, idempotent on resume.
         if plan.status not in _TERMINAL:
             plan.status = RUNNING
-            plan.updated_at = datetime.utcnow()
+            plan.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             db.commit()
 
     # Resolve the same capability set the user has configured in the
@@ -853,7 +853,7 @@ class BatchOrchestrator:
 
 def cleanup_expired_plans() -> int:
     """Delete plans whose expires_at has passed. Returns count deleted."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     with SessionLocal() as db:
         expired = (
             db.query(BatchPlan)

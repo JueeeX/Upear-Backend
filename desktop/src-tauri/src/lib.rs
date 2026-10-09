@@ -1,10 +1,10 @@
-//! HugAgentOS桌面客户端（Tauri v2 瘦客户端）。
+//! SUMC桌面客户端（Tauri v2 瘦客户端）。
 //!
 //! 方案 B —— 系统浏览器跳转登录 + deep-link 唤起：
 //!   1. 启动：起本地反代（127.0.0.1:随机端口），加载已存 token；
 //!   2. 已登录 → 窗口直接加载 `http://127.0.0.1:<port>/`（前端经反代访问后端）；
 //!   3. 未登录 → 窗口加载登录卡片（初始态），用户点「开始使用」再打开**系统浏览器**到 `<server>/?desktop=1`；
-//!   4. 浏览器登录成功 → 前端换一次性 handoff 票据 → 跳 `hugagent://auth/callback?ticket=`；
+//!   4. 浏览器登录成功 → 前端换一次性 handoff 票据 → 跳 `sumc://auth/callback?ticket=`；
 //!   5. OS 唤起 App → `redeem` 票据换回真正 token → 存盘 + 反代注入 cookie → 窗口跳首页；
 //!   6. 会话过期：前端要跳外部 SSO 时被导航守卫拦下 → 清 token + 重走系统浏览器登录。
 
@@ -20,7 +20,9 @@ mod prefs;
 mod proxy;
 mod update;
 
-use std::sync::Arc;
+use std::sync::{Arc, Once};
+
+static LEGACY_SCHEME_WARNING: Once = Once::new();
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -182,7 +184,7 @@ pub fn run() {
         // single-instance：第二次被 deep-link 拉起时，把 URL 转交给已运行实例。
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             for arg in argv.iter() {
-                if arg.starts_with("hugagent://") {
+                if arg.starts_with("sumc://") || arg.starts_with("hugagent://") {
                     handle_deep_link(app, arg.clone());
                 }
             }
@@ -449,7 +451,8 @@ pub fn run() {
             // Linux / Windows 开发期运行时注册协议（打包安装时由安装器注册）。
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             {
-                let _ = app.deep_link().register("hugagent");
+                let _ = app.deep_link().register("sumc");
+                let _ = app.deep_link().register("hugagent"); // one-release compatibility
             }
 
             // 初始窗口：有 token 进首页，没有则进登录卡片「初始态」（不自动开浏览器，
@@ -965,7 +968,7 @@ fn build_window(app: &tauri::AppHandle, url: &str) -> tauri::Result<()> {
                         if let Some(win) = app2.get_webview_window("main") {
                             let esc = path_str.replace('\\', "\\\\").replace('\'', "\\'");
                             let _ = win.eval(&format!(
-                                "window.dispatchEvent(new CustomEvent('hugagent:local-folder',{{detail:'{esc}'}}));"
+                                "window.dispatchEvent(new CustomEvent('sumc:local-folder',{{detail:'{esc}'}}));"
                             ));
                         }
                     });
@@ -983,7 +986,7 @@ fn build_window(app: &tauri::AppHandle, url: &str) -> tauri::Result<()> {
                         if let Some(win) = app2.get_webview_window("main") {
                             let esc = path_str.replace('\\', "\\\\").replace('\'', "\\'");
                             let _ = win.eval(&format!(
-                                "window.dispatchEvent(new CustomEvent('hugagent:grant-folder',{{detail:'{esc}'}}));"
+                                "window.dispatchEvent(new CustomEvent('sumc:grant-folder',{{detail:'{esc}'}}));"
                             ));
                         }
                     });
@@ -1071,9 +1074,16 @@ fn handle_deep_link(app: &tauri::AppHandle, raw_url: String) {
     });
 }
 
-/// 从 `hugagent://auth/callback?ticket=XXX` 抽取 ticket。
+/// 从 `sumc://auth/callback?ticket=XXX` 抽取 ticket。
 fn parse_ticket(raw_url: &str) -> Option<String> {
     let parsed = url::Url::parse(raw_url).ok()?;
+    match parsed.scheme() {
+        "sumc" => {}
+        "hugagent" => LEGACY_SCHEME_WARNING.call_once(|| {
+            eprintln!("[deprecated] hugagent:// is deprecated; use sumc://");
+        }),
+        _ => return None,
+    }
     parsed
         .query_pairs()
         .find(|(k, _)| k == "ticket")
@@ -1114,6 +1124,13 @@ mod display_tests {
     fn remote_retina_dpi_is_capped_by_virtual_resolution() {
         assert_eq!(display_zoom_for_platform(true, 2.0, 1920, 1080), 1.0);
         assert_eq!(display_zoom_for_platform(true, 1.5, 2560, 1440), 1.0);
+    }
+
+    #[test]
+    fn deep_link_accepts_sumc_and_one_release_legacy_scheme() {
+        assert_eq!(parse_ticket("sumc://auth/callback?ticket=new"), Some("new".into()));
+        assert_eq!(parse_ticket("hugagent://auth/callback?ticket=old"), Some("old".into()));
+        assert_eq!(parse_ticket("https://auth/callback?ticket=no"), None);
     }
 
     #[test]

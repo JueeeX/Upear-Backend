@@ -3,13 +3,13 @@
 > 最后更新：2026-07-21 ｜
 > [English](../../en/getting-started/domain-ontology-quickstart.md)
 
-本指南帮助你在 20 分钟内构建并发布第一个 Domain Pack，让 HugAgentOS 能够用
+本指南帮助你在 20 分钟内构建并发布第一个 Domain Pack，让 SUMC 能够用
 受控概念、关系、约束和工作流校验领域任务。示例不依赖外部 MCP，适合先验证
 完整闭环，再逐步绑定真实工具和技能。
 
 ## Domain Pack 包含什么
 
-HugAgentOS 的领域本体是可执行的业务契约，而不是只用于检索的术语表。一个
+SUMC 的领域本体是可执行的业务契约，而不是只用于检索的术语表。一个
 Domain Pack 由以下部分组成：
 
 - **基本信息与配置**：领域包 ID、版本、注入预算、熔断阈值等运行参数；

@@ -2,7 +2,7 @@
 
 > Last updated: 2026-06-11
 
-HugAgentOS funnels all persistent files — user uploads, AI-generated artifacts, knowledge base documents, exported reports — through a single **storage backend abstraction**. The `STORAGE_TYPE` environment variable switches between three implementations: local filesystem (Community Edition default), S3-compatible object storage, and Alibaba Cloud OSS (cloud storage is Enterprise Edition, EE — feature flag `cloud_storage`). Business code programs against the protocol only, so swapping backends requires zero code changes.
+SUMC funnels all persistent files — user uploads, AI-generated artifacts, knowledge base documents, exported reports — through a single **storage backend abstraction**. The `STORAGE_TYPE` environment variable switches between three implementations: local filesystem (Community Edition default), S3-compatible object storage, and Alibaba Cloud OSS (cloud storage is Enterprise Edition, EE — feature flag `cloud_storage`). Business code programs against the protocol only, so swapping backends requires zero code changes.
 
 ## Protocol and factory
 
@@ -74,7 +74,7 @@ OSS_ENDPOINT=https://oss-cn-hangzhou.aliyuncs.com   # required
 OSS_BUCKET=your-bucket                              # required
 OSS_ACCESS_KEY_ID=...                               # required
 OSS_ACCESS_KEY_SECRET=...                           # required
-OSS_KEY_PREFIX=hugagent/        # optional bucket-wide prefix
+OSS_KEY_PREFIX=sumc/        # optional bucket-wide prefix
 OSS_PRESIGNED_URL_EXPIRY=900
 ```
 

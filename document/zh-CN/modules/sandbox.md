@@ -2,7 +2,7 @@
 
 > 最后更新：2026-06-11
 
-沙箱是 HugAgentOS 中智能体执行代码的隔离环境：模型在对话里调用 `bash` 跑命令、运行[技能](agent-skills.md)脚本、生成可下载产物，全部发生在沙箱里而非后端主进程。系统通过统一的 **Provider 协议**抽象出三种可切换的执行后端——从单机轻量的 script_runner 到带持久会话、快照恢复的 OpenSandbox，再到远端 MicroVM 集群的 Cube——上层工具代码对此完全无感。
+沙箱是 SUMC 中智能体执行代码的隔离环境：模型在对话里调用 `bash` 跑命令、运行[技能](agent-skills.md)脚本、生成可下载产物，全部发生在沙箱里而非后端主进程。系统通过统一的 **Provider 协议**抽象出三种可切换的执行后端——从单机轻量的 script_runner 到带持久会话、快照恢复的 OpenSandbox，再到远端 MicroVM 集群的 Cube——上层工具代码对此完全无感。
 
 按[版本划分](../editions/overview.md)：**轻量沙箱（script_runner）+ 沙箱工具/offload 基础设施属社区版 CE**；**持久沙箱（opensandbox / cube，会话保持、环境复用、快照恢复）属商业版 EE**——社区版派生树剔除这两个 provider 文件，工厂自动回退轻量实现。
 
@@ -29,7 +29,7 @@
 
 | Provider | 文件 | 形态 | 适用场景 | 版本 |
 |---|---|---|---|---|
-| `script_runner` | `script_runner_provider.py` | 包装 `hugagent-script-runner` sidecar 容器的 HTTP 调用（容器内 setrlimit 子进程），无状态 | 单机部署、一次性代码执行，默认值 | CE |
+| `script_runner` | `script_runner_provider.py` | 包装 `sumc-script-runner` sidecar 容器的 HTTP 调用（容器内 setrlimit 子进程），无状态 | 单机部署、一次性代码执行，默认值 | CE |
 | `opensandbox` | `opensandbox_provider.py` + `_opensandbox_*.py` | 阿里 OpenSandbox（Docker 容器 + Jupyter 持久 kernel），per-chat 持久会话 + 预热池 + 快照 | 多轮迭代分析、技能重工作流 | **EE** |
 | `cube` | `cube_provider.py` | 腾讯 CubeSandbox（E2B 兼容 MicroVM），**远端节点**——后端通过 `e2b_code_interpreter` SDK 跨网访问，无本地 sidecar | 后端宿主机资源紧张 / 需要强隔离（MicroVM 级）/ 沙箱算力独立扩容的部署 | **EE** |
 
@@ -115,7 +115,7 @@ chat_id ──▶ _get_or_create_session ──▶ _Session（sandbox + CodeInte
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `SANDBOX_PROVIDER` | `script_runner` | provider 选择：`script_runner` / `opensandbox` / `cube` |
-| `SANDBOX_RUNNER_URL` | `http://hugagent-script-runner:8900` | script_runner sidecar 地址 |
+| `SANDBOX_RUNNER_URL` | `http://sumc-script-runner:8900` | script_runner sidecar 地址 |
 | `OPENSANDBOX_DOMAIN` / `OPENSANDBOX_API_KEY` / `OPENSANDBOX_IMAGE` | — | OpenSandbox 服务端与镜像 |
 | `OPENSANDBOX_DEFAULT_TIMEOUT_S` | 1800 | 沙箱服务端 TTL |
 | `OPENSANDBOX_POOL_{JUPYTER,LIGHT}_{MIN,MAX}_IDLE` / `OPENSANDBOX_POOL_MAX_TOTAL` | 2/3、2/5、20 | 预热池水位 |

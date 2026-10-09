@@ -980,6 +980,7 @@ async def start_plan_execute_run(
     enabled_agent_ids: Optional[List[str]] = None,
     session_messages: List[Dict[str, Any]],
     model_name: Optional[str] = None,
+    approval_decisions: Optional[Dict[str, str]] = None,
 ) -> ChatRun:
     """Plan Phase-2 (execute): background task on the same ChatRun infrastructure.
 
@@ -997,6 +998,7 @@ async def start_plan_execute_run(
         "enabled_kb_ids": enabled_kb_ids or [],
         "enabled_agent_ids": enabled_agent_ids or [],
         "model_name": model_name,
+        "approval_decisions": approval_decisions or {},
     }
     effective_model_name = model_name or DEFAULT_CHAT_MODEL_ALIAS
     run = _create_run_record(chat_id=chat_id, user_id=user_id, request_payload=request_payload)
@@ -1014,6 +1016,7 @@ async def start_plan_execute_run(
             enabled_agent_ids=enabled_agent_ids,
             session_messages=session_messages,
             model_name=effective_model_name,
+            approval_decisions=approval_decisions,
         ),
         name=f"plan_run:{run.run_id}",
     )
@@ -1036,6 +1039,7 @@ async def _run_plan_execute_workflow(
     enabled_agent_ids: Optional[List[str]],
     session_messages: List[Dict[str, Any]],
     model_name: str,
+    approval_decisions: Optional[Dict[str, str]],
 ) -> None:
     """Background plan-execute worker. Streams via XADD, persists at end.
 
@@ -1062,6 +1066,7 @@ async def _run_plan_execute_workflow(
     total_steps = 0
     exec_usage: Optional[Dict[str, Any]] = None
     tool_calls_log: List[Dict[str, Any]] = []
+    awaiting_approval = False
     # Strict workspace gate also applies to plan-execute runs. The plan
     # subagent has access to pin_to_workspace and is expected to pin its
     # final deliverables.
@@ -1093,6 +1098,7 @@ async def _run_plan_execute_workflow(
                 session_messages=session_messages,
                 chat_id=chat_id,
                 run_id=run_id,
+                approval_decisions=approval_decisions,
             ):
                 evt_type = event.get("type")
                 if evt_type == "plan_complete":
@@ -1100,6 +1106,8 @@ async def _run_plan_execute_workflow(
                     completed_steps = event.get("completed_steps", 0)
                     total_steps = event.get("total_steps", 0)
                     exec_usage = event.get("usage") or None
+                elif evt_type == "plan_approval_required":
+                    awaiting_approval = True
                 elif evt_type == "tool_call":
                     tool_calls_log.append(
                         {
@@ -1115,6 +1123,16 @@ async def _run_plan_execute_workflow(
                     tn = event.get("tool_name")
                     _attach_tool_result(tool_calls_log, tid, tn, res)
                 await _emit(event)
+
+        if awaiting_approval:
+            _finalize_run(
+                run_id,
+                status="completed",
+                completed_at=_utcnow(),
+                last_event_offset=offset_counter,
+            )
+            await _emit({"type": _TERMINAL_TYPE, "chat_id": chat_id})
+            return
 
         # Build plan snapshot in its own short session
         plan_snapshot = None
@@ -1766,6 +1784,19 @@ async def _run_plan_generate_workflow(
                         ],
                         "total_steps": len(steps),
                         "completed_steps": 0,
+                        **{
+                            key: event[key]
+                            for key in (
+                                "fsm",
+                                "fsm_runtime",
+                                "fsm_validation",
+                                "plan_hash",
+                                "agent_registry_hash",
+                                "agent_registry",
+                                "validation_status",
+                            )
+                            if key in event
+                        },
                     }
                     gen_usage = event.get("usage") or None
                 await _emit(event)

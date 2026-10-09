@@ -2,7 +2,7 @@
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 try:
@@ -64,7 +64,7 @@ def generate_storage_key(
     Format without chat_id:
         {env}/{category}/{user_id}/{timestamp}_{filename}
     """
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y%m%d%H%M%S")
 
     safe_filename = secure_filename(filename)
     if not safe_filename:

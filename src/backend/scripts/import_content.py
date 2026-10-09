@@ -279,7 +279,7 @@ def main() -> None:
     overwrite = not args.no_overwrite
 
     print("=" * 50)
-    print("HugAgentOS 数据导入")
+    print("SUMC 数据导入")
     print("=" * 50)
     if args.dry_run:
         print("⚠ 试运行模式 — 不会实际写入任何数据\n")

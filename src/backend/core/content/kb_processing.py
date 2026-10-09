@@ -8,9 +8,111 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import Optional
+from typing import Any, Mapping, Optional
 
 logger = logging.getLogger(__name__)
+
+INDEXING_IDENTITY_VERSION = 1
+
+
+def build_document_security_metadata(
+    *,
+    tenant_id: str,
+    user_id: str,
+    kb_id: str,
+    document_id: str,
+    source_type: str,
+    content_check: Mapping[str, Any],
+    checksum_sha256: Optional[str] = None,
+    source_reference: Optional[str] = None,
+    user_metadata: Optional[Mapping[str, Any]] = None,
+) -> dict[str, Any]:
+    """Build server-owned document provenance and indexing authority metadata."""
+    provenance: dict[str, Any] = {
+        "source_type": source_type,
+        "actor_user_id": user_id,
+    }
+    if checksum_sha256:
+        provenance["checksum_sha256"] = checksum_sha256
+    if source_reference:
+        provenance["source_reference"] = source_reference
+    return {
+        "tenant_id": tenant_id,
+        "provenance": provenance,
+        "content_check": dict(content_check),
+        "indexing_identity": {
+            "version": INDEXING_IDENTITY_VERSION,
+            "tenant_id": tenant_id,
+            "principal_id": user_id,
+            "kb_id": kb_id,
+            "document_id": document_id,
+        },
+        "user_metadata": dict(user_metadata or {}),
+    }
+
+
+def validate_indexing_identity(
+    metadata: Mapping[str, Any],
+    *,
+    tenant_id: str,
+    user_id: str,
+    kb_id: str,
+    document_id: str,
+) -> None:
+    identity = metadata.get("indexing_identity")
+    expected = {
+        "version": INDEXING_IDENTITY_VERSION,
+        "tenant_id": tenant_id,
+        "principal_id": user_id,
+        "kb_id": kb_id,
+        "document_id": document_id,
+    }
+    if not isinstance(identity, dict) or any(identity.get(key) != value for key, value in expected.items()):
+        raise PermissionError("KB indexing identity mismatch")
+
+
+def document_security_summary(document: Any) -> dict[str, Any]:
+    """Return the browser-safe subset of server-owned document security metadata."""
+    metadata = document.extra_data if isinstance(document.extra_data, dict) else {}
+    provenance = metadata.get("provenance") if isinstance(metadata.get("provenance"), dict) else {}
+    content_check = (
+        metadata.get("content_check") if isinstance(metadata.get("content_check"), dict) else {}
+    )
+    identity = (
+        metadata.get("indexing_identity")
+        if isinstance(metadata.get("indexing_identity"), dict)
+        else {}
+    )
+    checksum = provenance.get("checksum_sha256")
+    tenant_id = metadata.get("tenant_id")
+    tenant_bound = (
+        isinstance(tenant_id, str)
+        and identity.get("tenant_id") == tenant_id
+        and isinstance(identity.get("principal_id"), str)
+    )
+    return {
+        "tenant_bound": tenant_bound,
+        "provenance": {
+            "source_type": str(provenance.get("source_type") or "unknown"),
+            "checksum_sha256": checksum if isinstance(checksum, str) else None,
+        },
+        "content_check": {
+            "status": str(content_check.get("status") or "unknown"),
+            "file_type_validation": str(
+                content_check.get("file_type_validation") or "not_run"
+            ),
+            "malware_scan": str(content_check.get("malware_scan") or "not_run"),
+            "prompt_injection_scan": str(
+                content_check.get("prompt_injection_scan") or "not_run"
+            ),
+        },
+        "indexing_identity": {
+            "bound": tenant_bound
+            and identity.get("version") == INDEXING_IDENTITY_VERSION
+            and identity.get("kb_id") == document.kb_id
+            and identity.get("document_id") == document.document_id,
+        },
+    }
 
 
 # ── Text helpers ────────────────────────────────────────────────────────────
@@ -155,7 +257,7 @@ def update_document_status(document_id: str, status: str, error: Optional[str] =
                 meta = dict(doc.extra_data or {})
                 if status == "failed" and error:
                     meta["indexing_error"] = error[:1000]
-                    meta["indexing_failed_at"] = datetime.utcnow().isoformat()
+                    meta["indexing_failed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
                 else:
                     meta.pop("indexing_error", None)
                     meta.pop("indexing_failed_at", None)
@@ -172,6 +274,7 @@ def vectorise_document_background(
     document_id: str,
     kb_id: str,
     user_id: str,
+    tenant_id: str,
     title: str,
     file_bytes: bytes,
     mime_type: str,
@@ -181,13 +284,31 @@ def vectorise_document_background(
 ) -> None:
     """Background task: parse document -> build parent-child chunks -> write to Milvus + DB."""
     try:
+        from core.db.engine import SessionLocal
+        from core.db.models import KBDocument
+
+        identity_db = SessionLocal()
+        try:
+            document = identity_db.get(KBDocument, document_id)
+            if document is None or document.kb_id != kb_id:
+                raise PermissionError("KB indexing document scope mismatch")
+            metadata = document.extra_data if isinstance(document.extra_data, dict) else {}
+            validate_indexing_identity(
+                metadata,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                kb_id=kb_id,
+                document_id=document_id,
+            )
+        finally:
+            identity_db.close()
+
         from core.kb.kb_parser import parse_and_chunk
         from core.kb.kb_vector import (
             get_or_create_collection, embed_batch, build_sparse_text, text_to_sparse,
             upsert_rows, upsert_question_rows, truncate_utf8,
             TITLE_FIELD_MAX_BYTES, TAGS_FIELD_MAX_BYTES,
         )
-        from core.db.engine import SessionLocal
         from core.db.models import KBChunk
 
         cfg = indexing_config or {}

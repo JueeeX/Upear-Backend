@@ -1,10 +1,10 @@
-# HugAgentOS 桌面客户端（Tauri v2）
+# SUMC 桌面客户端（Tauri v2）
 
 把现有 Web 平台封装为桌面客户端（Windows / macOS / Linux）。客户端支持两种运行方式：
 连接已部署的团队服务器，或在 Windows、macOS 和 Linux 上由客户端离线安装并托管本机 CE 单机服务。
 两种方式都通过内置本地反代访问后端。
 
-登录走**方案 B**——系统浏览器跳转登录 + `hugagent://` deep-link 唤起 App + 一次性
+登录走**方案 B**——系统浏览器跳转登录 + `sumc://` deep-link 唤起 App + 一次性
 handoff 票据换 token。前端源码零改动（复用 `src/frontend`）。
 
 > 完整设计见 `internal design docs`。本目录是方案 B 的落地实现。
@@ -16,7 +16,7 @@ handoff 票据换 token。前端源码零改动（复用 `src/frontend`）。
 ```
 桌面App ──系统浏览器──► <server>/?desktop=1 ──SSO登录──► 前端换 handoff 票据
                                                             │
-   hugagent://auth/callback?ticket=<handoff>  ◄──浏览器跳转──┘
+   sumc://auth/callback?ticket=<handoff>  ◄──浏览器跳转──┘
         │ OS 唤起 App
         ▼
    POST <server>/api/v1/auth/desktop/redeem {ticket}  → 真正 session token（存 OS 私有目录）
@@ -80,16 +80,16 @@ Windows 机器上打，**Linux 包可在任意装好 Rust 的 Linux / WSL 环境
 }
 ```
 
-- `<应用配置目录>`：Windows `%APPDATA%\com.hugagent.desktop`，macOS
-  `~/Library/Application Support/com.hugagent.desktop`，Linux `~/.config/com.hugagent.desktop`
+- `<应用配置目录>`：Windows `%APPDATA%\com.sumc.desktop`，macOS
+  `~/Library/Application Support/com.sumc.desktop`，Linux `~/.config/com.sumc.desktop`
 - `deployment_mode` 可取 `remote` / `local`；切换本机服务时客户端会把地址固定为
   `http://127.0.0.1:32101`
-- 也可用环境变量 `HUGAGENT_SERVER_BASE` 覆盖（优先级高于 server.json，并强制切回远程模式）
+- 也可用环境变量 `SUMC_SERVER_BASE` 覆盖（优先级高于 server.json，并强制切回远程模式）
 - `cookie_name` 必须与后端 `SESSION_COOKIE_NAME` 一致（默认 `jx_session`）
 - 内网自签 HTTPS 时把 `insecure_tls` 设为 `true`
 - 编译期默认值来自 `src-tauri/src/brand.rs`，可用 `JX_DEFAULT_SERVER_BASE` 覆盖；正式分发务必通过构建变量、server.json 或环境变量配置实际服务地址
 - 本机模式的桌面更新源用 `JX_DESKTOP_UPDATE_BASE` 在构建时指定（未设则回退
-  `JX_DEFAULT_SERVER_BASE`），也可由 `HUGAGENT_UPDATE_SERVER_BASE` 在运行时覆盖
+  `JX_DEFAULT_SERVER_BASE`），也可由 `SUMC_UPDATE_SERVER_BASE` 在运行时覆盖
 
 ## 构建 / 运行
 
@@ -107,7 +107,7 @@ npm run build
 npm run build:thin
 
 # 开发调试：先确保 src/frontend 已 npm run build（反代直接 serve dist），再
-HUGAGENT_SERVER_BASE=https://你的后端 npm run dev
+SUMC_SERVER_BASE=https://你的后端 npm run dev
 ```
 
 > 平台打包目标由 `src-tauri/tauri.linux.conf.json`（Linux：AppImage + deb）、
@@ -122,7 +122,7 @@ HUGAGENT_SERVER_BASE=https://你的后端 npm run dev
 > 桌面前端、准备 CE 服务树、构建 CE 登录前端、删除构建期 `node_modules`，再把全部服务文件压成
 > 单个 `server-ce.zip` 后交给 Tauri 打包。源代码仓存在
 > `scripts/build_ce.py` 时，脚本正常运行生成器并执行开源边界门禁；公开 CE 仓不含生成器，脚本会先
-> 校验根目录 `.hugagent-edition` 为 `ce`，再只复制当前已派生 checkout 中的 Git tracked 文件。
+> 校验根目录 `.sumc-edition` 为 `ce`，再只复制当前已派生 checkout 中的 Git tracked 文件。
 > 同时生成与当前系统/架构匹配的 `runtime-core.tar.gz`。dev 模式从仓库内
 > `src/frontend/dist` 读取静态资源；终端用户安装或首次启动时不会运行这些构建步骤。
 
@@ -153,7 +153,7 @@ npm --prefix desktop run lock:desktop
 锁生成与运行时构建需要网络；发布后的完整安装包不需要 PyPI、Python、uv 或编译器。
 
 正式发版前需确保工作区干净，并在 Windows PowerShell 设置
-`$env:HUGAGENT_RELEASE_BUILD="1"`；此时 CE 生成器不会接受 `--allow-dirty`。版本号必须同时更新
+`$env:SUMC_RELEASE_BUILD="1"`；此时 CE 生成器不会接受 `--allow-dirty`。版本号必须同时更新
 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`（本机服务从 `0.2.0` 起提供），
 `prepare-bundle.mjs` 会在耗时构建开始前校验三者一致。公开 CE 的 Desktop Release workflow 会在
 启动 Windows x86_64、Linux x86_64、macOS arm64、macOS x86_64 四个原生目标前校验 release tag
@@ -235,12 +235,12 @@ pubkey 验签 → 安装 → 重启`。远程模式默认让更新源跟随当�
 
 ```bash
 # 1. 生成密钥对（私钥务必保密、离线保管；公钥要填进 tauri.conf.json）
-npx @tauri-apps/cli signer generate -w ~/.tauri/hugagent-updater.key
+npx @tauri-apps/cli signer generate -w ~/.tauri/sumc-updater.key
 # 输出里的 public key 填到 tauri.conf.json → plugins.updater.pubkey
 #   （占位符 REPLACE_WITH_TAURI_SIGNER_PUBLIC_KEY 必须替换）
 
 # 2. 构建时注入私钥（Windows PowerShell 同理设环境变量）
-export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/hugagent-updater.key)"
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/sumc-updater.key)"
 export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""   # 生成时设了口令就填这里
 npm run build
 # updater 产物随平台：Windows 多出 *.nsis.zip + .sig；Linux 的 AppImage 本体即更新包，旁边出 .sig
@@ -259,8 +259,8 @@ npm run build
 ```
 <DESKTOP_RELEASE_DIR>/
   ├─ latest.json                              # 更新清单（见下）
-  ├─ HugAgentOS_0.2.0_x64-setup.nsis.zip        # 构建产物（updater 安装包）
-  └─ HugAgentOS_0.2.0_x64-setup.nsis.zip.sig    # 对应签名
+  ├─ SUMC_0.2.0_x64-setup.nsis.zip        # 构建产物（updater 安装包）
+  └─ SUMC_0.2.0_x64-setup.nsis.zip.sig    # 对应签名
 ```
 
 `latest.json`（`platforms.*.url` 可写**裸文件名**，后端按请求来源自动改写成绝对下载地址、并把 `.sig`
@@ -273,12 +273,12 @@ npm run build
   "pub_date": "2026-07-16T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "HugAgentOS_0.2.0_x64-setup.nsis.zip.sig",
-      "url": "HugAgentOS_0.2.0_x64-setup.nsis.zip"
+      "signature": "SUMC_0.2.0_x64-setup.nsis.zip.sig",
+      "url": "SUMC_0.2.0_x64-setup.nsis.zip"
     },
     "linux-x86_64": {
-      "signature": "HugAgentOS_0.2.0_amd64.AppImage.sig",
-      "url": "HugAgentOS_0.2.0_amd64.AppImage"
+      "signature": "SUMC_0.2.0_amd64.AppImage.sig",
+      "url": "SUMC_0.2.0_amd64.AppImage"
     }
   }
 }
@@ -299,17 +299,17 @@ npm run build
 - 默认 `npm run build` 生成完整离线包：携带 `server-ce.zip`、`runtime-core.tar.gz` 和各自清单。
   首次启动只做 SHA-256/平台/依赖指纹校验、安全解压、运行时自检和健康检查，不访问 PyPI，
   不探测或修改系统 Python。`npm run build:thin` 生成仅连接团队服务器的精简包，本机模式会明确禁用。
-- Windows 的源码和运行时位于 `%LOCALAPPDATA%\com.hugagent.desktop\local-server\r`，物理目录
+- Windows 的源码和运行时位于 `%LOCALAPPDATA%\com.sumc.desktop\local-server\r`，物理目录
   使用完整 SHA-256 的 128-bit 前缀以避开 Win32 长路径限制；`active.json` 仍保存并校验完整指纹。
   业务数据仍在同一 `local-server\data`。交互卸载会询问是否同时删除数据并默认选择“否”；静默自动更新始终
-  保留数据。软件分发系统可向卸载器传入 `/HUGAGENT_DELETE_DATA` 明确请求删除数据。
-- macOS 的持久数据位于 `~/.hugagent`；源码、私有 Python 和版本目录位于
-  `~/Library/Application Support/com.hugagent.desktop/local-server`。从旧版升级时，如果
-  `~/.hugagent` 不存在或为空，客户端会把旧 `local-server/data` 原子迁入该目录；如果目录已有
+  保留数据。软件分发系统可向卸载器传入 `/SUMC_DELETE_DATA` 明确请求删除数据。
+- macOS 的持久数据位于 `~/.sumc`；源码、私有 Python 和版本目录位于
+  `~/Library/Application Support/com.sumc.desktop/local-server`。从旧版升级时，如果
+  `~/.sumc` 不存在或为空，客户端会把旧 `local-server/data` 原子迁入该目录；如果目录已有
   命令行版数据，则直接沿用并保留旧目录作为备份，不覆盖任何文件。macOS 把 App 拖入废纸篓不会执行卸载钩子，
-  因此默认不会删除 `~/.hugagent` 或 Application Support 下的运行环境；确认不再需要后可分别
+  因此默认不会删除 `~/.sumc` 或 Application Support 下的运行环境；确认不再需要后可分别
   手动删除。
-- Linux 完整包与 macOS 一样把持久数据统一放在 `~/.hugagent`，运行版本放在 Tauri 应用本地数据目录；
+- Linux 完整包与 macOS 一样把持久数据统一放在 `~/.sumc`，运行版本放在 Tauri 应用本地数据目录；
   AppImage 与 deb 都支持本机模式。Linux x86_64 运行时应在兼容基线系统上构建，避免引入过新的 glibc。
 - Linux 托盘依赖 libayatana-appindicator；Wayland 下全局快捷键（Ctrl+Shift+Space）兼容性因桌面
   环境而异。

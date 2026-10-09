@@ -37,7 +37,7 @@ import logging
 import os
 import re
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -347,7 +347,7 @@ async def _build_connected_update(user_id: str) -> Dict[str, Any]:
         "lark_name": ident.get("lark_name"),
         "tenant_key": ident.get("tenant_key"),
         **_CLEAR_LOGIN,
-        "last_verified_at": datetime.utcnow(),
+        "last_verified_at": datetime.now(timezone.utc).replace(tzinfo=None),
         "last_error": None,
     }
 
@@ -582,7 +582,7 @@ class LarkService:
             "login_verification_url_complete": dev.get("verification_url_complete"),
             "login_user_code": dev.get("user_code"),
             "login_device_code": dev.get("device_code"),
-            "login_started_at": datetime.utcnow(),
+            "login_started_at": datetime.now(timezone.utc).replace(tzinfo=None),
             "last_error": None,
         })
         # Start the background completion task (blocking polling until authorized/expired)

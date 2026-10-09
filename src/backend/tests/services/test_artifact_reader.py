@@ -4,7 +4,7 @@ Covers caching hit/miss, ownership check, parse error path. DB is mocked
 via an in-memory SQLite fixture from conftest.db_session pattern.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -133,7 +133,7 @@ def test_fetch_parsed_text_permission_ok(monkeypatch):
 def test_fetch_parsed_text_deleted_artifact(monkeypatch):
     from core.content import artifact_reader as ar
 
-    row = _make_artifact_row(parsed_text="content", deleted_at=datetime.utcnow())
+    row = _make_artifact_row(parsed_text="content", deleted_at=datetime.now(timezone.utc).replace(tzinfo=None))
     sess = _FakeSession(row)
 
     import core.db.engine as engine_mod
@@ -220,7 +220,7 @@ def test_load_artifact_meta_permission_denied(monkeypatch):
 
 def test_load_artifact_meta_deleted(monkeypatch):
     from core.content import artifact_reader as ar
-    row = _make_artifact_row(deleted_at=datetime.utcnow())
+    row = _make_artifact_row(deleted_at=datetime.now(timezone.utc).replace(tzinfo=None))
     sess = _FakeSession(row)
     import core.db.engine as engine_mod
     monkeypatch.setattr(engine_mod, "SessionLocal", lambda: sess)

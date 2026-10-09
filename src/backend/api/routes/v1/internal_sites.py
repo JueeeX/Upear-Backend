@@ -191,7 +191,7 @@ def _mirror_files_to_project_folder(
             if subtree_ids:
                 from datetime import datetime as _dt
 
-                now = _dt.utcnow()
+                now = _dt.now(_dt.timezone.utc).replace(tzinfo=None)
                 db.query(Artifact).filter(
                     Artifact.user_id == user_id,
                     *personal_artifact_predicates(Artifact),

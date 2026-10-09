@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from core.auth.backend import UserContext, get_current_user
@@ -25,6 +25,7 @@ from core.db.engine import get_db
 from core.db.models import AdminMcpServer, AdminSkill
 from core.infra.exceptions import AccessDeniedError, BadRequestError, ResourceNotFoundError
 from core.infra.responses import created_response, success_response
+from core.safeharness_capabilities import reject_uncontrolled_mutation
 from core.services.mcp_management_service import (
     encrypt_mcp_headers,
     probe_mcp_connectivity,
@@ -83,6 +84,7 @@ async def create_my_mcp_server(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """添加一个仅自己可见可用的远程 MCP 工具（HTTP/SSE）。
 
     创建即试连：连不上返回 422，避免把不可达端点落库。出于安全，用户入口**不支持
@@ -96,7 +98,7 @@ async def create_my_mcp_server(
 
     # Auto-generate a globally unique server_id to avoid collisions with public MCPs / other users
     server_id = f"umcp_{uuid.uuid4().hex[:16]}"
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     row = AdminMcpServer(
         server_id=server_id,
         display_name=body.display_name.strip(),
@@ -141,6 +143,7 @@ async def delete_my_mcp_server(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """删除自己添加的私有 MCP。只能删自己的（owner 校验）。"""
     _require_flag(str(user.user_id), db, "can_add_mcp", "自助添加 MCP")
     row = (
@@ -169,6 +172,7 @@ async def upload_my_skill(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """以 zip 包上传一个仅自己可见可用的技能（含 SKILL.md）。
 
     复用 admin 上传的解析链路，但打上 ``owner_user_id`` 并限 50MB。技能 id 取
@@ -224,6 +228,7 @@ async def create_my_skill(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """直接手写一个仅自己可见可用的技能（无需打包 zip）。
 
     技能 id 须全局唯一：不能与公共技能或他人私有技能冲突；与本人已有同名私有技能
@@ -289,7 +294,7 @@ async def create_my_skill(
         mcp_server_ids=mcp_server_ids,
         ontology_tags=list(body.tags),
     )
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if existing is not None:
         existing.skill_content = content
         existing.display_name = body.display_name
@@ -428,6 +433,7 @@ async def save_my_skill_file(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """新建或更新自己私有技能中的单个附加文件（UTF-8 文本）。
 
     SKILL.md 不走本接口（正文在编辑表单里改，经 ``POST /v1/me/skills`` 重建）。
@@ -445,7 +451,7 @@ async def save_my_skill_file(
     extra = dict(row.extra_files or {})
     extra[filename] = body.content
     row.extra_files = extra
-    row.updated_at = datetime.utcnow()
+    row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     flag_modified(row, "extra_files")
     db.commit()
     refresh_skill_caches()
@@ -459,6 +465,7 @@ async def delete_my_skill_file(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """删除自己私有技能中的单个附加文件。"""
     _require_flag(str(user.user_id), db, "can_add_skill", "自助添加技能")
     row = _get_own_skill(db, str(user.user_id), skill_id)
@@ -467,7 +474,7 @@ async def delete_my_skill_file(
         raise ResourceNotFoundError("skill_file", filename)
     del extra[filename]
     row.extra_files = extra
-    row.updated_at = datetime.utcnow()
+    row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     flag_modified(row, "extra_files")
     db.commit()
 
@@ -483,6 +490,7 @@ async def upload_my_skill_file(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """以 multipart 上传单个文件到自己的私有技能，二进制按 base64 标记安全存储。"""
     _require_flag(str(user.user_id), db, "can_add_skill", "自助添加技能")
 
@@ -500,7 +508,7 @@ async def upload_my_skill_file(
     extra = dict(row.extra_files or {})
     extra[filename] = encode_upload(filename, raw)
     row.extra_files = extra
-    row.updated_at = datetime.utcnow()
+    row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     flag_modified(row, "extra_files")
     db.commit()
     refresh_skill_caches()
@@ -540,6 +548,7 @@ async def delete_my_skill(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """删除自己上传的私有技能。只能删自己的（owner 校验）。"""
     _require_flag(str(user.user_id), db, "can_add_skill", "自助添加技能")
     row = (
@@ -573,6 +582,7 @@ async def set_my_skill_icon(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    reject_uncontrolled_mutation()
     """给自己的私有技能设置图标（owner 校验）。空串=恢复默认。"""
     _require_flag(str(user.user_id), db, "can_add_skill", "自助添加技能")
     row = (

@@ -2,7 +2,7 @@
 
 > 最后更新：2026-07-28
 
-HugAgentOS 后端是一个 FastAPI 应用，所有业务接口挂在 `/v1/*` 前缀下。生产部署中 Nginx 把 `/api/` 前缀剥掉后转发给后端（见 `src/frontend/default.conf.template`），因此**浏览器侧的完整路径是 `/api/v1/...`**，直接访问后端容器则是 `/v1/...`。本文示例统一使用本地开发地址 `http://localhost:3000/api`。
+SUMC 后端是一个 FastAPI 应用，所有业务接口挂在 `/v1/*` 前缀下。生产部署中 Nginx 把 `/api/` 前缀剥掉后转发给后端（见 `src/frontend/default.conf.template`），因此**浏览器侧的完整路径是 `/api/v1/...`**，直接访问后端容器则是 `/v1/...`。本文示例统一使用本地开发地址 `http://localhost:3000/api`。
 
 相关文档：[认证体系](../modules/auth.md) · [错误码参考](error-codes.md) · [环境变量](../deployment/environment-variables.md) · [License 与商业版](../editions/license.md)
 

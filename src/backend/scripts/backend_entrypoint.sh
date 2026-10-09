@@ -12,7 +12,7 @@ echo "[entrypoint] Starting backend bootstrap..."
 # cannot run on SQLite.  For SQLite we fall back to SQLAlchemy
 # ``Base.metadata.create_all()`` which respects the dialect-aware type
 # variants defined in the ORM models.
-DB_URL="${DATABASE_URL:-sqlite:///./hugagent.db}"
+DB_URL="${DATABASE_URL:-sqlite:///./sumc.db}"
 if echo "${DB_URL}" | grep -qi "^sqlite"; then
   echo "[entrypoint] SQLite detected – using create_all() instead of alembic..."
   python -c "from core.db.engine import init_db; init_db()"

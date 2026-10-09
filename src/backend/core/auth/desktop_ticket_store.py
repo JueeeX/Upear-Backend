@@ -5,7 +5,7 @@ deep-link waking the app):
 
   Browser-side login succeeds (session cookie already present)
     → POST /v1/auth/desktop/handoff  issues a one-time handoff ticket
-    → browser 302 to  hugagent://auth/callback?ticket=<handoff>
+    → browser 302 to  sumc://auth/callback?ticket=<handoff>
     → OS wakes the desktop app
     → app calls HTTPS directly  POST /v1/auth/desktop/redeem {ticket}  to exchange for the real session token
 

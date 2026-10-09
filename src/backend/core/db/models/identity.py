@@ -36,8 +36,8 @@ class UserShadow(Base):
     avatar_url = Column(Text)
     user_center_id = Column(String(64))
     extra_data = Column("metadata", JSONType, default={})  # Map to 'metadata' column in DB
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     last_sync_at = Column(TIMESTAMP(timezone=True))
 
     # Relationships
@@ -72,8 +72,8 @@ class LocalUser(Base):
     status = Column(String(20), nullable=False, default="active")
     invited_by_code = Column(String(32))
     password_updated_at = Column(TIMESTAMP(timezone=True))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint(
@@ -106,8 +106,8 @@ class UserFolder(Base):
         nullable=True,
     )
     name = Column(String(255), nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     deleted_at = Column(TIMESTAMP(timezone=True))
 
     __table_args__ = (
@@ -154,7 +154,7 @@ class UserApiKey(Base):
     enabled = Column(Boolean, nullable=False, default=True)
     expires_at = Column(TIMESTAMP(timezone=True))  # NULL = never expires
     last_used_at = Column(TIMESTAMP(timezone=True))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     revoked_at = Column(TIMESTAMP(timezone=True))  # Soft delete: revocation time
 
     __table_args__ = (
@@ -206,8 +206,8 @@ class DingTalkConnection(Base):
     )  # Plan B: dws auth export --base64 (application-layer encrypted), nullable
     last_verified_at = Column(TIMESTAMP(timezone=True))
     last_error = Column(Text)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint(
@@ -267,8 +267,8 @@ class LarkConnection(Base):
     )  # Portable credential bundle (for cube cross-machine use, application-layer encrypted), nullable
     last_verified_at = Column(TIMESTAMP(timezone=True))
     last_error = Column(Text)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint(
@@ -328,8 +328,8 @@ class EmailConnection(Base):
     config_bundle = Column(Text)  # base64(config.toml), for cube cross-session injection, nullable
     last_verified_at = Column(TIMESTAMP(timezone=True))
     last_error = Column(Text)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint(
@@ -398,8 +398,8 @@ class ChannelConnection(Base):
     enabled = Column(Boolean, nullable=False, default=True)
     last_event_at = Column(TIMESTAMP(timezone=True))
     last_error = Column(Text)
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint(

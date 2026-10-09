@@ -10,24 +10,24 @@ import pytest
 
 
 def test_local_profile_enables_memory_runtime_by_default(tmp_path, monkeypatch):
-    monkeypatch.setenv("HUGAGENT_HOME", str(tmp_path / "hugagent-home"))
+    monkeypatch.setenv("SUMC_HOME", str(tmp_path / "sumc-home"))
     monkeypatch.delenv("MEM0_ENABLED", raising=False)
-    monkeypatch.delenv("HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS", raising=False)
+    monkeypatch.delenv("SUMC_BOOTSTRAP_DEFAULT_PLUGINS", raising=False)
     monkeypatch.delenv("BACKEND_INTERNAL_URL", raising=False)
     monkeypatch.delenv("BACKEND_PORT", raising=False)
 
     defaults = cli.apply_local_env(port=18000)
 
     assert defaults["MEM0_ENABLED"] == "true"
-    assert defaults["HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS"] == "1"
+    assert defaults["SUMC_BOOTSTRAP_DEFAULT_PLUGINS"] == "1"
     assert defaults["BACKEND_INTERNAL_URL"] == "http://127.0.0.1:18000"
     assert defaults["BACKEND_PORT"] == "18000"
-    assert os.environ["HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS"] == "1"
+    assert os.environ["SUMC_BOOTSTRAP_DEFAULT_PLUGINS"] == "1"
 
 
 def test_local_bootstrap_installs_recommended_plugins_only_once(tmp_path, monkeypatch):
-    home = tmp_path / "hugagent-home"
-    monkeypatch.setenv("HUGAGENT_HOME", str(home))
+    home = tmp_path / "sumc-home"
+    monkeypatch.setenv("SUMC_HOME", str(home))
     cli.apply_local_env(port=18000)
     installs = []
     provisions = []
@@ -55,8 +55,8 @@ def test_local_bootstrap_installs_recommended_plugins_only_once(tmp_path, monkey
 
 
 def test_local_bootstrap_retries_after_partial_plugin_failure(tmp_path, monkeypatch):
-    home = tmp_path / "hugagent-home"
-    monkeypatch.setenv("HUGAGENT_HOME", str(home))
+    home = tmp_path / "sumc-home"
+    monkeypatch.setenv("SUMC_HOME", str(home))
     cli.apply_local_env(port=18000)
     monkeypatch.setattr(cli, "install_plugins", lambda _slugs: ["automation", "skill-manager"])
 
@@ -67,7 +67,7 @@ def test_local_bootstrap_retries_after_partial_plugin_failure(tmp_path, monkeypa
 
 
 def test_local_serve_fails_readiness_when_default_plugin_bootstrap_fails(monkeypatch):
-    monkeypatch.setenv("HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS", "1")
+    monkeypatch.setenv("SUMC_BOOTSTRAP_DEFAULT_PLUGINS", "1")
     monkeypatch.setattr(cli, "apply_local_env", lambda _port: {})
     monkeypatch.setattr(cli, "_ensure_schema_and_seed", lambda: None)
 
@@ -111,7 +111,7 @@ def test_ce_one_command_installer_bootstraps_default_plugins():
 
     installer = installer_path.read_text(encoding="utf-8")
 
-    assert "export HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS=1" in installer
+    assert "export SUMC_BOOTSTRAP_DEFAULT_PLUGINS=1" in installer
 
 
 def test_desktop_local_server_bootstraps_default_plugins():
@@ -120,7 +120,7 @@ def test_desktop_local_server_bootstraps_default_plugins():
         encoding="utf-8"
     )
 
-    assert '.env("HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS", "1")' in launcher
+    assert '.env("SUMC_BOOTSTRAP_DEFAULT_PLUGINS", "1")' in launcher
 
 
 def test_desktop_local_server_forces_utf8_python_stdio():

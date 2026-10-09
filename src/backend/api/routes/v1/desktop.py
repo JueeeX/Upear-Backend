@@ -16,8 +16,8 @@ Windows build machine) just puts three things into that directory:
 
     <DESKTOP_RELEASE_DIR>/
       ├─ latest.json                              # update manifest (format below)
-      ├─ HugAgentOS_0.2.0_x64-setup.nsis.zip        # NSIS installer (updater artifact)
-      └─ HugAgentOS_0.2.0_x64-setup.nsis.zip.sig    # matching signature (optional; the signature content can also be inlined into latest.json)
+      ├─ SUMC_0.2.0_x64-setup.nsis.zip        # NSIS installer (updater artifact)
+      └─ SUMC_0.2.0_x64-setup.nsis.zip.sig    # matching signature (optional; the signature content can also be inlined into latest.json)
 
 `latest.json` uses the Tauri v2 "dynamic manifest" format; `platforms.*.url` may be a **bare
 filename** — this endpoint rewrites it into an absolute download URL based on the request
@@ -31,7 +31,7 @@ all environments):
       "platforms": {
         "windows-x86_64": {
           "signature": "<contents of the .sig file>",
-          "url": "HugAgentOS_0.2.0_x64-setup.nsis.zip"
+          "url": "SUMC_0.2.0_x64-setup.nsis.zip"
         }
       }
     }

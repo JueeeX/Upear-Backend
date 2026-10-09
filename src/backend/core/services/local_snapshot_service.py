@@ -1,7 +1,7 @@
 """Write-back snapshots + rollback for desktop local files (ticket #08).
 
 Before the agent overwrites a file inside a local project, we copy the current
-content into a snapshot store (``~/.hugagent/local_snapshots``). The user can then
+content into a snapshot store (``~/.sumc/local_snapshots``). The user can then
 roll the file back to its previous version. Best-effort and non-fatal: a snapshot
 failure never blocks the write.
 
@@ -15,7 +15,7 @@ import hashlib
 import os
 import shutil
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -24,7 +24,7 @@ _MAX_PER_FILE = 10
 
 
 def _data_dir() -> Path:
-    return Path(os.getenv("HUGAGENT_HOME", str(Path.home() / ".hugagent"))).expanduser()
+    return Path(os.getenv("SUMC_HOME", str(Path.home() / ".sumc"))).expanduser()
 
 
 def _snap_root() -> Path:
@@ -53,7 +53,7 @@ def snapshot(real_path: str) -> Optional[str]:
             d = _dir_for(real)
             d.mkdir(parents=True, exist_ok=True)
             (d / "path.txt").write_text(real, encoding="utf-8")
-            stamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S%f")
+            stamp = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y%m%dT%H%M%S%f")
             dest = d / f"{stamp}.bak"
             shutil.copy2(real, dest)
             _prune(d)
@@ -90,7 +90,7 @@ def rollback(real_path: str) -> bool:
         with _LOCK:
             # snapshot the current (post-edit) content first, so a rollback is undoable
             if os.path.isfile(real):
-                shutil.copy2(real, d / f"{datetime.utcnow().strftime('%Y%m%dT%H%M%S%f')}.bak")
+                shutil.copy2(real, d / f"{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%dT%H%M%S%f')}.bak")
                 _prune(d)
                 backups = sorted(d.glob("*.bak"))
             shutil.copy2(backups[-2] if len(backups) >= 2 else backups[-1], real)

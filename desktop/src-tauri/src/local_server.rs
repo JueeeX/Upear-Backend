@@ -2,7 +2,7 @@
 //!
 //! Windows、macOS 与 Linux 安装包携带同版本 CE 派生树和私有 Python 运行时。
 //! 这里负责离线安装、启动服务、轮询健康状态，并在桌面进程退出时回收整个进程组。
-//! 运行环境位于应用本地数据目录；macOS/Linux 业务数据统一放在 ``~/.hugagent``。
+//! 运行环境位于应用本地数据目录；macOS/Linux 业务数据统一放在 ``~/.sumc``。
 
 use crate::local_payload::{self, PayloadPaths};
 use serde::{Deserialize, Serialize};
@@ -42,7 +42,7 @@ struct DataBackupManifest {
 /// Python/runtime payload. On macOS it contains ``Application Support`` and on
 /// Linux it may live below a desktop-specific data root; neither should become a
 /// model-generated workspace path. Keep only the runtime there and use the same
-/// ``~/.hugagent`` data root as the standalone local installer. Existing desktop
+/// ``~/.sumc`` data root as the standalone local installer. Existing desktop
 /// data is moved on first launch when that does not overwrite standalone data.
 pub fn resolve_local_server_data_dir(runtime_root: &Path, home_dir: Option<&Path>) -> PathBuf {
     #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -51,7 +51,7 @@ pub fn resolve_local_server_data_dir(runtime_root: &Path, home_dir: Option<&Path
         let Some(home_dir) = home_dir else {
             return legacy;
         };
-        let preferred = home_dir.join(".hugagent");
+        let preferred = home_dir.join(".sumc");
         if let Err(error) = migrate_legacy_data_dir(&legacy, &preferred) {
             eprintln!("[local-server] 迁移本机数据目录失败，继续使用旧目录：{error}");
             return legacy;
@@ -143,7 +143,7 @@ pub struct LocalServerManager {
     install_running: AtomicBool,
     shutting_down: AtomicBool,
     /// 混合架构（P2 身份桥）：桌面壳生成的桥接秘密。设置后孵化本机后端时注入
-    /// `HUGAGENT_DESKTOP_BRIDGE_SECRET`（身份桥）与 `CONFIG_TOKEN`（壳持有本机
+    /// `SUMC_DESKTOP_BRIDGE_SECRET`（身份桥）与 `CONFIG_TOKEN`（壳持有本机
     /// 实例的控制台令牌，用于云端模型配置下发 /v1/models/import）。
     bridge_secret: std::sync::OnceLock<String>,
 }
@@ -386,11 +386,11 @@ impl LocalServerManager {
                     ])
                     .arg("--no-browser")
                     .current_dir(&release.source_dir)
-                    .env("HUGAGENT_HOME", self.data_dir())
+                    .env("SUMC_HOME", self.data_dir())
                     .env("PYTHONUTF8", "1")
                     .env("PYTHONIOENCODING", "utf-8")
                     .env("PYTHONDONTWRITEBYTECODE", "1")
-                    .env("HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS", "1")
+                    .env("SUMC_BOOTSTRAP_DEFAULT_PLUGINS", "1")
                     .env(
                         "FRONTEND_DIST_DIR",
                         release.source_dir.join("src").join("frontend").join("dist"),
@@ -406,7 +406,7 @@ impl LocalServerManager {
                 self.apply_tool_path(&mut command);
                 // 混合架构：把桥接秘密注入本机后端（身份桥 + 壳持有的本机控制台令牌）。
                 if let Some(secret) = self.bridge_secret.get() {
-                    command.env("HUGAGENT_DESKTOP_BRIDGE_SECRET", secret);
+                    command.env("SUMC_DESKTOP_BRIDGE_SECRET", secret);
                     command.env("CONFIG_TOKEN", secret);
                 }
                 configure_process_group(&mut command);
@@ -574,7 +574,7 @@ impl LocalServerManager {
         });
         while let Some((progress, message)) = progress_rx.recv().await {
             self.update("installing", progress, &message).await;
-            self.append_log(format!("HUGAGENT_PROGRESS|{progress}|{message}"))
+            self.append_log(format!("SUMC_PROGRESS|{progress}|{message}"))
                 .await;
         }
         if let Err(error) = install_task
@@ -866,7 +866,7 @@ fn stop_recorded_process_tree(pid: u32, install_root: &Path) -> Result<(), Strin
     let script = format!(
         "$p=Get-CimInstance Win32_Process -Filter 'ProcessId = {pid}'; \
          if (-not $p) {{ exit 0 }}; \
-         $root=[IO.Path]::GetFullPath($env:HUGAGENT_INSTALL_ROOT).TrimEnd('\\'); \
+         $root=[IO.Path]::GetFullPath($env:SUMC_INSTALL_ROOT).TrimEnd('\\'); \
          if (-not $p.ExecutablePath -or -not [IO.Path]::GetFullPath($p.ExecutablePath).StartsWith($root + '\\',[StringComparison]::OrdinalIgnoreCase)) {{ exit 3 }}; \
          & taskkill.exe /PID {pid} /T /F | Out-Null; exit $LASTEXITCODE"
     );
@@ -879,7 +879,7 @@ fn stop_recorded_process_tree(pid: u32, install_root: &Path) -> Result<(), Strin
             "-Command",
             &script,
         ])
-        .env("HUGAGENT_INSTALL_ROOT", install_root);
+        .env("SUMC_INSTALL_ROOT", install_root);
     hide_console(&mut command);
     let status = command
         .status()
@@ -1013,7 +1013,7 @@ mod tests {
 
     fn manager(name: &str) -> Arc<LocalServerManager> {
         let base = std::env::temp_dir().join(format!(
-            "hugagent-desktop-local-server-{name}-{}",
+            "sumc-desktop-local-server-{name}-{}",
             std::process::id()
         ));
         let root = base.join("installed");
@@ -1059,7 +1059,7 @@ mod tests {
 
         assert!(hooks.contains("NSIS_HOOK_PREUNINSTALL"));
         assert!(hooks.contains("taskkill.exe /PID"));
-        assert!(hooks.contains("HUGAGENT_DELETE_DATA"));
+        assert!(hooks.contains("SUMC_DELETE_DATA"));
         assert!(hooks.contains("MB_DEFBUTTON2"));
         assert!(hooks.contains("GetTempFileName"));
         assert!(hooks.contains("ExecShell"));
@@ -1129,16 +1129,16 @@ mod tests {
     }
 
     #[test]
-    fn legacy_macos_data_moves_to_dot_hugagent_without_copying() {
+    fn legacy_macos_data_moves_to_dot_sumc_without_copying() {
         let base = std::env::temp_dir().join(format!(
-            "hugagent-desktop-data-migration-{}",
+            "sumc-desktop-data-migration-{}",
             std::process::id()
         ));
         let legacy = base
             .join("Library")
             .join("Application Support")
             .join("data");
-        let preferred = base.join("home").join(".hugagent");
+        let preferred = base.join("home").join(".sumc");
         let _ = std::fs::remove_dir_all(&base);
         std::fs::create_dir_all(legacy.join("workspace").join("site")).unwrap();
         std::fs::write(legacy.join("data.db"), "desktop data").unwrap();
@@ -1155,13 +1155,13 @@ mod tests {
     }
 
     #[test]
-    fn existing_dot_hugagent_wins_without_overwriting_or_deleting_legacy_data() {
+    fn existing_dot_sumc_wins_without_overwriting_or_deleting_legacy_data() {
         let base = std::env::temp_dir().join(format!(
-            "hugagent-desktop-data-conflict-{}",
+            "sumc-desktop-data-conflict-{}",
             std::process::id()
         ));
         let legacy = base.join("legacy");
-        let preferred = base.join("home").join(".hugagent");
+        let preferred = base.join("home").join(".sumc");
         let _ = std::fs::remove_dir_all(&base);
         std::fs::create_dir_all(&legacy).unwrap();
         std::fs::create_dir_all(&preferred).unwrap();
@@ -1179,9 +1179,9 @@ mod tests {
 
     #[test]
     fn mac_stale_process_match_is_scoped_to_this_install_and_port() {
-        let root = Path::new("/Users/test/Library/Application Support/HugAgentOS/local-server");
+        let root = Path::new("/Users/test/Library/Application Support/SUMC/local-server");
         assert!(mac_server_command_matches(
-            "/Users/test/Library/Application Support/HugAgentOS/local-server/releases/runtimes/abc/python/bin/python3 /Users/test/Library/Application Support/HugAgentOS/local-server/releases/sources/def/src/backend/cli.py serve --host 127.0.0.1 --port 32101",
+            "/Users/test/Library/Application Support/SUMC/local-server/releases/runtimes/abc/python/bin/python3 /Users/test/Library/Application Support/SUMC/local-server/releases/sources/def/src/backend/cli.py serve --host 127.0.0.1 --port 32101",
             root,
         ));
         assert!(!mac_server_command_matches(
@@ -1189,16 +1189,16 @@ mod tests {
             root,
         ));
         assert!(!mac_server_command_matches(
-            "/Users/test/Library/Application Support/HugAgentOS/local-server/releases/runtimes/abc/python/bin/python3 /Users/test/Library/Application Support/HugAgentOS/local-server/releases/sources/def/src/backend/cli.py serve --port 32102",
+            "/Users/test/Library/Application Support/SUMC/local-server/releases/runtimes/abc/python/bin/python3 /Users/test/Library/Application Support/SUMC/local-server/releases/sources/def/src/backend/cli.py serve --port 32102",
             root,
         ));
     }
 
     #[test]
     fn linux_stale_process_match_is_scoped_to_this_install_and_port() {
-        let root = Path::new("/home/test/.local/share/hugagent/local-server");
+        let root = Path::new("/home/test/.local/share/sumc/local-server");
         assert!(linux_server_command_matches(
-            "/home/test/.local/share/hugagent/local-server/releases/runtimes/abc/python/bin/python3 /home/test/.local/share/hugagent/local-server/releases/sources/def/src/backend/cli.py serve --host 127.0.0.1 --port 32101",
+            "/home/test/.local/share/sumc/local-server/releases/runtimes/abc/python/bin/python3 /home/test/.local/share/sumc/local-server/releases/sources/def/src/backend/cli.py serve --host 127.0.0.1 --port 32101",
             root,
         ));
         assert!(!linux_server_command_matches(

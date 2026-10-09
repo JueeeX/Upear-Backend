@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for ontology-governed agent execution."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.db.engine import Base
 from sqlalchemy import (
@@ -35,12 +35,12 @@ class OntologyPack(Base):
     is_default = Column(Boolean, nullable=False, default=False)
     active_version_id = Column(String(64), nullable=True)
     created_by = Column(String(64), nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
     )
     deleted_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
@@ -68,12 +68,12 @@ class OntologyPackVersion(Base):
     status = Column(String(16), nullable=False, default="draft")
     validation_report = Column(JSONType, nullable=False, default=dict)
     created_by = Column(String(64), nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
     )
     activated_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
@@ -129,7 +129,7 @@ class OntologyEnforcementEvent(Base):
     target = Column(String(255), nullable=True)
     latency_ms = Column(Integer, nullable=True)
     details = Column(JSONType, nullable=False, default=dict)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint(
@@ -175,7 +175,7 @@ class OntologyReviewRun(Base):
     feedback = Column(Text, nullable=False, default="")
     reviewers = Column(JSONType, nullable=False, default=list)
     latency_ms = Column(Integer, nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         CheckConstraint(
@@ -212,12 +212,12 @@ class OntologyDraft(Base):
     reviewer_id = Column(String(64), nullable=True)
     reviewer_comment = Column(Text, nullable=True)
     reviewed_at = Column(TIMESTAMP(timezone=True), nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
     __table_args__ = (

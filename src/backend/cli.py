@@ -1,14 +1,14 @@
-"""HugAgentOS no-Docker local CLI (``hugagent`` console entry).
+"""SUMC no-Docker local CLI (``sumc`` console entry).
 
 hermes-agent-style quick install: one process, SQLite, in-process fakeredis,
 subprocess MCP + sandbox — zero Docker / Postgres / Redis.
 
-    hugagent            # not initialized → onboard; else serve + open browser
-    hugagent onboard    # first-run wizard (admin account → model → serve); re-runnable
-    hugagent serve      # start the server
-    hugagent doctor     # environment self-check
+    sumc            # not initialized → onboard; else serve + open browser
+    sumc onboard    # first-run wizard (admin account → model → serve); re-runnable
+    sumc serve      # start the server
+    sumc doctor     # environment self-check
 
-Data lives under ``~/.hugagent/`` (override with ``HUGAGENT_HOME``):
+Data lives under ``~/.sumc/`` (override with ``SUMC_HOME``):
 ``data.db`` (SQLite), ``storage/``, ``workspace/`` (sandbox), ``logs/``, ``config.env``.
 
 IMPORTANT: this module sets the local-profile environment **before** importing
@@ -26,6 +26,20 @@ import threading
 import time
 from pathlib import Path
 from typing import Optional
+
+
+_LEGACY_ENV_PREFIX = "HUGAGENT_"
+
+
+def _apply_legacy_environment() -> None:
+    """One-release compatibility: SUMC_* wins; legacy values are read-only aliases."""
+    used = False
+    for name, value in list(os.environ.items()):
+        if name.startswith(_LEGACY_ENV_PREFIX):
+            os.environ.setdefault("SUMC_" + name[len(_LEGACY_ENV_PREFIX):], value)
+            used = True
+    if used:
+        _status("Deprecated HUGAGENT_* environment variables detected; use SUMC_*.", file=sys.stderr)
 
 
 def _configure_standard_streams() -> None:
@@ -61,7 +75,14 @@ def _status(message: str, *, file=None, **kwargs) -> None:
 
 
 def data_dir() -> Path:
-    return Path(os.getenv("HUGAGENT_HOME", str(Path.home() / ".hugagent"))).expanduser()
+    configured = os.getenv("SUMC_HOME")
+    if configured:
+        return Path(configured).expanduser()
+    legacy = os.getenv("HUGAGENT_HOME")
+    if legacy:
+        return Path(legacy).expanduser()
+    legacy_dir = Path.home() / ".hugagent"
+    return legacy_dir if legacy_dir.exists() else Path.home() / ".sumc"
 
 
 def ensure_loopback_proxy_bypass() -> None:
@@ -106,7 +127,7 @@ def apply_local_env(port: int) -> dict:
     defaults = {
         "DEPLOY_PROFILE": "local",
         "JX_EDITION": "ce",
-        "BRAND_PRODUCT_NAME": "HugAgentOS",
+        "BRAND_PRODUCT_NAME": "SUMC",
         "DATABASE_URL": f"sqlite:///{dd / 'data.db'}",
         "REDIS_URL": "memory://",
         "SESSION_STORE": "memory",
@@ -136,8 +157,8 @@ def apply_local_env(port: int) -> dict:
         # A local/desktop install is expected to be useful immediately after a
         # zero-state boot.  Keep the three credential-free first-party plugins
         # as the local-profile default even when the caller is plain
-        # ``hugagent serve`` rather than one of the installer wrappers.
-        "HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS": "1",
+        # ``sumc serve`` rather than one of the installer wrappers.
+        "SUMC_BOOTSTRAP_DEFAULT_PLUGINS": "1",
         "STORAGE_TYPE": "local",
         "STORAGE_PATH": str(dd / "storage"),
         "LOG_FILE_PATH": str(dd / "logs" / "backend.log"),
@@ -338,7 +359,7 @@ def mark_web_onboarding_complete(user_id: str) -> None:
 # (IM / email / low-code) need per-user credentials, so they're opt-in only.
 _DEFAULT_PLUGINS = ["automation", "skill-manager", "sites"]
 _DEFAULT_PLUGINS_MARKER = ".default-plugins-v1"
-_DEFAULT_PLUGIN_BOOTSTRAP_ENV = "HUGAGENT_BOOTSTRAP_DEFAULT_PLUGINS"
+_DEFAULT_PLUGIN_BOOTSTRAP_ENV = "SUMC_BOOTSTRAP_DEFAULT_PLUGINS"
 
 
 def list_installable_plugins() -> list:
@@ -619,7 +640,7 @@ def _configure_aux_model_step(
 
 def cmd_onboard(args) -> int:
     apply_local_env(args.port)
-    print("HugAgentOS 本地初始化\n" + "─" * 40)
+    print("SUMC 本地初始化\n" + "─" * 40)
     _ensure_schema_and_seed()
 
     # Step 1 — admin account
@@ -678,7 +699,7 @@ def cmd_onboard(args) -> int:
     except Exception as exc:
         print(f"✗ 模型配置失败：{exc}", file=sys.stderr)
         if not args.model_base_url:  # interactive: let them retry later
-            print("  可稍后运行 `hugagent onboard` 重配。")
+            print("  可稍后运行 `sumc onboard` 重配。")
         return 1
 
     # Step 2b (optional) — index/embedding model. Enables the self-built vector
@@ -765,7 +786,7 @@ def cmd_onboard(args) -> int:
 
     print("\n✓ 初始化完成。", end=" ")
     if args.no_serve:
-        print("运行 `hugagent` 启动服务。")
+        print("运行 `sumc` 启动服务。")
         return 0
     print("正在启动服务…\n")
     return cmd_serve(args)
@@ -810,7 +831,7 @@ def cmd_serve(args) -> int:
 
     host = args.host
     port = int(os.environ["PORT"])
-    print(f"HugAgentOS 监听于 http://{host}:{port}/  (Ctrl-C 停止)")
+    print(f"SUMC 监听于 http://{host}:{port}/  (Ctrl-C 停止)")
     if not args.no_browser:
         threading.Thread(target=_open_browser_when_ready, args=(port,), daemon=True).start()
     uvicorn.run(app, host=host, port=port, log_level="info")
@@ -831,7 +852,7 @@ def cmd_doctor(args) -> int:
         if required:
             ok = ok and passed
 
-    print("HugAgentOS 环境自检\n" + "─" * 40)
+    print("SUMC 环境自检\n" + "─" * 40)
     check("Python ≥ 3.11", sys.version_info >= (3, 11), sys.version.split()[0])
 
     dd = data_dir()
@@ -881,7 +902,7 @@ def cmd_doctor(args) -> int:
     check(
         "已初始化（存在管理员）",
         _is_initialized(),
-        "" if _is_initialized() else "运行 `hugagent onboard`",
+        "" if _is_initialized() else "运行 `sumc onboard`",
     )
 
     print("─" * 40)
@@ -894,17 +915,17 @@ def cmd_doctor(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     # Shared options usable both before and after the subcommand
-    # (`hugagent --host X --port Y serve` and options after `serve` both work).
+    # (`sumc --host X --port Y serve` and options after `serve` both work).
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
         "--host",
-        default=os.getenv("HUGAGENT_BIND_HOST", "127.0.0.1"),
+        default=os.getenv("SUMC_BIND_HOST", "127.0.0.1"),
         help="监听地址（默认 127.0.0.1；远程访问可显式设为 0.0.0.0）",
     )
     common.add_argument("--port", type=int, default=int(os.getenv("PORT", "3001")))
 
     p = argparse.ArgumentParser(
-        prog="hugagent", parents=[common], description="HugAgentOS 无 Docker 本地版"
+        prog="sumc", parents=[common], description="SUMC 无 Docker 本地版"
     )
     sub = p.add_subparsers(dest="command")
 
@@ -951,10 +972,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list] = None) -> int:
     _configure_standard_streams()
+    _apply_legacy_environment()
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "command", None):
-        # bare `hugagent`: onboard if fresh, else serve.
+        # bare `sumc`: onboard if fresh, else serve.
         args.func = cmd_serve if _is_initialized() else cmd_onboard
         for attr, val in (
             ("username", None),
@@ -977,6 +999,12 @@ def main(argv: Optional[list] = None) -> int:
         ):
             setattr(args, attr, getattr(args, attr, val))
     return args.func(args) or 0
+
+
+def legacy_main(argv: Optional[list] = None) -> int:
+    _configure_standard_streams()
+    _status("The 'hugagent' command is deprecated; use 'sumc'.", file=sys.stderr)
+    return main(argv)
 
 
 if __name__ == "__main__":

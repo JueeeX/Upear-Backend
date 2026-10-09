@@ -9,7 +9,7 @@ from previous turns (both user-uploaded and AI-generated):
   into a prompt block labeled by provenance.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 
@@ -38,9 +38,9 @@ def _make_art(artifact_id, user_id="user_1", summary="a summary",
         parsed_text=parsed_text,
         parsed_at=None,
         parse_error=None,
-        deleted_at=datetime.utcnow() if deleted else None,
+        deleted_at=datetime.now(timezone.utc).replace(tzinfo=None) if deleted else None,
         extra_data={"source": source},
-        created_at=created_at or datetime.utcnow(),
+        created_at=created_at or datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
 
@@ -102,7 +102,7 @@ class _MockSession:
 def test_collect_historical_includes_user_uploaded(monkeypatch):
     from api.routes.v1 import chats as chats_mod
 
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [
         _make_msg("user", {"attachments": [{"file_id": "ua_1"}]}, t0),
         _make_msg("user", {"attachments": [{"file_id": "ua_2"}]}, t0 + timedelta(seconds=5)),
@@ -130,7 +130,7 @@ def test_collect_historical_includes_ai_generated_from_assistant_messages(monkey
     (not in user messages). Must be scanned too."""
     from api.routes.v1 import chats as chats_mod
 
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [
         _make_msg("user", {"attachments": [{"file_id": "ua_1"}]}, t0),
         _make_msg("assistant",
@@ -168,7 +168,7 @@ def test_collect_historical_finds_imported_artifact_from_other_chat(monkeypatch)
     file_id."""
     from api.routes.v1 import chats as chats_mod
 
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [
         _make_msg("user",
                   {"attachments": [{"file_id": "ai_imported_rpt"}]},
@@ -194,7 +194,7 @@ def test_collect_historical_finds_imported_artifact_from_other_chat(monkeypatch)
 def test_collect_historical_infers_source_from_id_prefix(monkeypatch):
     from api.routes.v1 import chats as chats_mod
 
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [
         _make_msg("user", {"attachments": [{"file_id": "ua_abc"}]}, t0),
         _make_msg("assistant", {"artifacts": [{"file_id": "chart_xyz"}]}, t0 + timedelta(seconds=5)),
@@ -216,7 +216,7 @@ def test_collect_historical_infers_source_from_id_prefix(monkeypatch):
 
 def test_collect_historical_excludes_current_turn_file_ids(monkeypatch):
     from api.routes.v1 import chats as chats_mod
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [
         _make_msg("user",
                   {"attachments": [{"file_id": "ua_1"}, {"file_id": "ua_2"}]},
@@ -237,7 +237,7 @@ def test_collect_historical_excludes_current_turn_file_ids(monkeypatch):
 def test_collect_historical_dedupes_across_messages(monkeypatch):
     """Same file_id referenced in multiple messages → returned once."""
     from api.routes.v1 import chats as chats_mod
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [
         _make_msg("user", {"attachments": [{"file_id": "ua_1"}]}, t0),
         _make_msg("user", {"attachments": [{"file_id": "ua_1"}, {"file_id": "ua_2"}]},
@@ -256,7 +256,7 @@ def test_collect_historical_dedupes_across_messages(monkeypatch):
 def test_collect_historical_marks_missing_artifact_as_deleted(monkeypatch):
     """Message references a file_id but no Artifact row exists → deleted."""
     from api.routes.v1 import chats as chats_mod
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [_make_msg("user", {"attachments": [{"file_id": "ua_missing"}]}, t0)]
 
     import core.db.engine as engine_mod
@@ -270,7 +270,7 @@ def test_collect_historical_marks_missing_artifact_as_deleted(monkeypatch):
 def test_collect_historical_hides_foreign_user_artifact(monkeypatch):
     """An artifact owned by a different user → returned as deleted (no content)."""
     from api.routes.v1 import chats as chats_mod
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [_make_msg("user", {"attachments": [{"file_id": "ua_foreign"}]}, t0)]
     artifacts = [_make_art("ua_foreign", user_id="other_user", summary="secret")]
 
@@ -300,7 +300,7 @@ def test_collect_historical_no_messages_returns_empty(monkeypatch):
 
 def test_collect_historical_honors_soft_cap(monkeypatch):
     from api.routes.v1 import chats as chats_mod
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     messages = [
         _make_msg("user",
                   {"attachments": [{"file_id": f"ua_{i:02d}"}]},
@@ -327,13 +327,13 @@ def test_extract_message_file_ids_reads_both_keys():
     from api.routes.v1.chats import _extract_message_file_ids
     user_msg = _make_msg("user",
                          {"attachments": [{"file_id": "ua_1"}, {"file_id": "ua_2"}]},
-                         datetime.utcnow())
+                         datetime.now(timezone.utc).replace(tzinfo=None))
     asst_msg = _make_msg("assistant",
                          {"artifacts": [{"file_id": "ai_1"}]},
-                         datetime.utcnow())
+                         datetime.now(timezone.utc).replace(tzinfo=None))
     assert _extract_message_file_ids(user_msg) == ["ua_1", "ua_2"]
     assert _extract_message_file_ids(asst_msg) == ["ai_1"]
-    assert _extract_message_file_ids(_make_msg("user", None, datetime.utcnow())) == []
+    assert _extract_message_file_ids(_make_msg("user", None, datetime.now(timezone.utc).replace(tzinfo=None))) == []
 
 
 # ── _build_historical_files_context — source labels ───────────────────────

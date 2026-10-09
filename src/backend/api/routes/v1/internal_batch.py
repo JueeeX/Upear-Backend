@@ -20,7 +20,7 @@ import logging
 import os
 import re
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -520,7 +520,7 @@ async def resolve(
             max_retries=2,
             status="pending",
             progress={"done": 0, "success": 0, "failed": 0},
-            expires_at=datetime.utcnow() + timedelta(hours=24),
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24),
         )
         db.add(plan)
         db.commit()

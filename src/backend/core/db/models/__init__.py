@@ -34,6 +34,7 @@ from core.db.models.chat import (
     MessageFeedback,
 )
 from core.db.models.config import ModelProvider, ModelRoleAssignment, SystemConfig
+from core.db.models.control_center import ConfigCenterDraft, ConfigCenterVersion, SafeHarnessTestRun
 from core.db.models.evolution import (
     EvolutionAgentProfile,
     EvolutionCandidate,

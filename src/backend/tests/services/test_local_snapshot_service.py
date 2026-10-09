@@ -1,4 +1,4 @@
-"""Ticket #08: local write-back snapshots + rollback. Temp HUGAGENT_HOME."""
+"""Ticket #08: local write-back snapshots + rollback. Temp SUMC_HOME."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import importlib
 
 
 def _svc(tmp_path, monkeypatch):
-    monkeypatch.setenv("HUGAGENT_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("SUMC_HOME", str(tmp_path / "home"))
     import core.services.local_snapshot_service as s
 
     return importlib.reload(s)

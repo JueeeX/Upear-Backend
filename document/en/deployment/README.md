@@ -2,7 +2,7 @@
 
 > Last updated: July 21, 2026 ｜ [简体中文](../../zh-CN/deployment/README.md)
 
-HugAgentOS supports several deployment methods, from "zero-dependency single-machine trial" to "team production" to "air-gapped offline delivery." This page helps you **pick the right one**; each method's full steps live in its own document.
+SUMC supports several deployment methods, from "zero-dependency single-machine trial" to "team production" to "air-gapped offline delivery." This page helps you **pick the right one**; each method's full steps live in its own document.
 
 ## Choosing a deployment method
 
@@ -27,7 +27,7 @@ Cross-platform and reference:
   starts a loopback-only service, and opens sign-in without Docker or WSL2. Data stays
   under the current user's `%LOCALAPPDATA%` directory. This is a single-process,
   single-user deployment.
-- **No-Docker quick install**: the fastest command-line path on Linux and macOS. Run `curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/HugAgentOS/main/install.sh | bash`; the installer creates the admin account, configures the model, starts the server, and opens the browser. Data lives under `~/.hugagent/`. **Single process, single user** — ideal for personal trials and development, not for multi-user or production.
+- **No-Docker quick install**: the fastest command-line path on Linux and macOS. Run `curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash`; the installer creates the admin account, configures the model, starts the server, and opens the browser. Data lives under `~/.sumc/`. **Single process, single user** — ideal for personal trials and development, not for multi-user or production.
 - **Docker Compose**: the recommended standard deployment. All services are orchestrated by one `docker-compose.yml` (PostgreSQL + Redis + backend + MCP + frontend + sandbox), supporting multi-user, persistent sandboxes, layered memory, and every other capability.
 - **Offline production (EE)**: for isolated environments that cannot pull images online — build image tarballs on a connected machine, copy them to production, `docker load` + `compose up`. Part of the Enterprise Edition delivery scope.
 

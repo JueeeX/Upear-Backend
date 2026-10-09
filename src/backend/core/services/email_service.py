@@ -27,7 +27,7 @@ import asyncio
 import base64
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -280,7 +280,7 @@ class EmailService:
         ok, detail = await self._reverify(user_id, record)
         if ok and record.status != "connected":
             self.repo.update(user_id, {"status": "connected", "last_error": None,
-                                       "last_verified_at": datetime.utcnow()})
+                                       "last_verified_at": datetime.now(timezone.utc).replace(tzinfo=None)})
         elif not ok:
             self.repo.update(user_id, {"status": "error",
                                        "last_error": f"{_VERIFY_FAIL}。详情: {detail}" if detail else _VERIFY_FAIL})
@@ -371,7 +371,7 @@ class EmailService:
             "status": "connected",
             "secret_enc": encrypt_secret(secret),
             "config_bundle": base64.b64encode(content.encode("utf-8")).decode("ascii"),
-            "last_verified_at": datetime.utcnow(),
+            "last_verified_at": datetime.now(timezone.utc).replace(tzinfo=None),
             "last_error": None,
         })
         return self.status_dict(self.repo.get(user_id))

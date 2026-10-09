@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models — site hosting (build sites in chat, hosted by the platform at /site/<slug>/)."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.db.engine import Base
 from core.db.models.site_scope import SiteScopeMixin, site_scope_table_args
@@ -64,8 +64,8 @@ class Site(SiteScopeMixin, Base):
     # HTML page view count (asset files not counted)
     view_count = Column(BigInteger, nullable=False, default=0)
     extra_data = Column("metadata", JSONType, default={})
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     deleted_at = Column(TIMESTAMP(timezone=True))
 
     __table_args__ = (
@@ -85,7 +85,7 @@ class SiteKV(Base):
     site_id = Column(String(64), ForeignKey("sites.site_id", ondelete="CASCADE"), nullable=False)
     k = Column(String(64), nullable=False)
     v = Column(Text, nullable=False)
-    updated_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (PrimaryKeyConstraint("site_id", "k"),)
 
@@ -100,6 +100,6 @@ class SiteSubmission(Base):
     form_key = Column(String(64), nullable=False)
     payload = Column(JSONType, nullable=False)
     client_ip = Column(String(45))
-    created_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (Index("idx_site_submissions_site_created", "site_id", "created_at"),)

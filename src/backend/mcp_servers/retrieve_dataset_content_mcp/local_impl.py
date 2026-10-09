@@ -149,29 +149,17 @@ def retrieve_local_kb(
 
     user_id = current_user_id if current_user_id is not None else _get_current_user_id()
 
-    # Auto-resolve（权限分配单一真源）：未给 allowed 列表时，按当前用户的可见集解析——
-    # 自己私有库 + 公有库 + 已授权的 scoped 库。无 user_id 时降级为全部库（仅 stdio/本地调试，
-    # HTTP 模式必有 X-Current-User-Id）。
-    if not allowed:
-        try:
-            from core.db.engine import SessionLocal
-            from core.db.models import KBSpace
+    # The allowlist narrows authoritative access; it never grants access by itself.
+    try:
+        from core.db.engine import SessionLocal
 
-            with SessionLocal() as _db:
-                if user_id:
-                    allowed = get_accessible_local_kb_ids(_db, user_id)
-                else:
-                    spaces = (
-                        _db.query(KBSpace.kb_id)
-                        .filter(
-                            KBSpace.deleted_at.is_(None),
-                        )
-                        .all()
-                    )
-                    allowed = {s.kb_id for s in spaces if s.kb_id}
-                _local_kb_logger.info("Auto-resolved %d KB spaces", len(allowed))
-        except Exception as exc:
-            _local_kb_logger.warning("Auto-resolve KB spaces failed: %s", exc)
+        with SessionLocal() as _db:
+            accessible = get_accessible_local_kb_ids(_db, user_id) if user_id else set()
+            allowed = allowed & accessible if allowed else accessible
+            _local_kb_logger.info("Resolved %d tenant-scoped KB spaces", len(allowed))
+    except Exception as exc:
+        allowed = set()
+        _local_kb_logger.warning("Resolve KB spaces failed: %s", exc)
 
     if not allowed:
         _local_kb_logger.warning("retrieve_local_kb: no accessible private KBs")

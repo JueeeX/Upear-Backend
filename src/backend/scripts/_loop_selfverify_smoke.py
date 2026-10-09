@@ -6,7 +6,7 @@ Verification points:
   - with no threshold it will not call done on the first valid solution, converging via stagnation (or budget).
 
 Run (inside container):
-  docker exec hugagent-backend python -m scripts._loop_selfverify_smoke
+  docker exec sumc-backend python -m scripts._loop_selfverify_smoke
 """
 import asyncio
 import uuid
