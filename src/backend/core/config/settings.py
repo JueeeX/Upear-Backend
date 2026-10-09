@@ -920,7 +920,7 @@ class BrandingSettings:
     """Single source of brand defaults — the in-code fallback stays neutral; deployment branding comes from env / the content_blocks DB seed."""
 
     product_name: str = field(
-        default_factory=lambda: _env("BRAND_PRODUCT_NAME", "智能体平台").strip()
+        default_factory=lambda: _env("BRAND_PRODUCT_NAME", "Upear").strip()
     )
     product_subtitle: str = field(
         default_factory=lambda: _env("BRAND_PRODUCT_SUBTITLE", "AI 智能助手").strip()

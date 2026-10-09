@@ -1,9 +1,5 @@
 <p align="center">
-  <img src="./src/frontend/public/home/sumc-logo.png" alt="SUMC Logo" width="800" />
-</p>
-
-<p align="center">
-  <strong>SUMC：面向企业的本体驱动可信推理 AgentOS</strong>
+  <strong>Upear：面向企业的本体驱动可信推理 AgentOS</strong>
 </p>
 
 <p align="center">
@@ -16,18 +12,12 @@
 </p>
 
 <p align="center">
-  <img src="./assets/poster-cn.png" alt="SUMC 功能概览海报" width="100%" />
+  <img src="./assets/poster-cn.png" alt="Upear 功能概览海报" width="100%" />
 </p>
 
 <p align="center">
   <a href="./README.md">English</a> ·
   <a href="./README_CN.md">简体中文</a>
-</p>
-
-<!-- 预留稳定的上线地址，官网与在线体验启用后无需重新调整 README 结构。 -->
-<p align="center">
-  <a href="https://sumc.com">官方网站</a> ·
-  <a href="https://app.sumc.com">在线使用</a>
 </p>
 
 <p align="center">
@@ -48,7 +38,7 @@
   </a>
 </p>
 
-SUMC 是面向企业级智能体场景的 AgentOS，把领域本体提升为推理、决策与
+Upear 是面向企业级智能体场景的 AgentOS，把领域本体提升为推理、决策与
 行动的控制平面。其开源社区版将智能对话、私有知识库 RAG、子智能体、MCP 工具、
 Agent Skills、沙箱执行、长期记忆、自动化和数据画布整合到一个可私有部署的
 工作空间中。
@@ -70,10 +60,10 @@ Node.js 20+、Git 和 `curl`。Linux 平台若没有兼容的 `ripgrep` 预编�
 还需要当前稳定版 Rust 工具链；不需要 Docker、PostgreSQL 或 Redis。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/Upear/main/install.sh | bash
 ```
 
-安装器会把 SUMC 拉取到 `~/.sumc/source`，创建隔离的 Python 环境，
+安装器会把 Upear 拉取到 `~/.sumc/source`，创建隔离的 Python 环境，
 安装依赖并构建 Web 应用，然后进入首次配置向导。按照提示创建管理员并接入
 OpenAI 兼容模型或本地模型，完成后浏览器会打开
 [http://127.0.0.1:3001](http://127.0.0.1:3001)。
@@ -107,8 +97,8 @@ OpenAI 兼容模型或本地模型，完成后浏览器会打开
 Docker Desktop，以及 Docker Compose v2。
 
 ```bash
-git clone https://github.com/ZJU-REAL/HugAgentOS.git
-cd SUMC
+git clone https://gitcode.com/<your-org>/Upear-Backend.git
+cd Upear
 cp .env.example .env
 mkdir -p data/storage
 docker compose up -d --build
@@ -124,7 +114,7 @@ docker compose up -d --build
 
 ## 从回答到交付
 
-SUMC 的重点不是再包装一个聊天界面，而是把智能体完成任务需要的上下文、
+Upear 的重点不是再包装一个聊天界面，而是把智能体完成任务需要的上下文、
 执行能力和产物管理放在同一条链路中。
 
 <table>
@@ -152,7 +142,7 @@ SUMC 的重点不是再包装一个聊天界面，而是把智能体完成任务
 
 ## 领域本体驱动的企业可信体系
 
-SUMC 不只把本体当作知识库，而是把它作为机器可执行的控制平面。受控的领域
+Upear 不只把本体当作知识库，而是把它作为机器可执行的控制平面。受控的领域
 概念、关系、铁律、Action 契约、角色与权限，让技能、记忆和编排三大引擎共享
 同一套业务语言。
 
@@ -246,14 +236,14 @@ SUMC 不只把本体当作知识库，而是把它作为机器可执行的控制
 
 ## 系统架构
 
-SUMC 将用户渠道、智能体工作流、可复用能力引擎、本体契约、数据治理和
+Upear 将用户渠道、智能体工作流、可复用能力引擎、本体契约、数据治理和
 基础设施分层组织。Action 契约把本体层与计划生成、审批校验和门控执行连接起来，
 安全管理与平台监管则贯穿完整技术栈。
 
-![SUMC 中文系统架构图](./assets/sumc-architecture-zh.png)
+![Upear 中文系统架构图](./assets/sumc-architecture-zh.png)
 
 > [!NOTE]
-> 架构图展示 SUMC 的完整产品架构。其中部分治理、协作、网关和持久沙箱
+> 架构图展示 Upear 的完整产品架构。其中部分治理、协作、网关和持久沙箱
 > 能力仅在商业版中提供。
 
 ### 技术栈
@@ -332,9 +322,15 @@ SUMC 将用户渠道、智能体工作流、可复用能力引擎、本体契约
 发现安全漏洞时不要创建公开 Issue。请按照
 [安全策略](./SECURITY.md)提供的私密渠道报告。
 
+## 致谢
+
+本产品的平台后端基于 [HugAgentOS (ZJU-REAL)](https://github.com/ZJU-REAL/HugAgentOS)
+构建，并在此基础上扩展了 SafeHarness 生命周期安全能力（受保护对话链、工具安全网关、
+强制回执、运行监督与审计复核）。感谢上游项目与社区的贡献。
+
 ## 许可证
 
-SUMC Community Edition 采用 Apache License 2.0 并附加补充条款。
+Upear Community Edition 采用 Apache License 2.0 并附加补充条款。
 补充条款限制将本软件作为竞争性的多租户 SaaS 转售，并要求保留界面中的
 Powered-by 标识。内部使用、修改和分发的完整权利与义务以
 [LICENSE](./LICENSE)和 [NOTICE](./NOTICE)为准。

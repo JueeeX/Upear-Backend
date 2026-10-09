@@ -1,9 +1,5 @@
 <p align="center">
-  <img src="./src/frontend/public/home/sumc-logo.png" alt="SUMC logo" width="800" />
-</p>
-
-<p align="center">
-  <strong>SUMC: The Enterprise AgentOS for Ontology-Grounded Trustworthy Reasoning</strong>
+  <strong>Upear: The Enterprise AgentOS for Ontology-Grounded Trustworthy Reasoning</strong>
 </p>
 
 <p align="center">
@@ -16,18 +12,12 @@
 </p>
 
 <p align="center">
-  <img src="./assets/poster.png" alt="SUMC capability overview poster" width="100%" />
+  <img src="./assets/poster.png" alt="Upear capability overview poster" width="100%" />
 </p>
 
 <p align="center">
   <a href="./README.md">English</a> ·
   <a href="./README_CN.md">简体中文</a>
-</p>
-
-<!-- Keep these stable launch URLs so they can go live without another README redesign. -->
-<p align="center">
-  <a href="https://sumc.com">Website</a> ·
-  <a href="https://app.sumc.com">Try SUMC online</a>
 </p>
 
 <p align="center">
@@ -48,7 +38,7 @@
   </a>
 </p>
 
-SUMC is an enterprise-grade AgentOS that treats domain ontology as a
+Upear is an enterprise-grade AgentOS that treats domain ontology as a
 control plane for agent reasoning, decisions, and actions. Its open-source
 Community Edition combines agentic chat, private knowledge-base RAG,
 sub-agents, MCP tools, Agent Skills, sandboxed execution, long-term memory,
@@ -74,13 +64,13 @@ platforms without a compatible prebuilt `ripgrep` wheel, you also need the
 current stable Rust toolchain. You don't need Docker, PostgreSQL, or Redis.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/SUMC/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZJU-REAL/Upear/main/install.sh | bash
 ```
 
-The installer clones SUMC into `~/.sumc/source`, creates an isolated
+The installer clones Upear into `~/.sumc/source`, creates an isolated
 Python environment, installs the dependencies, builds the web application, and
 opens the first-run wizard. Follow the prompts to create an administrator and
-connect an OpenAI-compatible or local model. SUMC then opens at
+connect an OpenAI-compatible or local model. Upear then opens at
 [http://127.0.0.1:3001](http://127.0.0.1:3001).
 
 A fresh data directory creates exactly one local administrator. The initial
@@ -94,7 +84,7 @@ first sign-in. CE does not provide self-service registration.
 > strong administrator password, a firewall, and HTTPS first. Don't expose the
 > service directly on an untrusted network.
 
-Start SUMC again at any time with this command:
+Start Upear again at any time with this command:
 
 ```bash
 ~/.sumc/venv/bin/sumc
@@ -116,8 +106,8 @@ durable service volumes, or a long-running server deployment. You need Git,
 Docker Engine or Docker Desktop, and Docker Compose v2.
 
 ```bash
-git clone https://github.com/ZJU-REAL/HugAgentOS.git
-cd SUMC
+git clone https://gitcode.com/<your-org>/Upear-Backend.git
+cd Upear
 cp .env.example .env
 mkdir -p data/storage
 docker compose up -d --build
@@ -135,7 +125,7 @@ production configuration, and rebuild workflows, read the
 
 ## From answers to outcomes
 
-SUMC isn't another wrapper around a chat box. It puts the context,
+Upear isn't another wrapper around a chat box. It puts the context,
 execution environment, and artifact management an agent needs into one task
 flow.
 
@@ -168,7 +158,7 @@ flow.
 
 ## Enterprise trust through domain ontology
 
-SUMC uses domain ontology as an executable control plane, not only as a
+Upear uses domain ontology as an executable control plane, not only as a
 knowledge store. Controlled concepts, relationships, invariants, action
 contracts, roles, and permissions give the skill, memory, and orchestration
 engines one shared business language.
@@ -279,16 +269,16 @@ during the first run.
 
 ## Architecture
 
-SUMC separates user channels, agent workflows, reusable capability
+Upear separates user channels, agent workflows, reusable capability
 engines, ontology contracts, data governance, and infrastructure into clear
 layers. Action contracts connect the ontology layer to planning, validation,
 and gated execution, while security and platform governance span the complete
 stack.
 
-![SUMC layered architecture in English](./assets/sumc-architecture-en.svg)
+![Upear layered architecture in English](./assets/sumc-architecture-en.svg)
 
 > [!NOTE]
-> The diagram shows the complete SUMC product architecture. Some
+> The diagram shows the complete Upear product architecture. Some
 > governance, collaboration, gateway, and persistent-sandbox capabilities are
 > available only in Enterprise Edition.
 
@@ -382,9 +372,16 @@ content.
 Don't open a public Issue for a security vulnerability. Follow
 [SECURITY.md](./SECURITY.md) to report it through a private channel.
 
+## Acknowledgements
+
+The platform backend is built on [HugAgentOS (ZJU-REAL)](https://github.com/ZJU-REAL/HugAgentOS),
+extended with SafeHarness lifecycle security capabilities (protected chat chain,
+tool security gateway, enforcement receipts, runtime supervision, and audit
+review). Thanks to the upstream project and its community.
+
 ## License
 
-SUMC Community Edition is licensed under Apache License 2.0 with
+Upear Community Edition is licensed under Apache License 2.0 with
 supplementary terms. The terms restrict operating the software as a competing
 multi-tenant SaaS offering and require the UI's Powered-by attribution to
 remain visible. [LICENSE](./LICENSE) and [NOTICE](./NOTICE) define the complete
