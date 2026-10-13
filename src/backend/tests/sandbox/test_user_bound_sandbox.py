@@ -1,4 +1,10 @@
-"""Regression tests for OpenSandbox per-user volume routing."""
+"""Regression tests for OpenSandbox per-user volume routing.
+
+The OpenSandbox integration modules are not part of this build (see handoff
+2026-09-30: "引用不存在的 _opensandbox_internals —— 补模块或删测试"). Skip at
+collection instead of erroring; the file restores itself automatically if the
+modules ever land.
+"""
 
 from __future__ import annotations
 
@@ -7,8 +13,12 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from core.sandbox import _opensandbox_internals as internals
-from core.sandbox._opensandbox_session import _OpenSandboxSessionMixin
+
+try:
+    from core.sandbox import _opensandbox_internals as internals
+    from core.sandbox._opensandbox_session import _OpenSandboxSessionMixin
+except ImportError as _exc:  # pragma: no cover - depends on build contents
+    pytest.skip(f"OpenSandbox internals not present in this build: {_exc}", allow_module_level=True)
 
 _FLAGS = (
     "opensandbox_myspace_bind_mount_enabled",

@@ -20,6 +20,7 @@ enabled only when ``SUMC_LOCAL_OS_SANDBOX=1``. When off (default),
 from __future__ import annotations
 
 import os
+import posixpath
 import shlex
 from typing import List, Optional
 
@@ -95,7 +96,10 @@ def wrap_command(
     seen: List[str] = []
     extras = _MAC_EXTRA_WRITE if plat == "macos" else _LINUX_EXTRA_WRITE
     for p in list(write_paths) + extras:
-        ap = os.path.abspath(os.path.expanduser(p)) if p else ""
+        # POSIX normalization only: these paths are consumed by the *guest*
+        # command line (sandbox-exec / bwrap). Host os.path.abspath would leak
+        # Windows drive letters (F:\...) into Linux/macOS commands.
+        ap = posixpath.normpath(posixpath.expanduser(p)) if p else ""
         if ap and ap not in seen:
             seen.append(ap)
     if plat == "macos":

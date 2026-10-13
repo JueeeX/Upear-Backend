@@ -20,12 +20,21 @@ sys.modules[_spec.name] = lm
 _spec.loader.exec_module(lm)  # type: ignore[union-attr]
 
 
+def _is_link(path: str) -> bool:
+    # On Windows ensure_link falls back to a directory junction (ticket #10),
+    # which ntpath.islink does not report; there the link is simply a dir
+    # entry created at the link path.
+    if sys.platform == "win32":
+        return os.path.isdir(path)
+    return os.path.islink(path)
+
+
 def test_ensure_link_creates_symlink_to_real_folder(tmp_path):
     real = tmp_path / "proj"
     real.mkdir()
     ws = tmp_path / "ws"
     link = lm.ensure_local_project_link("myproj", str(real), workspace_root=str(ws))
-    assert os.path.islink(link)
+    assert _is_link(link)
     assert os.path.realpath(link) == os.path.realpath(str(real))
     assert link == str(ws / "local" / "myproj")
 
@@ -36,7 +45,7 @@ def test_ensure_link_is_idempotent(tmp_path):
     ws = tmp_path / "ws"
     a = lm.ensure_local_project_link("s", str(real), workspace_root=str(ws))
     b = lm.ensure_local_project_link("s", str(real), workspace_root=str(ws))
-    assert a == b and os.path.islink(b)
+    assert a == b and _is_link(b)
 
 
 def test_ensure_link_repoints_when_target_changes(tmp_path):

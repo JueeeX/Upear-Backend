@@ -54,6 +54,13 @@ def ensure_local_project_link(
         if os.path.realpath(link) == os.path.realpath(real):
             return link
         os.unlink(link)
+    elif os.path.exists(link) and _is_own_junction(link):
+        # Windows junction from a previous mount (ticket #10): same semantics
+        # as the symlink branch. ntpath.islink does not report junctions, so
+        # without this branch remounting the same slug would refuse as "taken".
+        if os.path.realpath(link) == os.path.realpath(real):
+            return link
+        os.rmdir(link)  # removes the junction itself, never the target contents
     elif os.path.exists(link):
         # A real dir/file squatting the slug name — refuse rather than clobber.
         raise ValueError(f"工作区中 {link} 已被占用，无法挂载本地项目")
@@ -82,6 +89,16 @@ def remove_local_project_link(slug: str, *, workspace_root: Optional[str] = None
             os.rmdir(link)
     except OSError:
         pass
+
+
+def _is_own_junction(link: str) -> bool:
+    """True when ``link`` is a reparse-point junction (Windows only).
+
+    Python 3.12+ exposes ``os.path.isjunction``; older interpreters never see
+    junctions here because the fallback itself requires the same runtime.
+    """
+    isjunction = getattr(os.path, "isjunction", None)
+    return bool(isjunction and os.name == "nt" and isjunction(link))
 
 
 def _windows_junction(link: str, real: str) -> None:  # pragma: no cover - Windows only
