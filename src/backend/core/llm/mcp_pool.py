@@ -44,6 +44,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from agentscope.mcp import HttpMCPConfig, MCPClient, StdioMCPConfig
 from agentscope.tool import Toolkit
 from core.llm.mcp_manager import BareNameMCPClient
+from core.llm.safeharness_mcp_guard import McpDescriptorGuardClient
 
 logger = logging.getLogger(__name__)
 
@@ -87,16 +88,21 @@ def make_client(
     cfg: dict,
     *,
     is_stateful: bool = True,
-    client_cls: type[BareNameMCPClient] = BareNameMCPClient,
+    client_cls: type[BareNameMCPClient] | None = None,
 ) -> MCPClient:
     """Build an MCPClient (HTTP or stdio) from a config dict.
 
     HTTP servers may set ``is_stateful=False`` for a fresh per-request connection
     (multi-user KB). stdio must be stateful (enforced by 2.0). ``client_cls`` lets
     callers substitute a ``BareNameMCPClient`` subclass (e.g. the confirmation-gated
-    client) while reusing the same URL/config construction.
+    client) while reusing the same URL/config construction. The default is the
+    descriptor-guard client: warn-only injection scanning of listed tools
+    (enforce via SAFEHARNESS_MCP_DESCRIPTOR_ENFORCE) — behaviourally identical
+    to the historic BareNameMCPClient unless a descriptor is flagged.
     """
     execution_timeout = _execution_timeout(name, cfg)
+    if client_cls is None:
+        client_cls = McpDescriptorGuardClient
     if is_http_cfg(cfg):
         # ⚠️ The 2.0 streamable_http MCP client does not follow 307 redirects. Many MCP
         # servers 307-redirect ``/mcp/`` (trailing slash) to ``/mcp`` → 2.0 throws

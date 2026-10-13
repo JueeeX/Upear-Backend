@@ -22,6 +22,7 @@ from core.config.catalog_loader import DB_HIDDEN_SERVERS, DB_UMBRELLA_ID
 from core.llm.chat_models import get_default_model, make_chat_model
 from core.llm.mcp_manager import close_clients
 from core.llm.mcp_pool import MCPConnectionPool
+from core.llm.safeharness_mcp_guard import policy_guard_enabled
 from core.llm.middlewares import (
     ActingToolCallIdMiddleware,
     AgentRuntimeState,
@@ -1748,6 +1749,12 @@ async def create_agent_executor(
     if not batch_mode:
         _middlewares.append(GoalAnchorReminderMiddleware(chat_id=chat_id, batch_mode=False))
     _middlewares.append(FinishPinGuardMiddleware(batch_mode=batch_mode))
+    if policy_guard_enabled():
+        from core.llm.safeharness_mcp_guard import SafeHarnessToolPolicyMiddleware
+
+        _middlewares.append(
+            SafeHarnessToolPolicyMiddleware()
+        )  # on_acting: SafeHarness policy eval over every tool call (env-gated, default off)
 
     # Collect all tool names (the collector still holds function_tools; tool_schemas covers Python+MCP)
     _all_tool_names = {ft.name for ft in toolkit.function_tools}
