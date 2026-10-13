@@ -211,13 +211,13 @@ def bootstrap_protected_chat() -> Any | None:
     async def inspect_with_judge(context: Mapping[str, str], judge: CountingJudge):
         from core.safeharness_audit import build_audit_sink
         from safeharness.api.context import SessionContext
-        from safeharness.policies import InformPolicy
+        from core.safeharness_inform import platform_inform_and_extras
         from safeharness.runtime import RuntimeConfig, RuntimeServices
 
         # The input decision is the security boundary itself — persist it to the
         # audit sink so allow/deny outcomes survive the process.
         runtime = SafeHarnessRuntime(
-            policies=(InformPolicy(),),
+            policies=platform_inform_and_extras(),
             services=RuntimeServices(judge_provider=judge, audit_sink=build_audit_sink()),
             config=RuntimeConfig(policy_version="safeharness.default.v1"),
         )

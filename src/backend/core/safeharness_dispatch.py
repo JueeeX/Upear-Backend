@@ -64,9 +64,9 @@ def detect_prompt_injection(message: str) -> str | None:
 
     if not isinstance(message, str) or not message.strip():
         raise ValueError("message must be a non-empty string")
-    from safeharness.policies.inform import InformPolicy
+    from core.safeharness_inform import platform_inform_policy
 
-    _, pattern_matched, _ = InformPolicy()._sanitize_value(message)
+    _, pattern_matched, _ = platform_inform_policy()._sanitize_value(message)
     return "prompt_injection_detected" if pattern_matched else None
 
 

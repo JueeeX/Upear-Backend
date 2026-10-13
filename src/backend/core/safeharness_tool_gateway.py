@@ -65,6 +65,57 @@ def _internet_search_executor():
 GATEWAY_DEMO_TOOL_ID = "system_status_snapshot"
 GATEWAY_DEMO_TOOL_CAPABILITY = "platform:status:read"
 
+_ENV_DESCRIPTOR_ENFORCE = "SAFEHARNESS_TOOL_GATEWAY_DESCRIPTOR_ENFORCE"
+
+
+def scan_tool_descriptor(descriptor) -> list[dict[str, str]]:
+    """Pre-registration content scan of a tool's name/description/tags (T4).
+
+    Catches injection-style copy in tool metadata before it can reach a model
+    through the authorized tool surface. Tags are scanned too: they are
+    attacker-suppliable text on third-party descriptors and drive policy
+    decisions (chain rules match on them). Warn-only by default; with
+    ``SAFEHARNESS_TOOL_GATEWAY_DESCRIPTOR_ENFORCE=1`` the assembly refuses to
+    register flagged descriptors (fail-closed, opt-in).
+    """
+    from safeharness.policies.inform import InformPolicy
+
+    findings: list[dict[str, str]] = []
+    policy = InformPolicy()
+    for field in ("name", "description"):
+        value = getattr(descriptor, field, "") or ""
+        if not isinstance(value, str) or not value.strip():
+            continue
+        _, matched, _ = policy._sanitize_value(value)
+        if matched:
+            findings.append({"field": field, "reason_code": "descriptor_injection_pattern"})
+    for tag in getattr(descriptor, "tags", ()) or ():
+        if not isinstance(tag, str) or not tag.strip():
+            continue
+        _, matched, _ = policy._sanitize_value(tag)
+        if matched:
+            findings.append({"field": "tags", "reason_code": "descriptor_injection_pattern"})
+    return findings
+
+
+def _descriptor_registration_guard(findings_by_tool: list[tuple[str, list[dict[str, str]]]], environ: dict[str, str]) -> None:
+    """Warn on flagged descriptors; raise when enforcement is enabled."""
+    flagged = [(tool, f) for tool, f in findings_by_tool if f]
+    if not flagged:
+        return
+    for tool, findings in flagged:
+        logger.warning(
+            "[tool-gateway] descriptor scan flagged '%s': %s",
+            tool,
+            findings,
+        )
+    enforce = (environ.get(_ENV_DESCRIPTOR_ENFORCE) or "").strip().lower() in ("1", "true", "yes")
+    if enforce:
+        raise ValueError(
+            "descriptor scan enforcement enabled and flagged: "
+            + ", ".join(tool for tool, _ in flagged)
+        )
+
 
 async def _system_status_executor() -> dict[str, Any]:
     """Safe read-only demo tool: process-local facts only — no files, no network."""
@@ -263,6 +314,13 @@ def build_gateway_application(environ: dict[str, str] | None = None):
 
     search_tool = build_internet_search_tool()
     demo = _demo_tool()
+    _descriptor_registration_guard(
+        [
+            (search_tool.descriptor.name, scan_tool_descriptor(search_tool.descriptor)),
+            (demo.descriptor.name, scan_tool_descriptor(demo.descriptor)),
+        ],
+        values,
+    )
     verifier = build_enforcement_receipt_verifier_from_environment(
         replay_store=SQLiteEnforcementReceiptReplayStore(_replay_db_path(values)),
         environ=values,

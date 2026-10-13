@@ -63,6 +63,8 @@ class SupervisionConfigRequest(BaseModel):
     loop_trigger: int = Field(..., ge=2, le=20)
     max_output_chars: int = Field(..., ge=200)
     max_total_chars: int = Field(..., ge=1000)
+    # 0 disables the retry-pressure trigger (default preserves old behaviour).
+    retry_trigger: int = Field(0, ge=0, le=50)
 
 
 @router.get("/supervision-config", summary="读取外部智能体运行监督阈值")
@@ -91,6 +93,7 @@ async def put_supervision_config(
         loop_trigger=body.loop_trigger,
         max_output_chars=body.max_output_chars,
         max_total_chars=body.max_total_chars,
+        retry_trigger=body.retry_trigger,
     )
     save_supervision_config(db, config)
     return success_response(data=config.to_dict())

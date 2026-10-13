@@ -283,12 +283,15 @@ def _resolve_fsm_judge(model_provider_id: Optional[str]):
                     timeout=config.timeout,
                 )
 
-                def caller(messages, model, *, _client=client):
+                def caller(messages, model, *, _client=client, _budget=max(2048, int(getattr(config, "max_tokens", 0) or 0))):
                     request = {
                         "model": model,
                         "messages": list(messages),
                         "temperature": 0,
-                        "max_tokens": 256,
+                        # Reasoning models spend completion tokens before any visible
+                        # content; a tight cap yields finish_reason="length" with an
+                        # empty answer, so budget from the configured cap (>= 2048).
+                        "max_tokens": _budget,
                     }
                     try:
                         response = _client.chat.completions.create(
@@ -298,6 +301,26 @@ def _resolve_fsm_judge(model_provider_id: Optional[str]):
                         # Some OpenAI-compatible providers reject response_format. Keep
                         # the strict parser and retry once without that optional hint.
                         response = _client.chat.completions.create(**request)
+                    choices = getattr(response, "choices", None) or []
+                    if not choices:
+                        return None
+                    content = getattr(getattr(choices[0], "message", None), "content", "")
+                    if isinstance(content, str) and content.strip():
+                        return content
+                    # Budget still exhausted the answer: retry once with no cap so
+                    # the strict parser sees the real verdict instead of a protocol
+                    # error (would-fail calls only; happy path pays nothing).
+                    uncapped = {
+                        "model": model,
+                        "messages": list(messages),
+                        "temperature": 0,
+                    }
+                    try:
+                        response = _client.chat.completions.create(
+                            **uncapped, response_format={"type": "json_object"}
+                        )
+                    except Exception:
+                        response = _client.chat.completions.create(**uncapped)
                     choices = getattr(response, "choices", None) or []
                     if not choices:
                         return None
@@ -344,7 +367,8 @@ async def _safeharness_check_fsm_inputs(
     judge = _CountingJudge(raw_judge)
     try:
         from safeharness import ContentSource, SafeHarnessRuntime, SessionContext
-        from safeharness.policies import InformPolicy, SqlGuardPolicy
+        from safeharness.policies import SqlGuardPolicy
+        from core.safeharness_inform import platform_extra_policies, platform_inform_policy
         from safeharness.runtime import RuntimeConfig, RuntimeServices
 
         # Planner-input decisions gate the whole multi-agent plan; keep them in
@@ -352,7 +376,7 @@ async def _safeharness_check_fsm_inputs(
         from core.safeharness_audit import build_audit_sink
 
         runtime = SafeHarnessRuntime(
-            policies=(InformPolicy(), SqlGuardPolicy()),
+            policies=(platform_inform_policy(), SqlGuardPolicy(), *platform_extra_policies()),
             services=RuntimeServices(judge_provider=judge, audit_sink=build_audit_sink()),
             config=RuntimeConfig(policy_version="safeharness.default.v1"),
         )

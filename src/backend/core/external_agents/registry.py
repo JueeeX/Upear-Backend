@@ -207,6 +207,11 @@ async def run_external_agent(
         session_id=run_id,
         run_id=run_id,
     )
+    # Retry-pressure feed (supervision trigger 5): only wired when the
+    # operator enabled it; with retry_trigger=0 the tool surface behaves
+    # exactly as before.
+    if config["gateway_tool"] is not None and supervision.config.retry_trigger > 0:
+        config["gateway_tool"]["on_denial"] = supervision.record_tool_denial
     started = time.monotonic()
     try:
         result: RunnerResult = await card.runner(message, config)

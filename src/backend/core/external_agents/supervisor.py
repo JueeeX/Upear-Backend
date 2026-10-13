@@ -11,6 +11,10 @@ Checks (in firing order):
 2. ``loop_trigger``       — N consecutive near-identical observations → loop.
 3. ``max_output_chars``   — single observation/output length.
 4. ``max_total_chars``    — cumulative output budget.
+5. ``retry_pressure``     — one tool denied N times inside the run (borrowed
+                            from AgentGuard's repeated-attempts pattern). Off
+                            by default (``retry_trigger=0``); enabling it only
+                            ever adds interventions, never removes one.
 
 Verdicts:
 - ``allow``     — no intervention.
@@ -35,7 +39,7 @@ from typing import Any
 _CONFIG_KEY = "external_agent_supervision"
 _GROUP_KEY = "external_agents"
 
-_TRIGGERS = ("max_steps", "loop", "output_length", "total_budget")
+_TRIGGERS = ("max_steps", "loop", "output_length", "total_budget", "retry_pressure")
 
 
 @dataclass(frozen=True)
@@ -44,6 +48,9 @@ class SupervisionConfig:
     loop_trigger: int = 3
     max_output_chars: int = 8000
     max_total_chars: int = 24000
+    # 0 disables the retry-pressure trigger entirely (default = historic
+    # behaviour); when set, a tool denied >= retry_trigger times halts the run.
+    retry_trigger: int = 0
 
     def to_dict(self) -> dict[str, int]:
         return {
@@ -51,6 +58,7 @@ class SupervisionConfig:
             "loop_trigger": self.loop_trigger,
             "max_output_chars": self.max_output_chars,
             "max_total_chars": self.max_total_chars,
+            "retry_trigger": self.retry_trigger,
         }
 
 
@@ -74,6 +82,7 @@ def load_supervision_config(db: Any) -> SupervisionConfig:
             loop_trigger=max(2, int(raw.get("loop_trigger", DEFAULT_SUPERVISION.loop_trigger))),
             max_output_chars=max(200, int(raw.get("max_output_chars", DEFAULT_SUPERVISION.max_output_chars))),
             max_total_chars=max(1000, int(raw.get("max_total_chars", DEFAULT_SUPERVISION.max_total_chars))),
+            retry_trigger=max(0, int(raw.get("retry_trigger", DEFAULT_SUPERVISION.retry_trigger))),
         )
     except Exception:  # noqa: BLE001 — fail closed to defaults, never open
         return DEFAULT_SUPERVISION
@@ -110,6 +119,15 @@ class SupervisionState:
     total_chars: int = 0
     recent: list[str] = field(default_factory=list)
     interventions: list[dict[str, Any]] = field(default_factory=list)
+    denials: dict[str, int] = field(default_factory=dict)
+
+    def record_tool_denial(self, tool_name: str) -> None:
+        """Count one tool denial. Callers feed this from the tool surface; the
+        retry-pressure trigger compares the counters on the next ``check``.
+        Safe to call from a worker thread (a lost increment only delays the
+        trigger by one denial)."""
+        key = (tool_name or "unknown").strip()[:80] or "unknown"
+        self.denials[key] = self.denials.get(key, 0) + 1
 
     def check(self, *, output_text: str, final: bool = False) -> dict[str, Any] | None:
         """Record one step/output. Returns an intervention dict when the run
@@ -141,6 +159,16 @@ class SupervisionState:
             trigger = self.config.loop_trigger
             if len(self.recent) >= trigger and len(set(self.recent[-trigger:])) == 1:
                 return _intervene("loop", f"连续 {trigger} 次近似相同输出")
+
+        # Kept last so the four historic triggers fire exactly as before.
+        threshold = self.config.retry_trigger
+        if threshold > 0:
+            for tool, count in self.denials.items():
+                if count >= threshold:
+                    return _intervene(
+                        "retry_pressure",
+                        f"工具 {tool} 已被拒绝 {count} 次（阈值 {threshold}）",
+                    )
         return None
 
 

@@ -17,7 +17,8 @@ from typing import Literal, Optional
 from urllib.parse import urlsplit, urlunsplit
 
 import httpx
-from core.auth.backend import UserContext, require_auth
+from core.auth.backend import UserContext, get_current_user, require_auth
+from api.deps import require_system_settings
 from core.auth.capabilities import user_has_capability
 from core.auth.permissions_iface import resolve_project_permission
 from core.config.settings import settings
@@ -1274,6 +1275,283 @@ async def simulate_safeharness_policy(
                 "gateway_verified": False,
                 "production_ready": False,
             },
+        },
+        trace_id=_current_trace_id(),
+    )
+
+
+# --- custom injection rules (additive policy-center layer) ------------------
+# The read-only /policies surface above is untouched: these endpoints manage a
+# separate, strictly additive deny-rule set (builtin defaults always stay on).
+
+
+class PolicyRulesRequest(BaseModel):
+    enabled: bool = False
+    rules: list[dict] = Field(default_factory=list)
+    chains: list[dict] = Field(default_factory=list)
+
+
+class PolicyRulesTestRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=8000)
+
+
+class PolicyRulesRollbackRequest(BaseModel):
+    version: int = Field(..., ge=1)
+
+
+@router.get("/policy-rules", summary="Read the custom injection rule set (additive layer)")
+async def get_policy_rules(
+    _user: UserContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from core.safeharness_inform import ensure_runtime_rules_synced
+    from core.safeharness_policy_rules import effective_summary, load_policy_rules
+
+    ensure_runtime_rules_synced()
+    state = load_policy_rules(db)
+    return success_response(
+        data={**state.to_dict(), "effective": effective_summary()},
+        trace_id=_current_trace_id(),
+    )
+
+
+@router.put("/policy-rules", summary="Set the custom injection rule set (hot-applied when enabled)")
+async def put_policy_rules(
+    request: Request,
+    actor: str = Depends(require_system_settings),
+    db: Session = Depends(get_db),
+):
+    from core.safeharness_policy_rules import (
+        PolicyRulesValidationError,
+        apply_policy_rules,
+    )
+
+    body = await _read_json_model(request, PolicyRulesRequest)
+    try:
+        state = apply_policy_rules(
+            db, rules=body.rules, enabled=body.enabled, actor=actor, chains=body.chains
+        )
+    except PolicyRulesValidationError as exc:
+        return error_response(
+            code=422,
+            message="Custom rule set failed validation.",
+            data={
+                "error": {"code": "safeharness_policy_rules_invalid"},
+                "errors": exc.errors,
+            },
+            status_code=422,
+            trace_id=_current_trace_id(),
+        )
+    return success_response(data=state.to_dict(), trace_id=_current_trace_id())
+
+
+@router.post("/policy-rules/test", summary="Run one text through the effective rule set")
+async def test_policy_rules(
+    request: Request,
+    _user: UserContext = Depends(get_current_user),
+):
+    import os as _os
+
+    from core.safeharness_inform import platform_inform_policy
+    from safeharness.policies.rules_loader import (
+        ENV_RULES_DIR,
+        load_rules_from_dir,
+        runtime_rules,
+    )
+
+    body = await _read_json_model(request, PolicyRulesTestRequest)
+    policy = platform_inform_policy()
+    cleaned, matched, changed = policy._sanitize_value(body.text)
+    matched_rule = None
+    candidates = list(runtime_rules())
+    directory = (_os.environ.get(ENV_RULES_DIR) or "").strip()
+    if directory:
+        try:
+            candidates = candidates + list(load_rules_from_dir(directory))
+        except Exception:  # noqa: BLE001 — reporting only, never raise here
+            pass
+    for rule in candidates:
+        if re.search(rule.pattern, body.text, re.IGNORECASE):
+            matched_rule = {
+                "name": rule.name,
+                "severity": rule.severity,
+                "category": rule.category,
+                "reason": rule.reason,
+                "source": rule.source,
+            }
+            break
+    return success_response(
+        data={
+            "hit": matched,
+            "changed": changed,
+            "cleaned": cleaned,
+            "matched_rule": matched_rule,
+            "rule_count": len(policy._patterns),
+        },
+        trace_id=_current_trace_id(),
+    )
+
+
+@router.post(
+    "/policy-rules/rollback",
+    summary="Re-apply a historical custom-rule version (management side)",
+)
+async def rollback_policy_rules_endpoint(
+    request: Request,
+    actor: str = Depends(require_system_settings),
+    db: Session = Depends(get_db),
+):
+    from core.safeharness_policy_rules import rollback_policy_rules as _rollback
+
+    body = await _read_json_model(request, PolicyRulesRollbackRequest)
+    try:
+        state = _rollback(db, version=body.version, actor=actor)
+    except KeyError as exc:
+        return error_response(
+            code=404,
+            message=str(exc),
+            data={"error": {"code": "safeharness_policy_version_unknown"}},
+            status_code=404,
+            trace_id=_current_trace_id(),
+        )
+    return success_response(data=state.to_dict(), trace_id=_current_trace_id())
+
+
+class PolicyRulesDraftRequest(BaseModel):
+    description: str = Field(..., min_length=1, max_length=2000)
+    sample_texts: list[str] = Field(default_factory=list, max_length=5)
+
+
+# Deliberately compact: long enumerated instruction prompts push the glm
+# reasoning model into unbounded thinking (8k+ tokens, empty visible content).
+# The security contract lives in the deterministic server-side validation and
+# the human PUT gate, not in prompt length.
+_DRAFT_RULES_SYSTEM_PROMPT = (
+    '你是注入检测规则起草助手。只输出 JSON：{"rules":[{"name":"snake_case",'
+    '"pattern":"正则","severity":"high","category":"demo","reason":"中文理由","action":"deny"}]}。'
+    "pattern 为 Python re（系统统一 IGNORECASE，勿加标志），要具体、覆盖中英文变体、避免灾难性回溯；"
+    "最多 3 条；name 唯一；action 只能 deny；reason 一句话。"
+)
+
+
+def _extract_draft_rules(raw: str) -> list:
+    import json as _json
+
+    from core.llm.message_compat import strip_thinking
+
+    text = strip_thinking(raw or "").strip()
+    if text.startswith("```"):
+        text = text.strip("`").lstrip("json").strip()
+    try:
+        parsed = _json.loads(text)
+    except _json.JSONDecodeError:
+        start, end = text.find("{"), text.rfind("}")
+        if start < 0 or end <= start:
+            raise ValueError("模型响应中找不到 JSON 对象")
+        parsed = _json.loads(text[start : end + 1])
+    if isinstance(parsed, dict):
+        parsed = parsed.get("rules")
+    if not isinstance(parsed, list) or not parsed:
+        raise ValueError("模型响应缺少非空 rules 数组")
+    rules = [item for item in parsed if isinstance(item, dict)]
+    if len(rules) > 20:
+        rules = rules[:20]
+    for item in rules:
+        if isinstance(item.get("pattern"), str) and len(item["pattern"]) > 500:
+            raise ValueError("存在超过 500 字符的 pattern，已拒绝整份草稿")
+    return rules
+
+
+async def _draft_rules_via_llm(description: str, sample_texts: list) -> tuple[list, str]:
+    """One LLM call producing draft rules. Returns (rules, model_name).
+
+    Never persists or hot-applies anything — the returned list is a draft for
+    the admin to review and apply through the existing PUT flow.
+    """
+    from core.services.model_config import ModelConfigService
+
+    service = ModelConfigService.get_instance()
+    cfg = service.resolve("judge") or service.resolve("main_agent")
+    if cfg is None or not cfg.base_url or not cfg.model_name:
+        raise RuntimeError("未配置可用模型（judge / main_agent 均不可用）")
+    user_prompt = f"要拦截的内容描述：\n{description}\n"
+    if sample_texts:
+        user_prompt += "\n应被命中的示例文本：\n" + "\n".join(
+            f"- {text}" for text in sample_texts
+        ) + "\n"
+    url = cfg.base_url.rstrip("/") + "/chat/completions"
+    headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
+    base_payload = {
+        "model": cfg.model_name,
+        "messages": [
+            {"role": "system", "content": _DRAFT_RULES_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0,
+        # Reasoning models spend completion tokens before any visible content;
+        # keep the same >= 2048 floor as the FSM judge caller.
+        "max_tokens": max(2048, int(cfg.max_tokens or 0)),
+        "stream": False,
+    }
+    json_payload = {**base_payload, "response_format": {"type": "json_object"}}
+    async with httpx.AsyncClient(timeout=cfg.timeout) as client:
+        resp = await client.post(url, json=json_payload, headers=headers)
+        if resp.status_code >= 400:
+            # Some OpenAI-compatible providers reject response_format.
+            resp = await client.post(url, json=base_payload, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+    try:
+        raw = data["choices"][0]["message"]["content"] or ""
+    except (KeyError, IndexError, TypeError) as exc:
+        raise RuntimeError("模型响应结构异常") from exc
+    return _extract_draft_rules(raw), cfg.model_name
+
+
+@router.post(
+    "/policy-rules/draft",
+    summary="Draft custom deny rules with the configured LLM (never auto-applied)",
+)
+async def draft_policy_rules_endpoint(
+    request: Request,
+    _actor: str = Depends(require_system_settings),
+):
+    from safeharness.policies.rules_loader import validate_rule_dicts
+
+    body = await _read_json_model(request, PolicyRulesDraftRequest)
+    samples = [s.strip()[:500] for s in body.sample_texts if isinstance(s, str) and s.strip()][:5]
+    try:
+        draft, model_name = await _draft_rules_via_llm(body.description, samples)
+    except (RuntimeError, ValueError, httpx.HTTPError) as exc:
+        return error_response(
+            code=502,
+            message=f"规则起草失败：{exc}",
+            data={"error": {"code": "safeharness_rule_draft_failed"}},
+            status_code=502,
+            trace_id=_current_trace_id(),
+        )
+    validation_errors = validate_rule_dicts(draft)
+    sample_results = []
+    if samples and not validation_errors:
+        for text in samples:
+            hit, matched_rule = False, None
+            for rule in draft:
+                try:
+                    if re.search(str(rule.get("pattern", "")), text, re.IGNORECASE):
+                        hit, matched_rule = True, str(rule.get("name", ""))
+                        break
+                except re.error:
+                    continue
+            sample_results.append(
+                {"text": text[:200], "hit": hit, "matched_rule": matched_rule}
+            )
+    return success_response(
+        data={
+            "draft": draft,
+            "validation_errors": validation_errors,
+            "sample_results": sample_results,
+            "model": model_name,
+            "notice": "草稿未应用；确认后请通过保存（PUT）人工落地。",
         },
         trace_id=_current_trace_id(),
     )

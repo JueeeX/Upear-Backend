@@ -160,6 +160,12 @@ async def execute_gateway_tool(bundle: dict[str, Any]) -> dict[str, Any]:
                 "duration_ms": int((time.monotonic() - started) * 1000),
             }
         )
+        sink = bundle.get("on_denial")
+        if callable(sink):
+            try:
+                sink(descriptor.name, exc.code)
+            except Exception:  # noqa: BLE001 — denial telemetry must not break the run
+                logger.debug("[external-agents] on_denial sink failed", exc_info=True)
         return {"error": {"code": exc.code, "message": str(exc)}}
     bundle["calls"].append(
         {

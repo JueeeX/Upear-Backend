@@ -210,6 +210,11 @@ def test_only_named_safeharness_routes_are_registered():
         "/v1/safeharness/security-report",
         "/v1/safeharness/policies",
         "/v1/safeharness/policies/simulate",
+        # additive custom-rule layer (deny-only, never touches /policies)
+        "/v1/safeharness/policy-rules",
+        "/v1/safeharness/policy-rules/test",
+        "/v1/safeharness/policy-rules/rollback",
+        "/v1/safeharness/policy-rules/draft",
         "/v1/safeharness/mutations",
         "/v1/safeharness/mutations/{approval_id}/decision",
     }

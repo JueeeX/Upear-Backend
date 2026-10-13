@@ -111,7 +111,7 @@ async def _inspect_semantic(content: str, *, context: dict[str, str]) -> GateDec
     """The judge leg: SafeHarnessRuntime(InformPolicy) + inspect_content."""
     from safeharness import SafeHarnessRuntime
     from safeharness.api.context import SessionContext
-    from safeharness.policies import InformPolicy
+    from core.safeharness_inform import platform_inform_policy
     from safeharness.runtime import RuntimeConfig, RuntimeServices
 
     from core.safeharness_audit import build_audit_sink
@@ -127,7 +127,7 @@ async def _inspect_semantic(content: str, *, context: dict[str, str]) -> GateDec
     provider, model_name = resolved
 
     runtime = SafeHarnessRuntime(
-        policies=(InformPolicy(),),
+        policies=(platform_inform_policy(),),
         services=RuntimeServices(judge_provider=provider, audit_sink=build_audit_sink()),
         config=RuntimeConfig(policy_version="safeharness.default.v1"),
     )
