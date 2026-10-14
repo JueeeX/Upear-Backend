@@ -1,30 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2733 1660" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 1430" role="img" aria-labelledby="title desc">
   <title id="title">Upear 安全增强架构</title>
   <desc id="desc">Upear 新增的 SafeHarness 安全层位于 HugAgentOS 平台基座之上，对消息路径、工具路径、记忆路径与全栈审计实施强制管控。</desc>
   <defs>
     <style>
       text { font-family: "Microsoft YaHei", "PingFang SC", Inter, "Segoe UI", Arial, sans-serif; }
-      .sec-bg { fill: #fdf3f2; stroke: #c40000; stroke-width: 6; }
-      .sec-label { fill: #c40000; font-size: 34px; font-weight: 800; }
-      .sec-sub { fill: #8f8f8f; font-size: 22px; font-weight: 500; }
+      .sec-bg { fill: #fdf1f0; stroke: #c40000; stroke-width: 6; }
+      .sec-label { fill: #c40000; font-size: 40px; font-weight: 800; }
+      .sec-sub { fill: #8f8f8f; font-size: 24px; font-weight: 500; }
       .sec-box { fill: #ffffff; stroke: #c40000; stroke-width: 4; }
-      .sec-box-title { fill: #c40000; font-size: 27px; font-weight: 800; }
-      .sec-box-sub { fill: #555; font-size: 20px; font-weight: 500; }
+      .sec-box-title { fill: #c40000; font-size: 30px; font-weight: 800; }
+      .sec-box-sub { fill: #555; font-size: 22px; font-weight: 500; }
       .ext-badge { fill: #c40000; }
-      .ext-badge-text { fill: #fff; font-size: 17px; font-weight: 700; }
+      .ext-badge-text { fill: #fff; font-size: 19px; font-weight: 700; }
       .base-bg { fill: #f4f8fc; stroke: #b7d4ed; stroke-width: 4; }
-      .base-label { fill: #2559a5; font-size: 27px; font-weight: 700; }
+      .base-label { fill: #2559a5; font-size: 32px; font-weight: 700; }
       .base-box { fill: #fff; stroke: #8bb3dc; stroke-width: 3.5; }
-      .base-text { fill: #171717; font-size: 24px; font-weight: 600; }
-      .base-hint { fill: #8a8a8a; font-size: 18px; font-weight: 500; }
-      .flow { stroke: #c40000; stroke-width: 5; fill: none; marker-end: url(#arrow-red); }
-      .flow-label { fill: #c40000; font-size: 21px; font-weight: 700; }
+      .base-text { fill: #171717; font-size: 27px; font-weight: 600; }
+      .base-hint { fill: #8a8a8a; font-size: 22px; font-weight: 600; }
+      .flow { stroke: #c40000; stroke-width: 6; fill: none; marker-end: url(#arrow-red); }
+      .flow-label { fill: #c40000; font-size: 24px; font-weight: 800; }
       .ledger { fill: #fff9ed; stroke: #dfa12d; stroke-width: 5; }
-      .ledger-text { fill: #875600; font-size: 24px; font-weight: 700; }
-      .side-bg { fill: #fdf3f2; stroke: #dfa12d; stroke-width: 5; }
-      .side-title { fill: #b06e00; font-size: 26px; font-weight: 800; }
+      .ledger-text { fill: #875600; font-size: 26px; font-weight: 700; }
+      .side-bg { fill: #fdf6e8; stroke: #dfa12d; stroke-width: 5; }
+      .side-title { fill: #b06e00; font-size: 30px; font-weight: 800; }
       .side-item { fill: #fff; stroke: #e4b33c; stroke-width: 3.5; }
-      .side-item-text { fill: #6b4a00; font-size: 23px; font-weight: 600; }
+      .side-item-text { fill: #6b4a00; font-size: 26px; font-weight: 600; }
     </style>
     <marker id="arrow-red" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto">
       <path d="M0,0 L12,5 L0,10 z" fill="#c40000"/>
@@ -32,125 +32,124 @@
   </defs>
 
   <!-- ============ SafeHarness 安全层（本项目新增） ============ -->
-  <rect x="40" y="30" width="2210" height="470" class="sec-bg"/>
-  <text x="70" y="85" class="sec-label">SafeHarness 安全层</text>
-  <text x="400" y="85" class="sec-sub">—— 本项目（Upear）在平台基座之上新增，非基座自带</text>
-  <text x="70" y="122" class="sec-sub">生命周期内嵌强制管控：以下每个检查都是执行路径上的一等公民，只增拦截、默认关闭、fail-closed。</text>
+  <rect x="30" y="26" width="1880" height="560" class="sec-bg"/>
+  <text x="62" y="92" class="sec-label">SafeHarness 安全层</text>
+  <text x="460" y="92" class="sec-sub">本项目（Upear）在平台基座之上新增，非基座自带</text>
+  <text x="62" y="134" class="sec-sub">生命周期内嵌强制管控：以下每个检查都是执行路径上的一等公民，只增拦截、默认关闭、fail-closed。</text>
 
-  <rect x="70" y="150" width="500" height="96" class="sec-box"/>
-  <text x="95" y="192" class="sec-box-title">输入防线（INFORM）</text>
-  <text x="95" y="226" class="sec-box-sub">正则模式 + 语义 Judge，毫秒级，不确定即拦</text>
+  <rect x="62" y="162" width="570" height="112" class="sec-box"/>
+  <text x="90" y="208" class="sec-box-title">输入防线（INFORM）</text>
+  <text x="90" y="248" class="sec-box-sub">正则模式 + 语义 Judge，毫秒级，不确定即拦</text>
 
-  <rect x="600" y="150" width="500" height="96" class="sec-box"/>
-  <text x="625" y="192" class="sec-box-title">能力门（CONSTRAIN）</text>
-  <text x="625" y="226" class="sec-box-sub">签名能力令牌，特权分离</text>
+  <rect x="656" y="162" width="570" height="112" class="sec-box"/>
+  <text x="684" y="208" class="sec-box-title">能力门（CONSTRAIN）</text>
+  <text x="684" y="248" class="sec-box-sub">签名能力令牌，特权分离</text>
 
-  <rect x="1130" y="150" width="500" height="96" class="sec-box"/>
-  <text x="1155" y="192" class="sec-box-title">工具网关 + 强制回执</text>
-  <text x="1155" y="226" class="sec-box-sub">原子消费防重放，HMAC 会签验证</text>
+  <rect x="1250" y="162" width="630" height="112" class="sec-box"/>
+  <text x="1278" y="208" class="sec-box-title">工具网关 + 强制回执</text>
+  <text x="1278" y="248" class="sec-box-sub">原子消费防重放，HMAC 会签验证</text>
 
-  <rect x="1660" y="150" width="560" height="96" class="sec-box"/>
-  <text x="1685" y="192" class="sec-box-title">运行监督 + 人工复核</text>
-  <text x="1685" y="226" class="sec-box-sub">步数/循环/预算触发 → 语义复核 → 队列</text>
+  <rect x="62" y="292" width="570" height="112" class="sec-box"/>
+  <text x="90" y="338" class="sec-box-title">运行监督 + 人工复核</text>
+  <text x="90" y="378" class="sec-box-sub">步数/循环/预算触发 → 语义复核 → 队列</text>
 
-  <rect x="70" y="280" width="500" height="96" class="sec-box"/>
-  <text x="95" y="322" class="sec-box-title">策略中心</text>
-  <text x="95" y="356" class="sec-box-sub">补充规则热生效 + 链式规则 + 回滚，人工闸门</text>
-  <rect x="430" y="286" width="120" height="30" class="ext-badge"/>
-  <text x="490" y="307" text-anchor="middle" class="ext-badge-text">本项目扩展</text>
+  <rect x="656" y="292" width="570" height="112" class="sec-box"/>
+  <text x="684" y="338" class="sec-box-title">策略中心</text>
+  <text x="684" y="378" class="sec-box-sub">补充规则热生效 + 链式规则 + 回滚</text>
+  <rect x="1080" y="300" width="130" height="34" class="ext-badge"/>
+  <text x="1145" y="324" text-anchor="middle" class="ext-badge-text">本项目扩展</text>
 
-  <rect x="600" y="280" width="500" height="96" class="sec-box"/>
-  <text x="625" y="322" class="sec-box-title">AI 辅助规则起草</text>
-  <text x="625" y="356" class="sec-box-sub">LLM 草稿 → 校验 → 样本自测 → 人工确认</text>
-  <rect x="960" y="286" width="120" height="30" class="ext-badge"/>
-  <text x="1020" y="307" text-anchor="middle" class="ext-badge-text">本项目扩展</text>
+  <rect x="1250" y="292" width="630" height="112" class="sec-box"/>
+  <text x="1278" y="338" class="sec-box-title">AI 辅助规则起草</text>
+  <text x="1278" y="378" class="sec-box-sub">LLM 草稿 → 校验 → 样本自测 → 人工确认</text>
 
-  <rect x="1130" y="280" width="500" height="96" class="sec-box"/>
-  <text x="1155" y="322" class="sec-box-title">MCP 通道守卫</text>
-  <text x="1155" y="356" class="sec-box-sub">描述注入扫描 + 策略评估中间件</text>
-  <rect x="1490" y="286" width="120" height="30" class="ext-badge"/>
-  <text x="1550" y="307" text-anchor="middle" class="ext-badge-text">本项目扩展</text>
+  <rect x="62" y="422" width="570" height="112" class="sec-box"/>
+  <text x="90" y="468" class="sec-box-title">MCP 通道守卫</text>
+  <text x="90" y="508" class="sec-box-sub">描述注入扫描 + 策略评估中间件</text>
 
-  <rect x="1660" y="280" width="560" height="96" class="sec-box"/>
-  <text x="1685" y="322" class="sec-box-title">轨迹链与工具标签</text>
-  <text x="1685" y="356" class="sec-box-sub">跨工具链式规则、重试压力、熵载荷检测</text>
-  <rect x="2080" y="286" width="120" height="30" class="ext-badge"/>
-  <text x="2140" y="307" text-anchor="middle" class="ext-badge-text">本项目扩展</text>
+  <rect x="656" y="422" width="570" height="112" class="sec-box"/>
+  <text x="684" y="468" class="sec-box-title">轨迹链与工具标签</text>
+  <text x="684" y="508" class="sec-box-sub">跨工具链式规则、重试压力、熵载荷检测</text>
 
-  <text x="70" y="432" class="flow-label">强制管控点：</text>
-  <text x="230" y="432" class="sec-box-sub">消息路径（对话 / 规划输入）</text>
-  <text x="230" y="468" class="sec-box-sub">工具路径（网关 + MCP + 沙盒工具）</text>
-  <text x="850" y="432" class="sec-box-sub">记忆路径（写入闸门 + 语义复查）</text>
-  <text x="850" y="468" class="sec-box-sub">FSM 规划器（LLM 只提案，代码定执行）</text>
+  <rect x="1250" y="422" width="630" height="112" class="sec-box"/>
+  <text x="1278" y="468" class="sec-box-title">FSM 规划守卫</text>
+  <text x="1278" y="508" class="sec-box-sub">规划输入逐条验证；LLM 提案，代码执行</text>
+
+  <text x="62" y="572" class="flow-label">强制管控点：</text>
+  <text x="250" y="572" class="sec-box-sub">消息路径（对话 / 规划输入）· 工具路径（网关 + MCP + 沙盒）· 记忆写入闸门 · 全栈审计</text>
 
   <!-- ============ 平台基座 ============ -->
-  <rect x="40" y="560" width="2210" height="880" class="base-bg"/>
-  <text x="70" y="612" class="base-label">平台基座</text>
-  <text x="200" y="612" class="sec-sub">—— HugAgentOS 基础设施，本项目在其上扩展（见文末致谢）</text>
+  <rect x="30" y="620" width="1880" height="790" class="base-bg"/>
+  <text x="62" y="678" class="base-label">平台基座</text>
+  <text x="220" y="678" class="sec-sub">HugAgentOS 基础设施，本项目在其上扩展（见文末致谢）</text>
 
-  <text x="70" y="668" class="base-hint">交互端</text>
-  <rect x="230" y="640" width="420" height="58" class="base-box"/><text x="440" y="676" text-anchor="middle" class="base-text">Web 应用 / 桌面客户端</text>
-  <rect x="680" y="640" width="420" height="58" class="base-box"/><text x="890" y="676" text-anchor="middle" class="base-text">IM（钉钉 / 企业微信 / 飞书）</text>
-  <rect x="1130" y="640" width="420" height="58" class="base-box"/><text x="1340" y="676" text-anchor="middle" class="base-text">开放接口 / API Key</text>
-  <rect x="1580" y="640" width="420" height="58" class="base-box"/><text x="1790" y="676" text-anchor="middle" class="base-text">模型网关</text>
+  <text x="62" y="732" class="base-hint">交互端</text>
+  <rect x="200" y="700" width="520" height="64" class="base-box"/><text x="460" y="742" text-anchor="middle" class="base-text">Web 应用 / 桌面客户端</text>
+  <rect x="740" y="700" width="520" height="64" class="base-box"/><text x="1000" y="742" text-anchor="middle" class="base-text">IM（钉钉 / 企业微信 / 飞书）</text>
+  <rect x="1280" y="700" width="320" height="64" class="base-box"/><text x="1440" y="742" text-anchor="middle" class="base-text">开放接口 / API Key</text>
+  <rect x="1620" y="700" width="270" height="64" class="base-box"/><text x="1755" y="742" text-anchor="middle" class="base-text">模型网关</text>
 
-  <text x="70" y="758" class="base-hint">智能体</text>
-  <rect x="230" y="730" width="330" height="58" class="base-box"/><text x="395" y="766" text-anchor="middle" class="base-text">多智能体对话</text>
-  <rect x="590" y="730" width="330" height="58" class="base-box"/><text x="755" y="766" text-anchor="middle" class="base-text">FSM 规划模式</text>
-  <rect x="950" y="730" width="330" height="58" class="base-box"/><text x="1115" y="766" text-anchor="middle" class="base-text">批量 / 自动化任务</text>
-  <rect x="1310" y="730" width="330" height="58" class="base-box"/><text x="1475" y="766" text-anchor="middle" class="base-text">子智能体 / 技能</text>
-  <rect x="1670" y="730" width="330" height="58" class="base-box"/><text x="1835" y="766" text-anchor="middle" class="base-text">外部智能体桥</text>
+  <text x="62" y="822" class="base-hint">智能体</text>
+  <rect x="200" y="790" width="400" height="64" class="base-box"/><text x="400" y="832" text-anchor="middle" class="base-text">多智能体对话</text>
+  <rect x="620" y="790" width="400" height="64" class="base-box"/><text x="820" y="832" text-anchor="middle" class="base-text">FSM 规划模式</text>
+  <rect x="1040" y="790" width="400" height="64" class="base-box"/><text x="1240" y="832" text-anchor="middle" class="base-text">批量 / 自动化任务</text>
+  <rect x="1460" y="790" width="220" height="64" class="base-box"/><text x="1570" y="832" text-anchor="middle" class="base-text">子智能体</text>
+  <rect x="1700" y="790" width="190" height="64" class="base-box"/><text x="1795" y="832" text-anchor="middle" class="base-text">外部桥</text>
 
-  <text x="70" y="848" class="base-hint">引擎</text>
-  <rect x="230" y="820" width="420" height="58" class="base-box"/><text x="440" y="856" text-anchor="middle" class="base-text">技能引擎</text>
-  <rect x="680" y="820" width="420" height="58" class="base-box"/><text x="890" y="856" text-anchor="middle" class="base-text">记忆引擎（mem0）</text>
-  <rect x="1130" y="820" width="420" height="58" class="base-box"/><text x="1340" y="856" text-anchor="middle" class="base-text">编排引擎</text>
-  <rect x="1580" y="820" width="420" height="58" class="base-box"/><text x="1790" y="856" text-anchor="middle" class="base-text">沙盒执行</text>
+  <text x="62" y="912" class="base-hint">引擎</text>
+  <rect x="200" y="880" width="400" height="64" class="base-box"/><text x="400" y="922" text-anchor="middle" class="base-text">技能引擎</text>
+  <rect x="620" y="880" width="400" height="64" class="base-box"/><text x="820" y="922" text-anchor="middle" class="base-text">记忆引擎（mem0）</text>
+  <rect x="1040" y="880" width="400" height="64" class="base-box"/><text x="1240" y="922" text-anchor="middle" class="base-text">编排引擎</text>
+  <rect x="1460" y="880" width="430" height="64" class="base-box"/><text x="1675" y="922" text-anchor="middle" class="base-text">沙盒执行</text>
 
-  <text x="70" y="938" class="base-hint">知识</text>
-  <rect x="230" y="910" width="420" height="58" class="base-box"/><text x="440" y="946" text-anchor="middle" class="base-text">知识库 RAG</text>
-  <rect x="680" y="910" width="420" height="58" class="base-box"/><text x="890" y="946" text-anchor="middle" class="base-text">领域本体契约</text>
-  <rect x="1130" y="910" width="420" height="58" class="base-box"/><text x="1340" y="946" text-anchor="middle" class="base-text">MCP 市场</text>
-  <rect x="1580" y="910" width="420" height="58" class="base-box"/><text x="1790" y="946" text-anchor="middle" class="base-text">数据画布</text>
+  <text x="62" y="1002" class="base-hint">知识</text>
+  <rect x="200" y="970" width="400" height="64" class="base-box"/><text x="400" y="1012" text-anchor="middle" class="base-text">知识库 RAG</text>
+  <rect x="620" y="970" width="400" height="64" class="base-box"/><text x="820" y="1012" text-anchor="middle" class="base-text">领域本体契约</text>
+  <rect x="1040" y="970" width="400" height="64" class="base-box"/><text x="1240" y="1012" text-anchor="middle" class="base-text">MCP 市场</text>
+  <rect x="1460" y="970" width="430" height="64" class="base-box"/><text x="1675" y="1012" text-anchor="middle" class="base-text">数据画布</text>
 
-  <text x="70" y="1028" class="base-hint">数据</text>
-  <rect x="230" y="1000" width="330" height="58" class="base-box"/><text x="395" y="1036" text-anchor="middle" class="base-text">PostgreSQL / SQLite</text>
-  <rect x="590" y="1000" width="330" height="58" class="base-box"/><text x="755" y="1036" text-anchor="middle" class="base-text">Redis</text>
-  <rect x="950" y="1000" width="330" height="58" class="base-box"/><text x="1115" y="1036" text-anchor="middle" class="base-text">Milvus / Neo4j</text>
-  <rect x="1310" y="1000" width="330" height="58" class="base-box"/><text x="1475" y="1036" text-anchor="middle" class="base-text">对象存储</text>
-  <rect x="1670" y="1000" width="330" height="58" class="base-box"/><text x="1835" y="1036" text-anchor="middle" class="base-text">审计库（WAL）</text>
+  <text x="62" y="1092" class="base-hint">数据</text>
+  <rect x="200" y="1060" width="330" height="64" class="base-box"/><text x="365" y="1102" text-anchor="middle" class="base-text">PostgreSQL / SQLite</text>
+  <rect x="550" y="1060" width="280" height="64" class="base-box"/><text x="690" y="1102" text-anchor="middle" class="base-text">Redis</text>
+  <rect x="850" y="1060" width="340" height="64" class="base-box"/><text x="1020" y="1102" text-anchor="middle" class="base-text">Milvus / Neo4j</text>
+  <rect x="1210" y="1060" width="300" height="64" class="base-box"/><text x="1360" y="1102" text-anchor="middle" class="base-text">对象存储</text>
+  <rect x="1530" y="1060" width="360" height="64" class="base-box"/><text x="1710" y="1102" text-anchor="middle" class="base-text">审计库（WAL）</text>
 
-  <text x="70" y="1118" class="base-hint">前端</text>
-  <rect x="230" y="1090" width="1120" height="58" class="base-box"/><text x="790" y="1126" text-anchor="middle" class="base-text">React 控制台——安全运营中心 / 策略中心 / 人工复核工作台</text>
-  <rect x="1380" y="1090" width="620" height="58" class="base-box"/><text x="1690" y="1126" text-anchor="middle" class="base-text">SafeHarness 管理面（38308）</text>
+  <text x="62" y="1182" class="base-hint">前端</text>
+  <rect x="200" y="1150" width="980" height="64" class="base-box"/><text x="690" y="1192" text-anchor="middle" class="base-text">React 控制台——安全运营中心 / 策略中心 / 复核工作台</text>
+  <rect x="1200" y="1150" width="690" height="64" class="base-box"/><text x="1545" y="1192" text-anchor="middle" class="base-text">SafeHarness 管理面（38308）</text>
 
-  <text x="70" y="1210" class="base-hint">部署</text>
-  <text x="230" y="1210" class="base-text">一键本地安装 · Docker Compose · Nginx · AgentScope 2.0 运行时 · FastAPI · Python 3.10+</text>
+  <text x="62" y="1272" class="base-hint">部署</text>
+  <text x="200" y="1272" class="base-text">一键本地安装 · Docker Compose · Nginx · AgentScope 2.0 · FastAPI · Python 3.10+</text>
+
+  <text x="62" y="1345" class="flow-label">安全层对基座的四个强制注入点：</text>
+  <text x="480" y="1345" class="sec-box-sub">① 消息入口（对话/规划输入检查）　② 工具执行（网关 + MCP 守卫）　③ 记忆写入（闸门 + 复查）　④ 全链审计落账</text>
 
   <!-- ============ 右侧治理栏 ============ -->
-  <rect x="2290" y="30" width="400" height="1410" class="side-bg"/>
-  <text x="2315" y="80" class="side-title">安全治理</text>
-  <text x="2315" y="112" class="sec-sub">横跨所有层</text>
-  <rect x="2315" y="140" width="350" height="58" class="side-item"/><text x="2490" y="176" text-anchor="middle" class="side-item-text">审计链 + 脱敏</text>
-  <rect x="2315" y="215" width="350" height="58" class="side-item"/><text x="2490" y="251" text-anchor="middle" class="side-item-text">策略版本化 + 回滚</text>
-  <rect x="2315" y="290" width="350" height="58" class="side-item"/><text x="2490" y="326" text-anchor="middle" class="side-item-text">人工复核队列</text>
-  <rect x="2315" y="365" width="350" height="58" class="side-item"/><text x="2490" y="401" text-anchor="middle" class="side-item-text">通信网关</text>
-  <rect x="2315" y="440" width="350" height="58" class="side-item"/><text x="2490" y="476" text-anchor="middle" class="side-item-text">权限与委托</text>
-  <rect x="2315" y="515" width="350" height="58" class="side-item"/><text x="2490" y="551" text-anchor="middle" class="side-item-text">限速 + 租约投递</text>
-  <rect x="2315" y="590" width="350" height="58" class="side-item"/><text x="2490" y="626" text-anchor="middle" class="side-item-text">对外网关管理</text>
-  <rect x="2315" y="665" width="350" height="58" class="side-item"/><text x="2490" y="701" text-anchor="middle" class="side-item-text">脱敏 + 限流</text>
+  <rect x="1950" y="26" width="420" height="1384" class="side-bg"/>
+  <text x="1980" y="86" class="side-title">安全治理</text>
+  <text x="1980" y="124" class="sec-sub">横跨所有层</text>
+  <rect x="1980" y="150" width="360" height="68" class="side-item"/><text x="2160" y="194" text-anchor="middle" class="side-item-text">审计链 + 脱敏</text>
+  <rect x="1980" y="238" width="360" height="68" class="side-item"/><text x="2160" y="282" text-anchor="middle" class="side-item-text">策略版本化 + 回滚</text>
+  <rect x="1980" y="326" width="360" height="68" class="side-item"/><text x="2160" y="370" text-anchor="middle" class="side-item-text">人工复核队列</text>
+  <rect x="1980" y="414" width="360" height="68" class="side-item"/><text x="2160" y="458" text-anchor="middle" class="side-item-text">通信网关</text>
+  <rect x="1980" y="502" width="360" height="68" class="side-item"/><text x="2160" y="546" text-anchor="middle" class="side-item-text">权限与委托</text>
+  <rect x="1980" y="590" width="360" height="68" class="side-item"/><text x="2160" y="634" text-anchor="middle" class="side-item-text">限速 + 租约投递</text>
+  <rect x="1980" y="678" width="360" height="68" class="side-item"/><text x="2160" y="722" text-anchor="middle" class="side-item-text">对外网关管理</text>
+  <rect x="1980" y="766" width="360" height="68" class="side-item"/><text x="2160" y="810" text-anchor="middle" class="side-item-text">脱敏 + 限流</text>
 
-  <rect x="2315" y="760" width="350" height="120" class="ledger"/>
-  <text x="2490" y="805" text-anchor="middle" class="ledger-text">四行审计闭环：</text>
-  <text x="2490" y="840" text-anchor="middle" class="ledger-text">issue → inspect →</text>
-  <text x="2490" y="868" text-anchor="middle" class="ledger-text">dispatched → succeeded</text>
+  <rect x="1980" y="880" width="360" height="170" class="ledger"/>
+  <text x="2160" y="936" text-anchor="middle" class="ledger-text">四行审计闭环</text>
+  <text x="2160" y="986" text-anchor="middle" class="ledger-text">issue → inspect →</text>
+  <text x="2160" y="1022" text-anchor="middle" class="ledger-text">dispatched → succeeded</text>
 
-  <path d="M 320 500 L 320 630" class="flow"/>
-  <text x="335" y="560" class="flow-label">消息路径</text>
-  <path d="M 880 500 L 880 720" class="flow"/>
-  <text x="895" y="590" class="flow-label">FSM 规划守卫</text>
-  <path d="M 1380 500 L 1380 810" class="flow"/>
-  <text x="1395" y="600" class="flow-label">工具 / MCP 路径</text>
-  <path d="M 1900 500 L 1900 810" class="flow"/>
-  <text x="1915" y="600" class="flow-label">记忆写入闸门</text>
+  <!-- enforcement arrows -->
+  <path d="M 460 586 L 460 700" class="flow"/>
+  <path d="M 820 534 L 820 790" class="flow"/>
+  <path d="M 1390 534 L 1390 880" class="flow"/>
+  <text x="1408" y="640" class="flow-label">工具 / MCP 路径</text>
+  <text x="478" y="640" class="flow-label">消息路径</text>
+  <text x="838" y="700" class="flow-label">FSM 规划守卫</text>
+  <path d="M 1780 534 L 1780 1060" class="flow"/>
+  <text x="1798" y="640" class="flow-label">记忆写入闸门</text>
 </svg>
