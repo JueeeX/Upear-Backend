@@ -29,9 +29,6 @@
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/License-Apache_2.0_%2B_terms-2E8B57?style=flat-square" alt="Apache 2.0 with supplementary terms" />
   </a>
-  <a href="./document/en/editions/overview.md">
-    <img src="https://img.shields.io/badge/Edition-Community-635BFF?style=flat-square" alt="Community Edition" />
-  </a>
   <a href="./document/en/deployment/quick-install.md">
     <img src="https://img.shields.io/badge/Install-One_command-0F766E?style=flat-square" alt="One-command installation" />
   </a>
@@ -44,16 +41,16 @@
 </p>
 
 Upear is an enterprise-grade AgentOS that treats domain ontology as a
-control plane for agent reasoning, decisions, and actions. Its open-source
-Community Edition combines agentic chat, private knowledge-base RAG,
-sub-agents, MCP tools, Agent Skills, sandboxed execution, long-term memory,
-automation, and a data canvas in one self-hosted workspace.
+control plane for agent reasoning, decisions, and actions. Upear ships as a
+single open-source edition that combines agentic chat, private knowledge-base
+RAG, sub-agents, MCP tools, Agent Skills, sandboxed execution, long-term
+memory, automation, a data canvas, and the SafeHarness security layer in one
+self-hosted workspace.
 
 > [!NOTE]
-> This Community repository is generated from the upstream main repository for
-> each release and is marked `generated`. Report changes to `src/**` through an
-> Issue or Discussion. Pull requests for documentation and examples are
-> welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+> Report changes to `src/**` through an Issue or Discussion. Pull requests for
+> documentation and examples are welcome. See
+> [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 ## Quick start
 
@@ -80,7 +77,7 @@ connect an OpenAI-compatible or local model. Upear then opens at
 
 A fresh data directory creates exactly one local administrator. The initial
 username and password are both `admin`, and the password must be changed on the
-first sign-in. CE does not provide self-service registration.
+first sign-in. Upear does not provide self-service registration.
 
 > [!WARNING]
 > The one-click server listens on `127.0.0.1` by default. If you need remote
@@ -161,7 +158,7 @@ flow.
   </tr>
 </table>
 
-## Enterprise trust through domain ontology
+## Trustworthy execution through domain ontology
 
 Upear uses domain ontology as an executable control plane, not only as a
 knowledge store. Controlled concepts, relationships, invariants, action
@@ -205,11 +202,59 @@ engines one shared business language.
 
 ## Core capabilities
 
-Community Edition covers the complete personal-agent loop from conversation
-and execution to retention and reuse. Optional infrastructure stays optional
-during the first run.
+Upear covers the complete agent loop from conversation and execution to
+retention and reuse — plus the SafeHarness security layer enforced on every
+path. Optional infrastructure stays optional during the first run.
 
 <table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🛡️ Protected chat chain</strong><br />
+      ms-level structural defense (injection regex + SQL shape, zero model
+      calls) → semantic judge (fail-closed) → routing; every decision audited.
+    </td>
+    <td width="50%" valign="top">
+      <strong>🧰 Tool security gateway + enforcement receipts</strong><br />
+      capability issuance with atomic consumption, HMAC countersign receipts,
+      four-line audit loop per tool call.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🎛️ Policy center</strong><br />
+      hot supplementary injection rules (file + runtime channels), chain rules
+      with tool tags, version rollback — every apply behind a human gate.
+    </td>
+    <td width="50%" valign="top">
+      <strong>🤖 AI-assisted rule drafting</strong><br />
+      LLM draft → deterministic validation → sample self-test → human confirm;
+      drafts are never auto-applied.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🧭 Run supervision + human review</strong><br />
+      step/loop/budget/retry triggers → semantic recheck → structured block →
+      review queue with closure records.
+    </td>
+    <td width="50%" valign="top">
+      <strong>🔒 MCP channel guard + audit redaction</strong><br />
+      descriptor injection scan and policy middleware for every MCP tool;
+      attack payloads never reach the ledger.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🧱 FSM planning guard</strong><br />
+      per-input semantic checks; the LLM only proposes — deterministic
+      compilation, plan hashing, and code-driven execution keep plans honest.
+    </td>
+    <td width="50%" valign="top">
+      <strong>🚨 Agent communication gateway</strong><br />
+      tenant/agent identity, default-deny topology, bounded delegation,
+      message inflation checks.
+    </td>
+  </tr>
   <tr>
     <td width="50%" valign="top">
       <strong>💬 Agentic chat and Plan Mode</strong><br />
@@ -283,11 +328,6 @@ stack. The red layer in the diagram — the Upear SafeHarness Suite security lay
 
 ![Upear security-augmented architecture: the SafeHarness layer added by this repository on top of the platform base](./assets/upear-architecture-en.svg)
 
-> [!NOTE]
-> The diagram shows the complete Upear product architecture. Some
-> governance, collaboration, gateway, and persistent-sandbox capabilities are
-> available only in Enterprise Edition.
-
 ### Technology stack
 
 The project combines mature, replaceable open-source components behind clear
@@ -305,25 +345,11 @@ service boundaries.
 See the [architecture overview](./document/en/architecture/overview.md) for the
 full request lifecycle, container topology, and design decisions.
 
-## Community and Enterprise editions
+## One edition, everything included
 
-Community Edition gives an individual a complete agent workspace. Enterprise
-Edition adds the governance, collaboration, and delivery capabilities needed
-to operate the same experience across an organization. Enterprise-only source
-is physically absent from the Community tree.
-
-| Community Edition | Enterprise Edition adds |
-|---|---|
-| Agentic chat, Plan Mode, and personal sub-agents | Teams, organization agents, and permission matrices |
-| 8 general MCP tools, personal skills, and a skill marketplace | Industry data tools, organization governance, and skill review |
-| Private knowledge bases and three-tier personal memory | Public knowledge administration and memory auditing |
-| Automation, batch execution, and a personal data canvas | Organization billing, usage reports, and canvas collaboration |
-| Lightweight sandbox and local file storage | Persistent sandboxes, cloud storage, and offline delivery |
-| Local accounts and branding with Powered-by attribution | SSO, compliance auditing, and full white-labeling |
-
-See the [edition overview](./document/en/editions/overview.md) for the complete
-feature boundary and upgrade path.
-
+Upear ships as a **single open-source edition**: the SafeHarness security
+layer, governance, gateway, and audit capabilities described above are part of
+the same tree — there is no feature-gated enterprise variant.
 ## Documentation
 
 The repository includes complete English and Chinese documentation for
@@ -343,7 +369,7 @@ Start from [document/README.md](./document/README.md) to browse every guide.
 
 ## Roadmap
 
-Future Community Edition development will focus on a connected workspace,
+Future development will focus on a connected workspace,
 efficient model orchestration, and a broader extension ecosystem.
 
 1. **Cloud/local switching and cross-client continuity.** Enable seamless
@@ -372,8 +398,6 @@ content.
 - Include reproduction steps, expected behavior, actual behavior, and your
   environment in bug reports.
 - Explain the concrete use case and problem when proposing a feature.
-- Keep English and Chinese documentation aligned with the Community and
-  Enterprise edition boundary.
 
 Don't open a public Issue for a security vulnerability. Follow
 [SECURITY.md](./SECURITY.md) to report it through a private channel.
@@ -387,7 +411,7 @@ review). Thanks to the upstream project and its community.
 
 ## License
 
-Upear Community Edition is licensed under Apache License 2.0 with
+Upear is licensed under Apache License 2.0 with
 supplementary terms. The terms restrict operating the software as a competing
 multi-tenant SaaS offering and require the UI's Powered-by attribution to
 remain visible. [LICENSE](./LICENSE) and [NOTICE](./NOTICE) define the complete

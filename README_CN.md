@@ -27,9 +27,6 @@
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/License-Apache_2.0_%2B_terms-2E8B57?style=flat-square" alt="Apache 2.0 with supplementary terms" />
   </a>
-  <a href="./document/zh-CN/editions/overview.md">
-    <img src="https://img.shields.io/badge/Edition-Community-635BFF?style=flat-square" alt="Community Edition" />
-  </a>
   <a href="./document/zh-CN/deployment/quick-install.md">
     <img src="https://img.shields.io/badge/Install-One_command-0F766E?style=flat-square" alt="一键安装" />
   </a>
@@ -42,7 +39,7 @@
 </p>
 
 Upear 是面向企业级智能体场景的 AgentOS，把领域本体提升为推理、决策与
-行动的控制平面。其开源社区版将智能对话、私有知识库 RAG、子智能体、MCP 工具、
+行动的控制平面。Upear 以单一开源版本将智能对话、私有知识库 RAG、子智能体、MCP 工具、
 Agent Skills、沙箱执行、长期记忆、自动化和数据画布整合到一个可私有部署的
 工作空间中。
 
@@ -181,10 +178,52 @@ Upear 不只把本体当作知识库，而是把它作为机器可执行的控�
 
 ## 核心能力
 
-社区版覆盖个人智能体从对话、执行到沉淀和复用的完整闭环；可选组件按需启用，
-不需要在首跑时部署全部基础设施。
+Upear 覆盖智能体从对话、执行到沉淀和复用的完整闭环，并在每条执行路径上
+强制实施 SafeHarness 安全层；可选组件按需启用，不需要在首跑时部署全部基础设施。
 
 <table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🛡️ 受保护对话链</strong><br />
+      毫秒级结构防线（注入正则 + SQL 形状，零模型调用）→ 语义 Judge
+      （fail-closed）→ 分流；每个决策审计落账。
+    </td>
+    <td width="50%" valign="top">
+      <strong>🧰 工具安全网关 + 强制回执</strong><br />
+      capability 签发与原子消费、HMAC 会签回执，每次工具调用四行审计闭环。
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🎛️ 策略中心</strong><br />
+      补充注入规则热生效（文件 + 运行时双通道）、支持工具标签的链式规则、
+      版本回滚——每次生效都过人工闸门。
+    </td>
+    <td width="50%" valign="top">
+      <strong>🤖 AI 辅助规则起草</strong><br />
+      LLM 草稿 → 服务端确定性校验 → 样本自测 → 人工确认；草稿绝不自动生效。
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🧭 运行监督 + 人工复核</strong><br />
+      步数/循环/预算/重试触发 → 语义复核 → 结构化拦截 → 复核队列留痕结案。
+    </td>
+    <td width="50%" valign="top">
+      <strong>🔒 MCP 通道守卫 + 审计脱敏</strong><br />
+      全部 MCP 工具描述注入扫描与策略评估中间件；攻击原文不落账。
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>🧱 FSM 规划守卫</strong><br />
+      规划输入逐条语义检查；LLM 只提案——确定性编译、计划哈希与代码驱动执行。
+    </td>
+    <td width="50%" valign="top">
+      <strong>🚨 智能体通信网关</strong><br />
+      租户/智能体身份、默认拒绝拓扑、有界委托、注水消息检查。
+    </td>
+  </tr>
   <tr>
     <td width="50%" valign="top">
       <strong>💬 智能对话与计划模式</strong><br />
@@ -245,10 +284,6 @@ Upear 将用户渠道、智能体工作流、可复用能力引擎、本体契�
 
 ![Upear 安全增强架构：红色 Upear SafeHarness Suite 安全层为本仓库在平台基座之上新增](./assets/upear-architecture-zh.svg)
 
-> [!NOTE]
-> 架构图展示 Upear 的完整产品架构。其中部分治理、协作、网关和持久沙箱
-> 能力仅在商业版中提供。
-
 ### 技术栈
 
 项目选择成熟、可替换的开源组件，并通过清晰的服务边界组合为完整产品。
@@ -265,23 +300,10 @@ Upear 将用户渠道、智能体工作流、可复用能力引擎、本体契�
 更详细的请求生命周期、容器拓扑和关键设计决策见
 [架构总览](./document/zh-CN/architecture/overview.md)。
 
-## 社区版与商业版
+## 单一版本，能力全含
 
-社区版让个人把智能体能力完整运行起来；商业版在相同产品体验上补充组织级治理、
-协作和交付能力。商业版能力不会以关闭开关的形式混入社区版源码。
-
-| 社区版（CE） | 商业版（EE）新增 |
-|---|---|
-| 智能对话、计划模式与个人子智能体 | 团队、成员、组织级智能体库与权限矩阵 |
-| 7 个通用 MCP、个人技能与技能市场 | 行业数据工具、组织级能力治理与技能审核 |
-| 私有知识库、三层个人记忆 | 公共知识库管理与记忆审计 |
-| 自动化、批量执行、个人数据画布 | 组织计费、用量汇总与画布多人协同 |
-| 轻量沙箱、本地文件存储 | 持久沙箱、云存储与离线商业交付 |
-| 本地账号与保留 Powered-by 的品牌配置 | SSO、审计合规与完整 white-label |
-
-功能边界与升级路径以
-[社区版与商业版说明](./document/zh-CN/editions/overview.md)为准。
-
+Upear 采用**单一开源版本**：上述 SafeHarness 安全层、治理、网关与审计能力
+均在同一代码树内开箱即含——不存在功能锁定的商业版变体。
 ## 文档
 
 仓库内提供完整的中英文文档，从首次部署到架构和二次开发均可离线阅读。
@@ -300,7 +322,7 @@ Upear 将用户渠道、智能体工作流、可复用能力引擎、本体契�
 
 ## 路线图
 
-社区版接下来将重点建设互联互通的工作空间、更高效的模型编排，以及更丰富的
+接下来将重点建设互联互通的工作空间、更高效的模型编排，以及更丰富的
 扩展生态。
 
 1. **云端/本地切换与多端互通。** 实现云端运行与本地运行的无缝切换，通过
@@ -333,7 +355,7 @@ Upear 将用户渠道、智能体工作流、可复用能力引擎、本体契�
 
 ## 许可证
 
-Upear Community Edition 采用 Apache License 2.0 并附加补充条款。
+Upear 采用 Apache License 2.0 并附加补充条款。
 补充条款限制将本软件作为竞争性的多租户 SaaS 转售，并要求保留界面中的
 Powered-by 标识。内部使用、修改和分发的完整权利与义务以
 [LICENSE](./LICENSE)和 [NOTICE](./NOTICE)为准。
