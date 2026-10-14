@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 1430" role="img" aria-labelledby="title desc">
   <title id="title">Upear security-augmented architecture</title>
-  <desc id="desc">The SafeHarness security layer added by Upear sits above the HugAgentOS platform base and enforces on the message path, the tool path, the memory path, and the audit ledger across all layers.</desc>
+  <desc id="desc">The Upear Guard security layer added by Upear sits above the HugAgentOS platform base and enforces on the message path, the tool path, the memory path, and the audit ledger across all layers.</desc>
   <defs>
     <style>
       text { font-family: Inter, "Segoe UI", Arial, sans-serif; }
@@ -33,7 +33,7 @@
 
   <!-- ============ SafeHarness security layer (added by Upear) ============ -->
   <rect x="30" y="26" width="1880" height="560" class="sec-bg"/>
-  <text x="62" y="92" class="sec-label">SafeHarness Security Layer</text>
+  <text x="62" y="92" class="sec-label">Upear Guard Security Layer</text>
   <text x="640" y="92" class="sec-sub">added by Upear on top of the platform base — not part of it</text>
   <text x="62" y="134" class="sec-sub">Lifecycle-integrated enforcement: every check below is a first-class hook on the execution path — deny-only, default-off, fail-closed.</text>
 

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 1430" role="img" aria-labelledby="title desc">
   <title id="title">Upear 安全增强架构</title>
-  <desc id="desc">Upear 新增的 SafeHarness 安全层位于 HugAgentOS 平台基座之上，对消息路径、工具路径、记忆路径与全栈审计实施强制管控。</desc>
+  <desc id="desc">Upear 新增的 Upear Guard 安全层位于 HugAgentOS 平台基座之上，对消息路径、工具路径、记忆路径与全栈审计实施强制管控。</desc>
   <defs>
     <style>
       text { font-family: "Microsoft YaHei", "PingFang SC", Inter, "Segoe UI", Arial, sans-serif; }
@@ -31,9 +31,9 @@
     </marker>
   </defs>
 
-  <!-- ============ SafeHarness 安全层（本项目新增） ============ -->
+  <!-- ============ Upear Guard 安全层（本项目新增） ============ -->
   <rect x="30" y="26" width="1880" height="560" class="sec-bg"/>
-  <text x="62" y="92" class="sec-label">SafeHarness 安全层</text>
+  <text x="62" y="92" class="sec-label">Upear Guard 安全层</text>
   <text x="460" y="92" class="sec-sub">本项目（Upear）在平台基座之上新增，非基座自带</text>
   <text x="62" y="134" class="sec-sub">生命周期内嵌强制管控：以下每个检查都是执行路径上的一等公民，只增拦截、默认关闭、fail-closed。</text>
 
