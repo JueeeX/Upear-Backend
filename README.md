@@ -1,5 +1,5 @@
 <p align="center">
-  <strong>Upear: The Enterprise AgentOS for Ontology-Grounded Trustworthy Reasoning</strong>
+  <strong>Upear(Unified Policy Enforcement & Accountability Runtime): The Enterprise AgentOS for Ontology-Grounded Trustworthy Reasoning</strong>
 </p>
 
 <p align="center">
