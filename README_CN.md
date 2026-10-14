@@ -13,7 +13,7 @@
 
 > **来源与范围。** Upear 构建于
 > [HugAgentOS](https://github.com/ZJU-REAL/HugAgentOS) 平台基座之上
-> （多智能体对话、会话与编排基础设施）。**Upear Guard 安全层**——输入防线、
+> （多智能体对话、会话与编排基础设施）。**Upear SafeHarness Suite 安全层**——输入防线、
 > 能力门、工具网关与强制回执、审计脱敏、运行监督、带 AI 辅助起草的策略中心、
 > MCP 通道守卫——是**本仓库自己的扩展**，也是本项目的主要贡献点。
 > 详见[致谢](#致谢)。
@@ -243,7 +243,7 @@ Upear 将用户渠道、智能体工作流、可复用能力引擎、本体契�
 基础设施分层组织。Action 契约把本体层与计划生成、审批校验和门控执行连接起来，
 安全管理与平台监管则贯穿完整技术栈。
 
-![Upear 安全增强架构：红色 Upear Guard 安全层为本仓库在平台基座之上新增](./assets/upear-architecture-zh.svg)
+![Upear 安全增强架构：红色 Upear SafeHarness Suite 安全层为本仓库在平台基座之上新增](./assets/upear-architecture-zh.svg)
 
 > [!NOTE]
 > 架构图展示 Upear 的完整产品架构。其中部分治理、协作、网关和持久沙箱
