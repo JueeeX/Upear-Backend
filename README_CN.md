@@ -1,5 +1,5 @@
 <p align="center">
-  <strong>Upear：面向企业的本体驱动可信推理 AgentOS</strong>
+  <strong>Upear(Unified Policy Enforcement & Accountability Runtime)：面向企业的本体驱动可信推理 AgentOS</strong>
 </p>
 
 <p align="center">
