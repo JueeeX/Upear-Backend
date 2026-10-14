@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2733 1660" role="img" aria-labelledby="title desc">
+  <title id="title">Upear security-augmented architecture</title>
+  <desc id="desc">The SafeHarness security layer added by Upear sits above the HugAgentOS platform base and enforces on the message path, the tool path, the memory path, and the audit ledger across all layers.</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      .sec-bg { fill: #fdf3f2; stroke: #c40000; stroke-width: 6; rx: 18; }
+      .sec-label { fill: #c40000; font-size: 34px; font-weight: 800; }
+      .sec-sub { fill: #8f8f8f; font-size: 22px; font-weight: 500; }
+      .sec-box { fill: #ffffff; stroke: #c40000; stroke-width: 4; rx: 12; }
+      .sec-box-title { fill: #c40000; font-size: 27px; font-weight: 800; }
+      .sec-box-sub { fill: #555; font-size: 20px; font-weight: 500; }
+      .ext-badge { fill: #c40000; rx: 9; }
+      .ext-badge-text { fill: #fff; font-size: 17px; font-weight: 700; }
+      .base-bg { fill: #f4f8fc; stroke: #b7d4ed; stroke-width: 4; rx: 18; }
+      .base-label { fill: #2559a5; font-size: 27px; font-weight: 700; }
+      .base-box { fill: #fff; stroke: #8bb3dc; stroke-width: 3.5; rx: 10; }
+      .base-text { fill: #171717; font-size: 24px; font-weight: 600; }
+      .base-hint { fill: #8a8a8a; font-size: 18px; font-weight: 500; }
+      .flow { stroke: #c40000; stroke-width: 5; fill: none; marker-end: url(#arrow-red); }
+      .flow-label { fill: #c40000; font-size: 21px; font-weight: 700; }
+      .ledger { fill: #fff9ed; stroke: #dfa12d; stroke-width: 5; rx: 14; }
+      .ledger-text { fill: #875600; font-size: 24px; font-weight: 700; }
+      .side-bg { fill: #fdf3f2; stroke: #dfa12d; stroke-width: 5; rx: 16; }
+      .side-title { fill: #b06e00; font-size: 26px; font-weight: 800; }
+      .side-item { fill: #fff; stroke: #e4b33c; stroke-width: 3.5; rx: 10; }
+      .side-item-text { fill: #6b4a00; font-size: 23px; font-weight: 600; }
+    </style>
+    <marker id="arrow-red" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L12,5 L0,10 z" fill="#c40000"/>
+    </marker>
+  </defs>
+
+  <!-- ============ SafeHarness security layer (added by Upear) ============ -->
+  <rect x="40" y="30" width="2210" height="470" class="sec-bg" rx="18"/>
+  <text x="70" y="85" class="sec-label">SafeHarness Security Layer</text>
+  <text x="480" y="85" class="sec-sub">— added by Upear on top of the platform base (this repository)</text>
+  <text x="70" y="122" class="sec-sub">Lifecycle-integrated enforcement: every check below is a first-class hook on the agent execution path, deny-only and fail-closed.</text>
+
+  <!-- row 1 -->
+  <rect x="70" y="150" width="500" height="96" class="sec-box" rx="12"/>
+  <text x="95" y="192" class="sec-box-title">Input Defense (INFORM)</text>
+  <text x="95" y="226" class="sec-box-sub">pattern + semantic judge, ms-level, fail-closed</text>
+
+  <rect x="600" y="150" width="500" height="96" class="sec-box" rx="12"/>
+  <text x="625" y="192" class="sec-box-title">Capability Gate (CONSTRAIN)</text>
+  <text x="625" y="226" class="sec-box-sub">signed capability tokens, privilege split</text>
+
+  <rect x="1130" y="150" width="500" height="96" class="sec-box" rx="12"/>
+  <text x="1155" y="192" class="sec-box-title">Tool Gateway + Receipts</text>
+  <text x="1155" y="226" class="sec-box-sub">atomic consumption, HMAC countersign</text>
+
+  <rect x="1660" y="150" width="560" height="96" class="sec-box" rx="12"/>
+  <text x="1685" y="192" class="sec-box-title">Run Supervision + Human Review</text>
+  <text x="1685" y="226" class="sec-box-sub">loop/step/budget triggers → semantic recheck</text>
+
+  <!-- row 2: extensions -->
+  <rect x="70" y="280" width="500" height="96" class="sec-box" rx="12"/>
+  <text x="95" y="322" class="sec-box-title">Policy Center</text>
+  <text x="95" y="356" class="sec-box-sub">hot rules + chains, rollback, human gate</text>
+  <rect x="430" y="286" width="120" height="30" class="ext-badge" rx="9"/>
+  <text x="490" y="307" text-anchor="middle" class="ext-badge-text">extension</text>
+
+  <rect x="600" y="280" width="500" height="96" class="sec-box" rx="12"/>
+  <text x="625" y="322" class="sec-box-title">AI-Assisted Rule Drafting</text>
+  <text x="625" y="356" class="sec-box-sub">LLM draft → validate → sample test → human</text>
+  <rect x="960" y="286" width="120" height="30" class="ext-badge" rx="9"/>
+  <text x="1020" y="307" text-anchor="middle" class="ext-badge-text">extension</text>
+
+  <rect x="1130" y="280" width="500" height="96" class="sec-box" rx="12"/>
+  <text x="1155" y="322" class="sec-box-title">MCP Channel Guard</text>
+  <text x="1155" y="356" class="sec-box-sub">descriptor scan + policy middleware</text>
+  <rect x="1490" y="286" width="120" height="30" class="ext-badge" rx="9"/>
+  <text x="1550" y="307" text-anchor="middle" class="ext-badge-text">extension</text>
+
+  <rect x="1660" y="280" width="560" height="96" class="sec-box" rx="12"/>
+  <text x="1685" y="322" class="sec-box-title">Trajectory &amp; Tag Chains</text>
+  <text x="1685" y="356" class="sec-box-sub">cross-tool chains, retry pressure, entropy</text>
+  <rect x="2080" y="286" width="120" height="30" class="ext-badge" rx="9"/>
+  <text x="2140" y="307" text-anchor="middle" class="ext-badge-text">extension</text>
+
+  <!-- enforcement flows -->
+  <text x="70" y="432" class="flow-label">enforces on:</text>
+  <text x="230" y="432" class="sec-box-sub">the message path (chat / plan inputs)</text>
+  <text x="230" y="468" class="sec-box-sub">the tool path (gateway + MCP + sandbox tools)</text>
+  <text x="230" y="504"  class="sec-box-sub" display="none"></text>
+  <rect x="820" y="404" width="640" height="52" fill="none" stroke="none"/>
+  <text x="850" y="432" class="sec-box-sub">the memory path (write gate + semantic recheck)</text>
+  <text x="850" y="468" class="sec-box-sub">the FSM planner (LLM proposes, code decides)</text>
+
+  <!-- ============ platform base ============ -->
+  <rect x="40" y="560" width="2210" height="880" class="base-bg" rx="18"/>
+  <text x="70" y="612" class="base-label">Platform Base</text>
+  <text x="260" y="612" class="sec-sub">— HugAgentOS foundation, extended in this repository (see Acknowledgements)</text>
+
+  <!-- channels -->
+  <text x="70" y="668" class="base-hint">Channels</text>
+  <rect x="230" y="640" width="420" height="58" class="base-box" rx="10"/><text x="440" y="676" text-anchor="middle" class="base-text">Web / Desktop</text>
+  <rect x="680" y="640" width="420" height="58" class="base-box" rx="10"/><text x="890" y="676" text-anchor="middle" class="base-text">IM (DingTalk / WeCom / Feishu)</text>
+  <rect x="1130" y="640" width="420" height="58" class="base-box" rx="10"/><text x="1340" y="676" text-anchor="middle" class="base-text">Open API / API Key</text>
+  <rect x="1580" y="640" width="420" height="58" class="base-box" rx="10"/><text x="1790" y="676" text-anchor="middle" class="base-text">Model Gateway</text>
+
+  <!-- agent layer -->
+  <text x="70" y="758" class="base-hint">Agents</text>
+  <rect x="230" y="730" width="330" height="58" class="base-box" rx="10"/><text x="395" y="766" text-anchor="middle" class="base-text">Multi-agent chat</text>
+  <rect x="590" y="730" width="330" height="58" class="base-box" rx="10"/><text x="755" y="766" text-anchor="middle" class="base-text">FSM plan mode</text>
+  <rect x="950" y="730" width="330" height="58" class="base-box" rx="10"/><text x="1115" y="766" text-anchor="middle" class="base-text">Batch / automation</text>
+  <rect x="1310" y="730" width="330" height="58" class="base-box" rx="10"/><text x="1475" y="766" text-anchor="middle" class="base-text">Sub-agents / skills</text>
+  <rect x="1670" y="730" width="330" height="58" class="base-box" rx="10"/><text x="1835" y="766" text-anchor="middle" class="base-text">External agent bridge</text>
+
+  <!-- capability engines -->
+  <text x="70" y="848" class="base-hint">Engines</text>
+  <rect x="230" y="820" width="420" height="58" class="base-box" rx="10"/><text x="440" y="856" text-anchor="middle" class="base-text">Skills engine</text>
+  <rect x="680" y="820" width="420" height="58" class="base-box" rx="10"/><text x="890" y="856" text-anchor="middle" class="base-text">Memory engine (mem0)</text>
+  <rect x="1130" y="820" width="420" height="58" class="base-box" rx="10"/><text x="1340" y="856" text-anchor="middle" class="base-text">Orchestration engine</text>
+  <rect x="1580" y="820" width="420" height="58" class="base-box" rx="10"/><text x="1790" y="856" text-anchor="middle" class="base-text">Sandboxed execution</text>
+
+  <!-- knowledge / ontology -->
+  <text x="70" y="938" class="base-hint">Knowledge</text>
+  <rect x="230" y="910" width="420" height="58" class="base-box" rx="10"/><text x="440" y="946" text-anchor="middle" class="base-text">Knowledge-base RAG</text>
+  <rect x="680" y="910" width="420" height="58" class="base-box" rx="10"/><text x="890" y="946" text-anchor="middle" class="base-text">Ontology contracts</text>
+  <rect x="1130" y="910" width="420" height="58" class="base-box" rx="10"/><text x="1340" y="946" text-anchor="middle" class="base-text">MCP marketplace</text>
+  <rect x="1580" y="910" width="420" height="58" class="base-box" rx="10"/><text x="1790" y="946" text-anchor="middle" class="base-text">Data canvas</text>
+
+  <!-- data foundation -->
+  <text x="70" y="1028" class="base-hint">Data</text>
+  <rect x="230" y="1000" width="330" height="58" class="base-box" rx="10"/><text x="395" y="1036" text-anchor="middle" class="base-text">PostgreSQL / SQLite</text>
+  <rect x="590" y="1000" width="330" height="58" class="base-box" rx="10"/><text x="755" y="1036" text-anchor="middle" class="base-text">Redis</text>
+  <rect x="950" y="1000" width="330" height="58" class="base-box" rx="10"/><text x="1115" y="1036" text-anchor="middle" class="base-text">Milvus / Neo4j</text>
+  <rect x="1310" y="1000" width="330" height="58" class="base-box" rx="10"/><text x="1475" y="1036" text-anchor="middle" class="base-text">Object storage</text>
+  <rect x="1670" y="1000" width="330" height="58" class="base-box" rx="10"/><text x="1835" y="1036" text-anchor="middle" class="base-text">Audit store (WAL)</text>
+
+  <!-- ops strip -->
+  <text x="70" y="1118" class="base-hint">Frontend</text>
+  <rect x="230" y="1090" width="1120" height="58" class="base-box" rx="10"/><text x="790" y="1126" text-anchor="middle" class="base-text">React console — security operations center, policy center, review workbench</text>
+  <rect x="1380" y="1090" width="620" height="58" class="base-box" rx="10"/><text x="1690" y="1126" text-anchor="middle" class="base-text">SafeHarness Admin UI (38308)</text>
+
+  <text x="70" y="1210" class="base-hint">Deploy</text>
+  <text x="230" y="1210" class="base-text">One-command local installer · Docker Compose · Nginx · AgentScope 2.0 runtime · FastAPI · Python 3.10+</text>
+
+  <!-- ============ right rail: governance ============ -->
+  <rect x="2290" y="30" width="400" height="1410" class="side-bg" rx="16"/>
+  <text x="2315" y="80" class="side-title">Security governance</text>
+  <text x="2315" y="112" class="sec-sub">spans every layer</text>
+  <rect x="2315" y="140" width="350" height="58" class="side-item" rx="10"/><text x="2490" y="176" text-anchor="middle" class="side-item-text">Audit chain + redaction</text>
+  <rect x="2315" y="215" width="350" height="58" class="side-item" rx="10"/><text x="2490" y="251" text-anchor="middle" class="side-item-text">Policy versioning + rollback</text>
+  <rect x="2315" y="290" width="350" height="58" class="side-item" rx="10"/><text x="2490" y="326" text-anchor="middle" class="side-item-text">Human review queue</text>
+  <rect x="2315" y="365" width="350" height="58" class="side-item" rx="10"/><text x="2490" y="401" text-anchor="middle" class="side-item-text">Communication gateway</text>
+  <rect x="2315" y="440" width="350" height="58" class="side-item" rx="10"/><text x="2490" y="476" text-anchor="middle" class="side-item-text">Permission &amp; delegation</text>
+  <rect x="2315" y="515" width="350" height="58" class="side-item" rx="10"/><text x="2490" y="551" text-anchor="middle" class="side-item-text">Rate limit + delivery lease</text>
+  <rect x="2315" y="590" width="350" height="58" class="side-item" rx="10"/><text x="2490" y="626" text-anchor="middle" class="side-item-text">External gateway mgmt</text>
+  <rect x="2315" y="665" width="350" height="58" class="side-item" rx="10"/><text x="2490" y="701" text-anchor="middle" class="side-item-text">Redaction + throttling</text>
+
+  <!-- ledger note -->
+  <rect x="2315" y="760" width="350" height="120" class="ledger" rx="14"/>
+  <text x="2490" y="805" text-anchor="middle" class="ledger-text">Four-line audit loop:</text>
+  <text x="2490" y="840" text-anchor="middle" class="ledger-text">issue → inspect →</text>
+  <text x="2490" y="868" text-anchor="middle" class="ledger-text">dispatched → succeeded</text>
+
+  <!-- enforcement arrows from security layer into base -->
+  <path d="M 320 500 L 320 630" class="flow"/>
+  <text x="335" y="560" class="flow-label">message path</text>
+  <path d="M 880 500 L 880 720" class="flow"/>
+  <text x="895" y="590" class="flow-label">FSM planner guard</text>
+  <path d="M 1380 500 L 1380 810" class="flow"/>
+  <text x="1395" y="600" class="flow-label">tool / MCP path</text>
+  <path d="M 1900 500 L 1900 810" class="flow"/>
+  <text x="1915" y="600" class="flow-label">memory write gate</text>
+</svg>

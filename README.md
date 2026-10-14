@@ -11,9 +11,14 @@
   run code, and carry real tasks through to completion.
 </p>
 
-<p align="center">
-  <img src="./assets/poster.png" alt="Upear capability overview poster" width="100%" />
-</p>
+> **Provenance & scope.** Upear is built **on top of the
+> [HugAgentOS](https://github.com/ZJU-REAL/HugAgentOS) platform base**
+> (multi-agent chat, sessions, orchestration infrastructure). The
+> **SafeHarness security layer** — input defense, capability gate, tool
+> gateway with enforcement receipts, audit redaction, run supervision, the
+> policy center with AI-assisted rule drafting, and the MCP channel guard —
+> is **this repository's own extension** and is the main contribution here.
+> See [Acknowledgements](#acknowledgements).
 
 <p align="center">
   <a href="./README.md">English</a> ·
@@ -273,9 +278,10 @@ Upear separates user channels, agent workflows, reusable capability
 engines, ontology contracts, data governance, and infrastructure into clear
 layers. Action contracts connect the ontology layer to planning, validation,
 and gated execution, while security and platform governance span the complete
-stack.
+stack. The red layer in the diagram — the SafeHarness security layer — is
+**added by this repository** on top of the HugAgentOS base.
 
-![Upear layered architecture in English](./assets/sumc-architecture-en.svg)
+![Upear security-augmented architecture: the SafeHarness layer added by this repository on top of the platform base](./assets/upear-architecture-en.svg)
 
 > [!NOTE]
 > The diagram shows the complete Upear product architecture. Some
