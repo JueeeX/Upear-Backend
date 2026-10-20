@@ -4,6 +4,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
+from core.auth.backend import UserContext
 from fastapi import BackgroundTasks, HTTPException
 
 
@@ -74,7 +76,7 @@ def test_preview_file_returns_inline_pdf_for_powerpoint(monkeypatch, tmp_path):
         file_id="ppt_1",
         background_tasks=background_tasks,
         format="pdf",
-        user=None,
+        user=UserContext(user_id="u1", user_center_id="c", username="u"),
         db=object(),
     ))
 
@@ -97,7 +99,7 @@ def test_preview_file_rejects_non_powerpoint(monkeypatch):
             file_id="pdf_1",
             background_tasks=BackgroundTasks(),
             format="pdf",
-            user=None,
+            user=UserContext(user_id="u1", user_center_id="c", username="u"),
             db=object(),
         ))
 

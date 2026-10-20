@@ -54,3 +54,37 @@ def tenant_of(user_id: Optional[str]) -> str:
     except Exception as exc:  # noqa: BLE001
         logger.debug("[tenancy] resolution failed for %s: %s", user_id, exc)
         return DEFAULT_TENANT
+
+
+TENANT_QUOTA_CONFIG_KEY = "tenant_quota"
+
+
+def load_tenant_quota(tenant_id: Optional[str]) -> dict:
+    """This tenant's quota knobs, ``{}`` when absent or unreadable.
+
+    Fail-open by design: a quota system that errors closed would take the
+    product down with it. The config shape is
+    ``{"<tenant_id>": {"max_users": int, "daily_chat_runs_per_user": int}}``;
+    a missing key (or missing knob) means unlimited — the pre-M14 behaviour,
+    bit-identical.
+    """
+    if not tenant_id:
+        return {}
+    try:
+        import json
+
+        from core.db.engine import SessionLocal
+        from core.db.models import SystemConfig
+
+        with SessionLocal() as db:
+            row = db.get(SystemConfig, TENANT_QUOTA_CONFIG_KEY)
+            if row is None or not (row.config_value or "").strip():
+                return {}
+            payload = json.loads(row.config_value)
+            if not isinstance(payload, dict):
+                return {}
+            entry = payload.get(str(tenant_id))
+            return entry if isinstance(entry, dict) else {}
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[tenancy] quota load failed for %s: %s", tenant_id, exc)
+        return {}

@@ -31,6 +31,25 @@ class UserContext(BaseModel):
     username: str
     email: Optional[str] = None
     avatar_url: Optional[str] = None
+    # M14 unified tenant resolution: stamped by _with_tenant at the auth
+    # funnels via core.auth.tenancy.tenant_of (shadow metadata, "default" when
+    # undeclared). Consumers must read this instead of re-deriving a tenant.
+    tenant_id: str = "default"
+
+
+def _with_tenant(user: UserContext) -> UserContext:
+    """Stamp the resolved tenant onto a freshly built context.
+
+    tenancy.tenant_of opens its own session; one indexed PK read per
+    authenticated request is the cost of keeping the tenant out of the session
+    payload (which predates tenancy and stays as-is).
+    """
+    from core.auth.tenancy import tenant_of
+
+    try:
+        return user.model_copy(update={"tenant_id": tenant_of(user.user_id)})
+    except Exception:  # noqa: BLE001 — tenancy already degrades internally
+        return user
 
 
 def _sso_login_url() -> str:
@@ -154,12 +173,14 @@ def _resolve_api_key_context(token: Optional[str], db: Session) -> Optional[User
     user = resolve_api_key(db, token or "")
     if not user:
         return None
-    return UserContext(
-        user_id=user.user_id,
-        user_center_id=user.user_center_id or "",
-        username=user.username,
-        email=user.email,
-        avatar_url=user.avatar_url,
+    return _with_tenant(
+        UserContext(
+            user_id=user.user_id,
+            user_center_id=user.user_center_id or "",
+            username=user.username,
+            email=user.email,
+            avatar_url=user.avatar_url,
+        )
     )
 
 
@@ -199,12 +220,14 @@ async def _resolve_session_user(request: Request) -> Optional[UserContext]:
         return None
     user_data = await validate_session(token)
     if user_data:
-        return UserContext(
-            user_id=user_data["user_id"],
-            user_center_id=user_data.get("user_center_id", ""),
-            username=user_data.get("username", ""),
-            email=user_data.get("email"),
-            avatar_url=user_data.get("avatar_url"),
+        return _with_tenant(
+            UserContext(
+                user_id=user_data["user_id"],
+                user_center_id=user_data.get("user_center_id", ""),
+                username=user_data.get("username", ""),
+                email=user_data.get("email"),
+                avatar_url=user_data.get("avatar_url"),
+            )
         )
 
     # Cookie exists but Redis session expired → clear 401, do NOT fallback
@@ -239,7 +262,7 @@ async def get_current_user(
 
     bridge_user = resolve_bridge_user(request, db)
     if bridge_user is not None:
-        return bridge_user
+        return _with_tenant(bridge_user)
 
     # ── 1. Try Cookie session first (works in all modes) ──
     session_user = await _resolve_session_user(request)
@@ -304,12 +327,14 @@ async def get_current_user(
         }
     )
 
-    return UserContext(
-        user_id=user_shadow.user_id,
-        user_center_id=user_shadow.user_center_id,
-        username=user_shadow.username,
-        email=user_shadow.email,
-        avatar_url=user_shadow.avatar_url,
+    return _with_tenant(
+        UserContext(
+            user_id=user_shadow.user_id,
+            user_center_id=user_shadow.user_center_id,
+            username=user_shadow.username,
+            email=user_shadow.email,
+            avatar_url=user_shadow.avatar_url,
+        )
     )
 
 
@@ -338,7 +363,7 @@ def require_auth(required: bool = True):
             try:
                 session_user = await _resolve_session_user(request)
                 if session_user is not None:
-                    return session_user
+                    return session_user  # already tenant-stamped
             except HTTPException:
                 # Session cookie expired — for optional auth, return None
                 return None
@@ -380,12 +405,14 @@ def require_auth(required: bool = True):
                     avatar_url=user_info.get("avatar_url"),
                 )
 
-                return UserContext(
-                    user_id=user_shadow.user_id,
-                    user_center_id=user_shadow.user_center_id,
-                    username=user_shadow.username,
-                    email=user_shadow.email,
-                    avatar_url=user_shadow.avatar_url,
+                return _with_tenant(
+                    UserContext(
+                        user_id=user_shadow.user_id,
+                        user_center_id=user_shadow.user_center_id,
+                        username=user_shadow.username,
+                        email=user_shadow.email,
+                        avatar_url=user_shadow.avatar_url,
+                    )
                 )
             except AccountCapacityExceeded:
                 # Edition admission blocks must not degrade to anonymous access.

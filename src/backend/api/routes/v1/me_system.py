@@ -14,6 +14,7 @@ and remain exclusive to the EE system console.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from typing import Dict, List, Optional
 
@@ -150,3 +151,69 @@ async def test_personal_config(
     if group_key not in _TESTABLE_GROUPS:
         raise HTTPException(status_code=400, detail="该分组无可测试的外部服务")
     return success_response(data=await test_service_group(group_key))
+
+
+# ── Tenant quota (M14, phase 1) ───────────────────────────────────────────
+
+_TENANT_QUOTA_KEY = "tenant_quota"
+
+
+@router.get("/tenant-quota", summary="读取租户配额（管理面）")
+async def get_tenant_quota(_: str = Depends(require_system_settings)):
+    """``{"<tenant_id>": {"max_users": int, "daily_chat_runs_per_user": int}}``；缺席键 = 无限制。"""
+    from core.db.engine import SessionLocal
+    from core.db.models import SystemConfig
+
+    with SessionLocal() as db:
+        row = db.get(SystemConfig, _TENANT_QUOTA_KEY)
+    if row is None or not (row.config_value or "").strip():
+        return success_response(data={})
+    try:
+        payload = json.loads(row.config_value)
+    except json.JSONDecodeError:
+        payload = {}
+    return success_response(data=payload if isinstance(payload, dict) else {})
+
+
+@router.put("/tenant-quota", summary="写入租户配额（管理面；热生效，缺席键=无限制）")
+async def put_tenant_quota(body: Dict[str, dict], _: str = Depends(require_system_settings)):
+    """整体替换配额表。每租户仅认 ``max_users`` / ``daily_chat_runs_per_user`` 两个正整数旋钮。"""
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="body must be an object keyed by tenant_id")
+    cleaned: Dict[str, dict] = {}
+    for tenant_id, knobs in body.items():
+        tid = str(tenant_id or "").strip()
+        if not tid:
+            raise HTTPException(status_code=400, detail="tenant_id cannot be empty")
+        if not isinstance(knobs, dict):
+            raise HTTPException(status_code=400, detail=f"{tid}: knobs must be an object")
+        entry: Dict[str, int] = {}
+        for knob in ("max_users", "daily_chat_runs_per_user"):
+            if knob not in knobs or knobs[knob] is None:
+                continue
+            try:
+                value = int(knobs[knob])
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=400, detail=f"{tid}.{knob} 必须是整数")
+            if value < 0:
+                raise HTTPException(status_code=400, detail=f"{tid}.{knob} 不能为负")
+            entry[knob] = value
+        cleaned[tid] = entry
+
+    from core.db.engine import SessionLocal
+    from core.db.models import SystemConfig
+
+    with SessionLocal() as db:
+        row = db.get(SystemConfig, _TENANT_QUOTA_KEY)
+        if row is None:
+            row = SystemConfig(
+                config_key=_TENANT_QUOTA_KEY,
+                display_name="租户配额",
+                description="租户级账号与对话运行配额（M14）",
+                group_key="tenant_quota",
+                is_secret=False,
+            )
+            db.add(row)
+        row.config_value = json.dumps(cleaned, ensure_ascii=False)
+        db.commit()
+    return success_response(data=cleaned)

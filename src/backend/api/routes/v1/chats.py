@@ -919,13 +919,15 @@ async def _run_external_agent_turn(
     The bridge itself enforces the SafeHarness structural checks; a block comes
     back as an assistant-visible notice (and an audited deny), never as a crash.
     """
+    from core.auth.tenancy import tenant_of
     from core.external_agents import run_external_agent
     from core.external_agents.registry import ExternalAgentBlocked
 
     card = _external_agent_target(request, db)
     assert card is not None
     context = {
-        "tenant_id": "default",
+        # M14: the caller's resolved tenant — not the historical "default".
+        "tenant_id": tenant_of(db_user_id) if db_user_id else "default",
         "session_id": request.chat_id,
         "trace_id": request.chat_id,
         "user_id": db_user_id,
@@ -979,6 +981,42 @@ async def _run_external_agent_turn(
     )
 
 
+def _enforce_chat_run_quota(user, db: Session) -> None:
+    """Per-user daily chat-run quota, driven by the caller's tenant config (M14).
+
+    Fail-open: a tenant without a ``daily_chat_runs_per_user`` knob is
+    unlimited — the pre-M14 behaviour, bit-identical. Counted on
+    ``chat_runs.created_at`` (UTC day) before the run row exists, so a rejected
+    request consumes nothing.
+    """
+    from core.auth.tenancy import load_tenant_quota
+
+    quota = load_tenant_quota(getattr(user, "tenant_id", "") or "default")
+    try:
+        daily = int(quota.get("daily_chat_runs_per_user") or 0)
+    except (TypeError, ValueError):
+        daily = 0
+    if daily <= 0:
+        return
+    from core.db.models import ChatRun
+
+    day_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    used = (
+        db.query(ChatRun)
+        .filter(ChatRun.user_id == user.user_id, ChatRun.created_at >= day_start)
+        .count()
+    )
+    if used >= daily:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "code": 42901,
+                "message": f"今日对话次数已达配额上限（{daily}）",
+                "data": {},
+            },
+        )
+
+
 @router.post("/send", response_model=ChatResponse, summary="非流式聊天")
 async def chat_send(
     request: ChatRequest,
@@ -993,6 +1031,7 @@ async def chat_send(
     _ensure_main_model_configured()
     chat_service = ChatService(db)
     db_user_id = resolve_db_user_id(db, _authenticated_user_id(user))
+    _enforce_chat_run_quota(user, db)
     request, _agent_name, execution_message, explicit_subagent_command = (
         _resolve_chat_agent_targets(
             db,
@@ -1162,6 +1201,7 @@ async def chat_stream(
     _ensure_main_model_configured()
     chat_service = ChatService(db)
     db_user_id = resolve_db_user_id(db, _authenticated_user_id(user))
+    _enforce_chat_run_quota(user, db)
     request, _agent_name_stream, execution_message, explicit_subagent_command = (
         _resolve_chat_agent_targets(
             db,

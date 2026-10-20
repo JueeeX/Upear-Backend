@@ -1053,6 +1053,32 @@ async def get_all_memories(
     return []
 
 
+async def get_memory_owner(memory_id: str) -> Optional[str]:
+    """The user_id a memory belongs to, or None when it cannot be resolved.
+
+    Ownership verification for the single-entry management endpoints (M14): a
+    mem0 row carries the creating user's id in its payload, so the check is one
+    read. None is deliberately ambiguous (absent, disabled, or unreadable) —
+    callers must treat it as *not owned*, never as a wildcard.
+    """
+    if not memory_id:
+        return None
+    memory = _get_memory()
+    if memory is None:
+        return None
+    try:
+        loop = asyncio.get_running_loop()
+        row = await loop.run_in_executor(None, lambda: memory.get(memory_id))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[MemoryService] get memory owner failed: %s", type(exc).__name__)
+        return None
+    if isinstance(row, dict):
+        owner = row.get("user_id")
+        return str(owner) if owner else None
+    owner = getattr(row, "user_id", None)
+    return str(owner) if owner else None
+
+
 async def update_memory(memory_id: str, content: str) -> bool:
     """Rewrite one memory's text in place, keeping its id and metadata.
 

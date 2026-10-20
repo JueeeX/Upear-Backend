@@ -53,12 +53,18 @@ def persist_summary(message_id: str, summary: EvolutionSummary) -> bool:
         return False
 
 
-def load_summary(message_id: str) -> Optional[Dict[str, Any]]:
-    """Read back a persisted summary, for the settlement-query endpoint."""
+def load_summary(message_id: str, *, viewer_user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Read back a persisted summary, for the settlement-query endpoint.
+
+    ``viewer_user_id`` (M14): when given, the message's owning session must
+    belong to the viewer — a mismatch returns None, which the endpoint renders
+    as the pending shape. A turn that is not yours is indistinguishable from
+    one that has not settled yet, and neither leaks its contents.
+    """
     if not message_id:
         return None
     try:
-        from core.db.models import ChatMessage
+        from core.db.models import ChatMessage, ChatSession
 
         with SessionLocal() as db:
             message = (
@@ -66,6 +72,10 @@ def load_summary(message_id: str) -> Optional[Dict[str, Any]]:
             )
             if message is None:
                 return None
+            if viewer_user_id is not None:
+                session = db.get(ChatSession, message.chat_id)
+                if session is None or str(session.user_id or "") != str(viewer_user_id):
+                    return None
             return (message.extra_data or {}).get(METADATA_KEY)
     except Exception as exc:
         logger.warning("[evolution] loading summary failed for %s: %s", message_id, exc)

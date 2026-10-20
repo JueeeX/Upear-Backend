@@ -33,7 +33,7 @@ async def get_turn_settlement(
     polling for an outcome that legitimately does not exist yet, and a 404 would
     read as "this turn is gone".
     """
-    summary = load_summary(message_id)
+    summary = load_summary(message_id, viewer_user_id=user.user_id)
     if summary is None:
         return success_response(
             data={"message_id": message_id, "state": SETTLE_PENDING, "mechanisms": []}

@@ -30,7 +30,13 @@ from core.memory.graph import delete_graph_relation, list_graph_relations
 from core.memory.profile import delete_field as profile_delete_field
 from core.memory.profile import get as profile_get
 from core.memory.profile import upsert_field as profile_upsert_field
-from core.memory.service import delete_all_memories, delete_memory, get_all_memories, update_memory
+from core.memory.service import (
+    delete_all_memories,
+    delete_memory,
+    get_all_memories,
+    get_memory_owner,
+    update_memory,
+)
 from core.services import UserService
 from core.services.memory_settings_service import MemorySettingsService
 from fastapi import APIRouter, Depends, Query
@@ -313,6 +319,10 @@ async def edit_memory(
     user: UserContext = Depends(get_current_user),
 ):
     """改写单条 L2 记忆的正文，保留其 id 与元数据。"""
+    owner = await get_memory_owner(memory_id)
+    if owner != str(user.user_id):
+        # M14: not-owned (or unresolvable) must be indistinguishable from absent.
+        return error_response(code=40001, message="记忆不存在", status_code=404)
     ok = await update_memory(memory_id, body.text)
     if not ok:
         return error_response(code=50003, message="修改失败", status_code=500)
@@ -330,6 +340,9 @@ async def remove_memory(
     user: UserContext = Depends(get_current_user),
 ):
     """删除单条记忆。"""
+    owner = await get_memory_owner(memory_id)
+    if owner != str(user.user_id):
+        return error_response(code=40001, message="记忆不存在", status_code=404)
     ok = await delete_memory(memory_id)
     if not ok:
         return error_response(code=50001, message="删除失败", status_code=500)

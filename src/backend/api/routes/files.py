@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from core.artifacts.store import get_artifact
-from core.auth.backend import UserContext, require_auth
+from core.auth.backend import UserContext, get_current_user, require_auth
 from core.content.office import find_libreoffice_binary
 from core.db.engine import get_db
 from core.db.repository import AuditLogRepository
@@ -95,7 +95,9 @@ def _authorize_access(
 ) -> None:
     metadata = item.get("metadata") or {}
     if not user:
-        return
+        # M14 hardening: artifact download/preview requires an authenticated
+        # caller — an anonymous request must never skip the ownership check.
+        raise HTTPException(status_code=401, detail="Authentication required")
     if can_access_artifact_metadata(db, str(user.user_id), metadata):
         return
 
@@ -264,7 +266,7 @@ async def download_file(
     inline: bool = Query(
         False, description="If true, serve for inline display (Content-Disposition: inline)"
     ),
-    user: Optional[UserContext] = Depends(require_auth(required=False)),
+    user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -376,7 +378,7 @@ async def preview_file(
     file_id: str,
     background_tasks: BackgroundTasks,
     format: str = Query("pdf", description="Preview format, currently only pdf is supported"),
-    user: Optional[UserContext] = Depends(require_auth(required=False)),
+    user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """将 Office 文件（PPT/PPTX/DOC/DOCX）经 LibreOffice 转为可在浏览器内联预览的 PDF。
