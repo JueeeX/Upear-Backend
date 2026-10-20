@@ -221,6 +221,8 @@ async def run_external_agent(
 
     reply = result.reply
     review_status = "not_reviewed"
+    output_guard: dict[str, Any] | None = None
+    output_blocked = False
     if result.interventions:
         # Graded escalation: review whatever the run produced before degrading
         # the reply to the structured notice (fail-closed on judge errors).
@@ -231,6 +233,17 @@ async def run_external_agent(
         review_status = f"{gate.judge_status}:{gate.reason_code}"
         reply = supervision_notice(result.interventions[-1], reviewed=gate.reason_code)
         await _record_supervision(context, card, result, gate)
+    else:
+        # Output-side guard (env-gated, default off): review the clean path
+        # only — the supervision branch above already judges its own target.
+        from core.external_agents.output_guard import review_output
+
+        output_guard = await review_output(reply, context=context)
+        output_blocked = bool(output_guard and output_guard["action"] == "blocked")
+        if output_guard and output_guard["action"] in ("warn", "blocked"):
+            await _record_blocked_output(context, card, output_guard)
+        if output_blocked:
+            reply = output_guard["notice"]
 
     # Long-term memory write-back: only genuine (non-intervened) replies are
     # persisted, fire-and-forget, budgeted and gated like the read path.
@@ -241,6 +254,7 @@ async def run_external_agent(
         and long_term_status in ("retrieved", "empty")
         and reply
         and not result.halted
+        and not output_blocked
     ):
         try:
             from core.config.settings import settings
@@ -281,6 +295,18 @@ async def run_external_agent(
                 "halted": result.halted,
                 "review": review_status,
             } if result.interventions else {"interventions": [], "halted": False},
+            **(
+                {
+                    "output_guard": {
+                        "mode": output_guard["mode"],
+                        "reason_code": output_guard["reason_code"],
+                        "review": output_guard["review"],
+                        "action": output_guard["action"],
+                    }
+                }
+                if output_guard
+                else {}
+            ),
             "duration_ms": result.duration_ms or duration_ms,
             "run_id": run_id,
         },
@@ -339,6 +365,58 @@ async def _record_supervision(
         await build_audit_sink().write(AuditRecord("decision", event, decision=decision))
     except Exception as exc:  # noqa: BLE001 — audit noise never breaks the run
         logger.warning("[external-agents] supervision audit write failed: %s", type(exc).__name__)
+
+
+async def _record_blocked_output(
+    context: dict[str, str],
+    card: ExternalAgentCard,
+    guard: dict[str, Any],
+) -> None:
+    """Audit a failed output-side review (deny — warn annotates, enforce replaces)."""
+    try:
+        from safeharness.api.decisions import Decision, Disposition, Reason
+        from safeharness.api.events import EventKind, EventMeta, SecurityEvent
+        from safeharness.ports import AuditRecord
+
+        from core.safeharness_audit import build_audit_sink
+
+        meta = EventMeta(
+            tenant_id=str(context.get("tenant_id") or ""),
+            session_id=str(context.get("session_id") or ""),
+            run_id=str(context.get("run_id") or ""),
+            agent_id=str(context.get("agent_id") or ""),
+            sequence=1,
+            framework="sumc-external-agents",
+            trace_id=str(context.get("trace_id") or ""),
+        )
+        event = SecurityEvent(
+            kind=EventKind.FINAL_OUTPUT_PROPOSED,
+            meta=meta,
+            payload={
+                "source": "external_agent_output",
+                "framework": card.framework,
+                "reason_code": guard.get("reason_code") or "",
+                "review": guard.get("review") or "",
+                "mode": guard.get("mode") or "",
+                "action": guard.get("action") or "",
+                "redacted": True,
+            },
+        )
+        decision = Decision(
+            disposition=Disposition.DENY,
+            effective_event=event,
+            reasons=(
+                Reason(
+                    "external_agent_output_blocked",
+                    "Output-side review did not pass; warn mode annotates, enforce mode replaces the reply.",
+                    "safeharness.external-agents.output-guard",
+                ),
+            ),
+            policy_version="safeharness.default.v1",
+        )
+        await build_audit_sink().write(AuditRecord("decision", event, decision=decision))
+    except Exception as exc:  # noqa: BLE001 — audit noise never breaks the run
+        logger.warning("[external-agents] output-guard audit write failed: %s", type(exc).__name__)
 
 
 async def _record_run(context: dict[str, str], card: ExternalAgentCard, result: RunnerResult) -> None:
