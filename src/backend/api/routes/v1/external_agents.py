@@ -3,8 +3,9 @@
 The frameworks (smolagents / openai-agents / autogen) execute their own agent
 loops with the platform's main model provider. Inbound messages pass the
 SafeHarness structural checks first; blocks are audited like protected-chat
-blocks. This surface is read/run only — it never registers anything into the
-agent catalog or the evolution loop.
+blocks. The catalog is builtin cards plus operator-registered custom cards
+(data, not code — the framework stays whitelist-bound to the code-side
+runners); registration never touches the evolution loop.
 """
 
 from typing import Optional
@@ -25,22 +26,39 @@ from core.external_agents.model_settings import (
     set_agent_model,
     set_default_model,
 )
-from core.external_agents.registry import CATALOG, ExternalAgentBlocked
+from core.external_agents.registry import ExternalAgentBlocked
 
 router = APIRouter(prefix="/v1/external-agents", tags=["External Agents"])
 
 
-@router.get("", summary="列出外部智能体（真实第三方框架接入）及其 AgentCard 与模型设置")
+def _lookup_card(db: Session, agent_id: str):
+    """One card from the merged catalog (builtin + registered custom)."""
+    from core.external_agents.custom_registry import lookup_agent
+
+    card = lookup_agent(db, agent_id)
+    if card is None:
+        raise BadRequestError(f"未知外部智能体: {agent_id}")
+    return card
+
+
+def _catalog_has(db: Session, agent_id: str) -> bool:
+    from core.external_agents.custom_registry import lookup_agent
+
+    return lookup_agent(db, agent_id) is not None
+
+
+@router.get("", summary="列出外部智能体（内置 + 注册的自定义）及其 AgentCard 与模型设置")
 async def list_external_agents(user: UserContext = Depends(get_current_user), db: Session = Depends(get_db)):
-    catalog = available_external_agents()
+    catalog = available_external_agents(db)
     settings = get_model_settings(db)
 
     from core.external_agents.cards import get_card
-    from core.external_agents.registry import CATALOG as _CATALOG
+    from core.external_agents.custom_registry import merged_catalog
 
+    merged = merged_catalog(db)
     cards = {
-        agent_id: get_card(db, agent_id, _CATALOG[agent_id])
-        for agent_id in _CATALOG
+        agent_id: get_card(db, agent_id, merged[agent_id])
+        for agent_id in merged
     }
     return success_response(data={**catalog, "cards": cards, "model_settings": settings})
 
@@ -51,11 +69,10 @@ async def get_external_agent_card(
     user: UserContext = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if agent_id not in CATALOG:
-        raise BadRequestError(f"未知外部智能体: {agent_id}")
+    card = _lookup_card(db, agent_id)
     from core.external_agents.cards import get_card
 
-    return success_response(data=get_card(db, agent_id, CATALOG[agent_id]))
+    return success_response(data=get_card(db, agent_id, card))
 
 
 class SupervisionConfigRequest(BaseModel):
@@ -110,7 +127,7 @@ async def put_external_agent_card(
     _: str = Depends(require_system_settings),
     db: Session = Depends(get_db),
 ):
-    if agent_id not in CATALOG:
+    if not _catalog_has(db, agent_id):
         raise BadRequestError(f"未知外部智能体: {agent_id}")
     from core.external_agents.cards import save_card
 
@@ -143,7 +160,7 @@ async def put_model_setting(
     _: str = Depends(require_system_settings),
     db: Session = Depends(get_db),
 ):
-    if body.scope != "default" and body.scope not in CATALOG:
+    if body.scope != "default" and not _catalog_has(db, body.scope):
         raise BadRequestError(f"未知外部智能体: {body.scope}")
     try:
         if body.scope == "default":
@@ -183,8 +200,9 @@ async def run_agent(
     agent_id: str,
     body: ExternalAgentRunRequest,
     user: UserContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    if agent_id not in CATALOG:
+    if not _catalog_has(db, agent_id):
         raise BadRequestError(f"未知外部智能体: {agent_id}")
     context = {
         "tenant_id": getattr(user, "tenant_id", "") or "default",
@@ -199,6 +217,76 @@ async def run_agent(
             f"SafeHarness 已拦截该请求（{exc.reason_code}）；外部智能体未执行。"
         )
     return success_response(data=data)
+
+
+class RegisterAgentRequest(BaseModel):
+    agent_id: str = Field(..., min_length=3, max_length=63, description="小写字母开头的 3-63 位小写字母/数字/连字符")
+    name: str = Field(..., min_length=1, max_length=64)
+    framework: str = Field(..., min_length=1, max_length=32, description="受支持的框架名（代码侧白名单）")
+    project: str = Field("", max_length=200, description="来源项目（可选）")
+    description: str = Field(..., min_length=1, max_length=500)
+
+
+class UpdateAgentRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=64)
+    framework: Optional[str] = Field(None, min_length=1, max_length=32)
+    project: Optional[str] = Field(None, max_length=200)
+    description: Optional[str] = Field(None, min_length=1, max_length=500)
+    enabled: Optional[bool] = Field(None, description="停用后从有效目录剔除（不删记录）")
+
+
+@router.post("", summary="注册自定义外部智能体（管理面；卡片是数据，framework 限代码侧白名单）")
+async def register_external_agent(
+    body: RegisterAgentRequest,
+    actor: str = Depends(require_system_settings),
+    db: Session = Depends(get_db),
+):
+    from core.external_agents.custom_registry import CustomAgentError, register_custom
+
+    try:
+        record = register_custom(
+            db,
+            agent_id=body.agent_id,
+            name=body.name,
+            framework=body.framework,
+            project=body.project,
+            description=body.description,
+            actor=actor,
+        )
+    except CustomAgentError as exc:
+        raise BadRequestError(str(exc))
+    return success_response(data=record)
+
+
+@router.put("/{agent_id}", summary="更新自定义外部智能体（管理面；内置不可改）")
+async def update_external_agent(
+    agent_id: str,
+    body: UpdateAgentRequest,
+    actor: str = Depends(require_system_settings),
+    db: Session = Depends(get_db),
+):
+    from core.external_agents.custom_registry import CustomAgentError, update_custom
+
+    try:
+        record = update_custom(db, agent_id, body.model_dump(exclude_none=True), actor=actor)
+    except CustomAgentError as exc:
+        raise BadRequestError(str(exc))
+    return success_response(data=record)
+
+
+@router.delete("/{agent_id}", summary="删除自定义外部智能体（管理面；内置不可删，连同卡面/模型覆盖残行清理）")
+async def delete_external_agent(
+    agent_id: str,
+    actor: str = Depends(require_system_settings),
+    db: Session = Depends(get_db),
+):
+    from core.external_agents.custom_registry import CustomAgentError, delete_custom
+
+    try:
+        delete_custom(db, agent_id)
+    except CustomAgentError as exc:
+        raise BadRequestError(str(exc))
+    return success_response(data={"deleted": agent_id})
 
 
 __all__ = ["router"]

@@ -510,13 +510,15 @@ def _resolve_chat_agent_targets(
         disabled_agent_ids=disabled_ids,
     )
 
-    # External framework agents (ext-*) are platform-level targets: always
-    # selectable, executed by the external bridge rather than the sub-agent
-    # factory. They resolve before the delegate list because they are not
-    # UserAgent rows. Only a persistent agent_id conversation (or an explicit
-    # @mention) reaches them — same rule as native sub-agents.
-    from core.external_agents.registry import CATALOG as _EXTERNAL_CATALOG
+    # External framework agents (builtin + operator-registered custom cards)
+    # are platform-level targets: always selectable, executed by the external
+    # bridge rather than the sub-agent factory. They resolve before the
+    # delegate list because they are not UserAgent rows. Only a persistent
+    # agent_id conversation (or an explicit @mention) reaches them — same rule
+    # as native sub-agents.
+    from core.external_agents.custom_registry import merged_catalog
 
+    _EXTERNAL_CATALOG = merged_catalog(db)
     if request.agent_id in _EXTERNAL_CATALOG:
         return request, _EXTERNAL_CATALOG[request.agent_id].name, request.message, None
     if request.mention_agent_id in _EXTERNAL_CATALOG:
@@ -885,15 +887,22 @@ def _load_session_messages(
     return messages
 
 
-def _external_agent_target(request: ChatRequest):
-    """The external framework agent this turn targets, if any."""
-    from core.external_agents.registry import CATALOG as _EXTERNAL_CATALOG
+def _external_agent_target(request: ChatRequest, db: Session | None = None):
+    """The external framework agent this turn targets, if any (merged catalog)."""
+    from core.external_agents.registry import CATALOG as _BUILTIN_CATALOG
 
-    if request.agent_id in _EXTERNAL_CATALOG:
-        return _EXTERNAL_CATALOG[request.agent_id]
-    if request.mention_agent_id in _EXTERNAL_CATALOG:
-        return _EXTERNAL_CATALOG[request.mention_agent_id]
-    return None
+    def _pick(catalog):
+        if request.agent_id in catalog:
+            return catalog[request.agent_id]
+        if request.mention_agent_id in catalog:
+            return catalog[request.mention_agent_id]
+        return None
+
+    if db is not None:
+        from core.external_agents.custom_registry import merged_catalog
+
+        return _pick(merged_catalog(db))
+    return _pick(_BUILTIN_CATALOG)
 
 
 async def _run_external_agent_turn(
@@ -903,6 +912,7 @@ async def _run_external_agent_turn(
     actual_model_name: Optional[str],
     *,
     db_user_id: str = "",
+    db: Session | None = None,
 ) -> ChatResponse:
     """Execute one turn through the external bridge and persist the reply.
 
@@ -912,7 +922,7 @@ async def _run_external_agent_turn(
     from core.external_agents import run_external_agent
     from core.external_agents.registry import ExternalAgentBlocked
 
-    card = _external_agent_target(request)
+    card = _external_agent_target(request, db)
     assert card is not None
     context = {
         "tenant_id": "default",
@@ -1056,10 +1066,10 @@ async def chat_send(
             extra_data=_build_user_extra_data(request, selected_model_provider_id),
         )
 
-        if _external_agent_target(request) is not None:
+        if _external_agent_target(request, db) is not None:
             return await _run_external_agent_turn(
                 request, chat_service, effective_user_message, actual_model_name,
-                db_user_id=db_user_id,
+                db_user_id=db_user_id, db=db,
             )
 
         _user_settings = UserService(db).get_user_settings(db_user_id)
@@ -1263,11 +1273,11 @@ async def chat_stream(
         extra_data=_build_user_extra_data(request, selected_model_provider_id),
     )
 
-    if _external_agent_target(request) is not None:
+    if _external_agent_target(request, db) is not None:
         async def _external_stream():
             result = await _run_external_agent_turn(
                 request, chat_service, effective_user_message, actual_model_name,
-                db_user_id=db_user_id,
+                db_user_id=db_user_id, db=db,
             )
             text_frame = json.dumps(
                 {"type": "text", "content": result.response}, ensure_ascii=False

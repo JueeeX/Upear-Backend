@@ -81,8 +81,12 @@ CATALOG: dict[str, ExternalAgentCard] = {
 }
 
 
-def available_external_agents() -> dict[str, Any]:
-    """Catalog + per-framework availability (import probe, no side effects)."""
+def available_external_agents(db=None) -> dict[str, Any]:
+    """Catalog + per-framework availability (import probe, no side effects).
+
+    With a DB session the builtin CATALOG is merged with operator-registered
+    custom cards (hot-read); without one only builtin entries are listed.
+    """
     import importlib.util
 
     modules = {
@@ -90,11 +94,16 @@ def available_external_agents() -> dict[str, Any]:
         "openai-agents": "agents",
         "autogen": "autogen_agentchat",
     }
+    catalog = CATALOG
+    if db is not None:
+        from core.external_agents.custom_registry import merged_catalog
+
+        catalog = merged_catalog(db)
     items = []
-    for card in CATALOG.values():
+    for agent_id, card in catalog.items():
         module = modules.get(card.framework, "")
         installed = importlib.util.find_spec(module) is not None if module else False
-        items.append({**card.public, "available": installed})
+        items.append({**card.public, "available": installed, "custom": agent_id not in CATALOG})
     return {"agents": items}
 
 
@@ -143,7 +152,14 @@ async def run_external_agent(
     """Guarded dispatch: SafeHarness structural check → framework run → audit."""
     card = CATALOG.get(agent_id)
     if card is None:
-        raise KeyError(agent_id)
+        # Custom (operator-registered) card — fresh DB read, hot-effective.
+        from core.db.engine import SessionLocal
+        from core.external_agents.custom_registry import lookup_agent
+
+        with SessionLocal() as custom_db:
+            card = lookup_agent(custom_db, agent_id)
+        if card is None:
+            raise KeyError(agent_id)
     context = context or {}
     run_id = context.get("run_id") or f"ext-{uuid4().hex[:12]}"
     context = {**context, "run_id": run_id, "agent_id": card.agent_id}

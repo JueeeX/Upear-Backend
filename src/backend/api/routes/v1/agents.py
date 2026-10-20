@@ -74,12 +74,14 @@ async def list_agents(
     db: Session = Depends(get_db),
 ):
     items = UserAgentService(db).list_for_user(user.user_id)
-    # External framework agents (ext-*) are platform-level, read-only entries:
-    # selectable in the chat @ menu, executed by the bridge, never editable
-    # through the UserAgent CRUD (their ids fail service lookups by design).
-    from core.external_agents.registry import CATALOG as external_catalog
+    # External framework agents (builtin + operator-registered custom cards)
+    # are platform-level, read-only entries: selectable in the chat @ menu,
+    # executed by the bridge, never editable through the UserAgent CRUD (their
+    # ids fail service lookups by design).
+    from core.external_agents.custom_registry import merged_catalog
+    from core.external_agents.registry import CATALOG as builtin_catalog
 
-    for agent_id, card in external_catalog.items():
+    for agent_id, card in merged_catalog(db).items():
         items.append(
             {
                 "agent_id": agent_id,
@@ -105,6 +107,7 @@ async def list_agents(
                 "source_market_slug": None,
                 "ontology_tags": [],
                 "external": True,
+                "custom": agent_id not in builtin_catalog,
                 "framework": card.framework,
                 "project": card.project,
             }
