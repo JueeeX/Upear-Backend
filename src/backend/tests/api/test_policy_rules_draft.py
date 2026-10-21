@@ -5,6 +5,8 @@ touched by this endpoint), deterministic validation of the LLM output, and
 sample self-testing. The LLM call itself is mocked — no network in tests.
 """
 
+import json
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -57,13 +59,13 @@ def client():
         app.dependency_overrides.pop(get_db, None)
 
 
-def _mock_llm(monkeypatch, rules=None, exc=None, model="test-model"):
+def _mock_llm(monkeypatch, rules=None, exc=None, model="test-model", chains=None):
     from api.routes.v1 import safeharness as routes
 
     async def fake(description, samples):
         if exc is not None:
             raise exc
-        return rules, model
+        return rules, chains or [], model
 
     monkeypatch.setattr(routes, "_draft_rules_via_llm", fake)
 
@@ -158,3 +160,102 @@ def test_draft_sample_results_report_misses(client, monkeypatch):
     data = res.json()["data"]
     hits = {r["text"]: r["hit"] for r in data["sample_results"]}
     assert hits == {"clean text": False, "contains x_marker_xyz inside": True}
+
+
+# ── P1.3: chain drafting + attack-corpus regression preview ───────────────
+
+_VALID_CHAIN = {
+    "name": "chain_read_then_send",
+    "first": "query_db.*",
+    "then": "http_post.*",
+    "max_gap": 2,
+    "severity": "critical",
+    "reason": "先查库后外发",
+}
+
+
+def test_draft_with_chains_validated_not_applied(client, monkeypatch):
+    _mock_llm(monkeypatch, rules=[_VALID_RULE], chains=[_VALID_CHAIN])
+    res = client.post(
+        "/v1/safeharness/policy-rules/draft",
+        json={"description": "先查库再外发的场景"},
+    )
+    assert res.status_code == 200
+    data = res.json()["data"]
+    assert data["validation_errors"] == []
+    assert data["chain_draft"][0]["name"] == "chain_read_then_send"
+    assert runtime_rules() == ()
+    from safeharness.policies.rules_loader import runtime_chains
+
+    assert runtime_chains() == ()  # chains are draft-only too
+
+
+def test_draft_chain_errors_reported_rules_kept(client, monkeypatch):
+    broken = [{"name": "chain_broken", "first": "a.*", "then": "", "max_gap": 1, "severity": "high"}]
+    _mock_llm(monkeypatch, rules=[_VALID_RULE], chains=broken)
+    res = client.post(
+        "/v1/safeharness/policy-rules/draft",
+        json={"description": "链缺端点条件"},
+    )
+    assert res.status_code == 200
+    data = res.json()["data"]
+    assert any("then" in e for e in data["validation_errors"])
+    assert data["draft"]  # the valid rule half survives
+
+
+def test_draft_without_chains_keeps_legacy_shape(client, monkeypatch):
+    _mock_llm(monkeypatch, rules=[_VALID_RULE])
+    res = client.post("/v1/safeharness/policy-rules/draft", json={"description": "无链场景"})
+    data = res.json()["data"]
+    assert data["chain_draft"] == []
+    assert set(data) >= {"draft", "chain_draft", "validation_errors", "sample_results", "regression", "model", "notice"}
+
+
+def test_draft_regression_preview_numbers(client, monkeypatch, tmp_path):
+    # A tiny corpus: one attack the draft catches, one it does not.
+    suites = tmp_path / "suites"
+    suites.mkdir()
+    (suites / "demo.json").write_text(
+        json.dumps(
+            {
+                "name": "demo-suite",
+                "description": "t",
+                "attacks": [
+                    {"id": "a1", "severity": "high", "text": "see x_marker_xyz here"},
+                    {"id": "a2", "severity": "high", "text": "totally innocent text"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SAFEHARNESS_ATTACK_SUITES_DIR", str(suites))
+    _mock_llm(monkeypatch, rules=[_VALID_RULE])
+    res = client.post("/v1/safeharness/policy-rules/draft", json={"description": "标记拦截"})
+    data = res.json()["data"]
+    regression = data["regression"]
+    assert regression is not None
+    assert regression["total"] == 2
+    assert regression["draft_caught"] == 1
+    assert regression["escapes"] == ["demo-suite/a2"]
+    assert regression["per_rule"] == [{"name": "block_x_marker", "fired": 1}]
+
+
+def test_draft_regression_absent_when_suites_missing(client, monkeypatch):
+    monkeypatch.setenv("SAFEHARNESS_ATTACK_SUITES_DIR", "Z:/definitely/missing/suites")
+    _mock_llm(monkeypatch, rules=[_VALID_RULE])
+    res = client.post("/v1/safeharness/policy-rules/draft", json={"description": "无套件"})
+    data = res.json()["data"]
+    assert data["regression"] is None
+    assert "攻击集回归不可用" in data["notice"]
+
+
+def test_draft_regression_absent_when_validation_failed(client, monkeypatch):
+    duplicated = [
+        {**_VALID_RULE, "name": "dup", "pattern": "a"},
+        {**_VALID_RULE, "name": "dup", "pattern": "b"},
+    ]
+    _mock_llm(monkeypatch, rules=duplicated)
+    res = client.post("/v1/safeharness/policy-rules/draft", json={"description": "校验失败"})
+    data = res.json()["data"]
+    assert data["validation_errors"]
+    assert data["regression"] is None

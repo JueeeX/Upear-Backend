@@ -1417,6 +1417,89 @@ async def rollback_policy_rules_endpoint(
     return success_response(data=state.to_dict(), trace_id=_current_trace_id())
 
 
+def _attack_suites_dir() -> FilePath | None:
+    """The agentprobe attack-suite corpus, or None when unavailable."""
+    env_dir = os.environ.get("SAFEHARNESS_ATTACK_SUITES_DIR", "").strip()
+    if env_dir:
+        path = FilePath(env_dir)
+        return path if path.is_dir() else None
+    for parent in FilePath(__file__).resolve().parents:
+        candidate = parent / "tools" / "agentprobe" / "suites"
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def _load_attack_corpus(suites_dir: FilePath) -> list[dict]:
+    corpus: list[dict] = []
+    for path in sorted(suites_dir.glob("*.json")):
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 — a broken suite file is skipped
+            continue
+        suite = str(doc.get("name") or path.stem)
+        for attack in doc.get("attacks") or []:
+            if isinstance(attack, dict) and isinstance(attack.get("text"), str) and attack["text"].strip():
+                corpus.append(
+                    {"suite": suite, "id": str(attack.get("id") or ""), "text": attack["text"]}
+                )
+    return corpus
+
+
+def _regression_preview(rules: list) -> dict | None:
+    """rule_tester-semantics regression of one draft over the attack corpus.
+
+    Pure regex-layer numbers (baseline = built-in patterns only; draft =
+    built-in + drafted patterns). Returns None when the corpus directory is
+    unavailable — never raises.
+    """
+    suites_dir = _attack_suites_dir()
+    if suites_dir is None:
+        return None
+    corpus = _load_attack_corpus(suites_dir)
+    if not corpus:
+        return None
+    try:
+        from safeharness.policies.inform import InformPolicy, _DEFAULT_PATTERNS
+
+        baseline_policy = InformPolicy()
+        draft_patterns = tuple(
+            str(rule.get("pattern", ""))
+            for rule in rules
+            if isinstance(rule.get("pattern"), str)
+        )
+        augmented_policy = InformPolicy(patterns=tuple(_DEFAULT_PATTERNS) + draft_patterns)
+    except Exception:  # noqa: BLE001
+        return None
+
+    per_rule = {str(rule.get("name", "")): 0 for rule in rules}
+    total = baseline_caught = draft_caught = 0
+    escapes: list[str] = []
+    for attack in corpus:
+        text = attack["text"]
+        total += 1
+        _, base_hit, _ = baseline_policy._sanitize_value(text)
+        _, aug_hit, _ = augmented_policy._sanitize_value(text)
+        baseline_caught += bool(base_hit)
+        draft_caught += bool(aug_hit)
+        if not aug_hit:
+            escapes.append(f"{attack['suite']}/{attack['id']}")
+        for rule in rules:
+            try:
+                if re.search(str(rule.get("pattern", "")), text, re.IGNORECASE):
+                    name = str(rule.get("name", ""))
+                    per_rule[name] = per_rule.get(name, 0) + 1
+            except re.error:
+                continue
+    return {
+        "total": total,
+        "baseline_caught": baseline_caught,
+        "draft_caught": draft_caught,
+        "escapes": escapes,
+        "per_rule": [{"name": name, "fired": fired} for name, fired in per_rule.items()],
+    }
+
+
 class PolicyRulesDraftRequest(BaseModel):
     description: str = Field(..., min_length=1, max_length=2000)
     sample_texts: list[str] = Field(default_factory=list, max_length=5)
@@ -1428,13 +1511,23 @@ class PolicyRulesDraftRequest(BaseModel):
 # the human PUT gate, not in prompt length.
 _DRAFT_RULES_SYSTEM_PROMPT = (
     '你是注入检测规则起草助手。只输出 JSON：{"rules":[{"name":"snake_case",'
-    '"pattern":"正则","severity":"high","category":"demo","reason":"中文理由","action":"deny"}]}。'
+    '"pattern":"正则","severity":"high","category":"demo","reason":"中文理由","action":"deny"}],'
+    '"chains":[{"name":"snake_case","first":"工具名正则","then":"工具名正则","max_gap":2,'
+    '"severity":"critical","reason":"中文理由"}]}。'
     "pattern 为 Python re（系统统一 IGNORECASE，勿加标志），要具体、覆盖中英文变体、避免灾难性回溯；"
-    "最多 3 条；name 唯一；action 只能 deny；reason 一句话。"
+    "rules 最多 3 条；name 唯一；action 只能 deny；reason 一句话。"
+    "chains 描述两步工具序列风险（先 first 后 then，跨 max_gap 步内）；最多 2 条；"
+    "没有序列风险就整个省略 chains 键。"
 )
 
 
-def _extract_draft_rules(raw: str) -> list:
+def _extract_draft(raw: str) -> tuple[list, list]:
+    """Split one LLM response into (deny rules, chain rules).
+
+    Chains are optional (P1.3): a response with only ``rules`` keeps working.
+    Both halves still go through deterministic server-side validation after
+    extraction — this function only enforces the cheap shape limits.
+    """
     import json as _json
 
     from core.llm.message_compat import strip_thinking
@@ -1449,7 +1542,9 @@ def _extract_draft_rules(raw: str) -> list:
         if start < 0 or end <= start:
             raise ValueError("模型响应中找不到 JSON 对象")
         parsed = _json.loads(text[start : end + 1])
+    chains_raw = None
     if isinstance(parsed, dict):
+        chains_raw = parsed.get("chains")
         parsed = parsed.get("rules")
     if not isinstance(parsed, list) or not parsed:
         raise ValueError("模型响应缺少非空 rules 数组")
@@ -1459,14 +1554,23 @@ def _extract_draft_rules(raw: str) -> list:
     for item in rules:
         if isinstance(item.get("pattern"), str) and len(item["pattern"]) > 500:
             raise ValueError("存在超过 500 字符的 pattern，已拒绝整份草稿")
-    return rules
+    chains: list = []
+    if isinstance(chains_raw, list):
+        chains = [item for item in chains_raw if isinstance(item, dict)][:10]
+    for item in chains:
+        for key in ("first", "then"):
+            value = item.get(key)
+            if isinstance(value, str) and len(value) > 500:
+                raise ValueError("存在超过 500 字符的链端点正则，已拒绝整份草稿")
+    return rules, chains
 
 
-async def _draft_rules_via_llm(description: str, sample_texts: list) -> tuple[list, str]:
-    """One LLM call producing draft rules. Returns (rules, model_name).
+async def _draft_rules_via_llm(description: str, sample_texts: list) -> tuple[list, list, str]:
+    """One LLM call producing draft rules (+ optional chain rules).
 
-    Never persists or hot-applies anything — the returned list is a draft for
-    the admin to review and apply through the existing PUT flow.
+    Returns (rules, chains, model_name). Never persists or hot-applies
+    anything — the returned drafts are for the admin to review and apply
+    through the existing PUT flow.
     """
     from core.services.model_config import ModelConfigService
 
@@ -1505,7 +1609,8 @@ async def _draft_rules_via_llm(description: str, sample_texts: list) -> tuple[li
         raw = data["choices"][0]["message"]["content"] or ""
     except (KeyError, IndexError, TypeError) as exc:
         raise RuntimeError("模型响应结构异常") from exc
-    return _extract_draft_rules(raw), cfg.model_name
+    rules, chains = _extract_draft(raw)
+    return rules, chains, cfg.model_name
 
 
 @router.post(
@@ -1516,12 +1621,12 @@ async def draft_policy_rules_endpoint(
     request: Request,
     _actor: str = Depends(require_system_settings),
 ):
-    from safeharness.policies.rules_loader import validate_rule_dicts
+    from safeharness.policies.rules_loader import validate_chain_dicts, validate_rule_dicts
 
     body = await _read_json_model(request, PolicyRulesDraftRequest)
     samples = [s.strip()[:500] for s in body.sample_texts if isinstance(s, str) and s.strip()][:5]
     try:
-        draft, model_name = await _draft_rules_via_llm(body.description, samples)
+        draft, chain_draft, model_name = await _draft_rules_via_llm(body.description, samples)
     except (RuntimeError, ValueError, httpx.HTTPError) as exc:
         return error_response(
             code=502,
@@ -1530,7 +1635,7 @@ async def draft_policy_rules_endpoint(
             status_code=502,
             trace_id=_current_trace_id(),
         )
-    validation_errors = validate_rule_dicts(draft)
+    validation_errors = validate_rule_dicts(draft) + validate_chain_dicts(chain_draft)
     sample_results = []
     if samples and not validation_errors:
         for text in samples:
@@ -1545,13 +1650,24 @@ async def draft_policy_rules_endpoint(
             sample_results.append(
                 {"text": text[:200], "hit": hit, "matched_rule": matched_rule}
             )
+    # P1.3: attack-corpus regression preview (pure regex-layer semantics).
+    # Skipped when validation failed — broken regexes cannot be fired.
+    regression = None
+    regression_notice = ""
+    if not validation_errors:
+        regression = _regression_preview(draft)
+        if regression is None:
+            regression_notice = " 攻击集回归不可用（套件目录缺失）。"
+
     return success_response(
         data={
             "draft": draft,
+            "chain_draft": chain_draft,
             "validation_errors": validation_errors,
             "sample_results": sample_results,
+            "regression": regression,
             "model": model_name,
-            "notice": "草稿未应用；确认后请通过保存（PUT）人工落地。",
+            "notice": "草稿未应用；确认后请通过保存（PUT）人工落地。" + regression_notice,
         },
         trace_id=_current_trace_id(),
     )
