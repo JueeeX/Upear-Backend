@@ -217,3 +217,73 @@ async def put_tenant_quota(body: Dict[str, dict], _: str = Depends(require_syste
         row.config_value = json.dumps(cleaned, ensure_ascii=False)
         db.commit()
     return success_response(data=cleaned)
+
+
+# ── Middleware overrides (P1.1, registry) ─────────────────────────────────
+
+
+@router.get("/middleware-config", summary="读取中间件装配视图（管理面）")
+async def get_middleware_config(_: str = Depends(require_system_settings)):
+    """每项 ``{name, level, enabled}``。security 级恒启用（注册表拒绝禁用）。"""
+    from core.llm.middleware_registry import (
+        DEFAULT_REGISTRY,
+        LEVEL_SECURITY,
+        load_disabled_names,
+    )
+
+    disabled = load_disabled_names()
+    return success_response(
+        data={
+            "items": [
+                {
+                    "name": spec.name,
+                    "level": spec.level,
+                    "enabled": spec.name not in disabled,
+                    "locked": spec.level == LEVEL_SECURITY,
+                }
+                for spec in DEFAULT_REGISTRY
+            ]
+        }
+    )
+
+
+@router.put("/middleware-config", summary="切换可禁用的功能中间件（管理面；security 级拒绝）")
+async def put_middleware_config(body: Dict[str, list], _: str = Depends(require_system_settings)):
+    """整体替换 ``disabled`` 名单。仅接受 functional 名单内的名字；security 级与未知名一律 400。"""
+    if not isinstance(body, dict) or not isinstance(body.get("disabled"), list):
+        raise HTTPException(status_code=400, detail='body must be {"disabled": [names]}')
+
+    from core.llm.middleware_registry import (
+        LEVEL_FUNCTIONAL,
+        LEVEL_SECURITY,
+        OVERRIDES_CONFIG_KEY,
+        REGISTRY_BY_NAME,
+    )
+
+    disabled: List[str] = []
+    for name in body["disabled"]:
+        spec = REGISTRY_BY_NAME.get(str(name))
+        if spec is None:
+            raise HTTPException(status_code=400, detail=f"未知中间件: {name}")
+        if spec.level == LEVEL_SECURITY:
+            raise HTTPException(status_code=400, detail=f"安全中间件不可禁用: {name}")
+        if spec.level == LEVEL_FUNCTIONAL:
+            disabled.append(spec.name)
+
+    from core.db.engine import SessionLocal
+    from core.db.models import SystemConfig
+
+    with SessionLocal() as db:
+        row = db.get(SystemConfig, OVERRIDES_CONFIG_KEY)
+        if row is None:
+            row = SystemConfig(
+                config_key=OVERRIDES_CONFIG_KEY,
+                display_name="中间件装配覆盖",
+                description="功能中间件禁用名单（P1.1 注册表）",
+                group_key="middleware",
+                is_secret=False,
+            )
+            db.add(row)
+        row.config_value = json.dumps({"disabled": disabled}, ensure_ascii=False)
+        db.commit()
+    return success_response(data={"disabled": disabled})

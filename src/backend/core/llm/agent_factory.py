@@ -22,19 +22,7 @@ from core.config.catalog_loader import DB_HIDDEN_SERVERS, DB_UMBRELLA_ID
 from core.llm.chat_models import get_default_model, make_chat_model
 from core.llm.mcp_manager import close_clients
 from core.llm.mcp_pool import MCPConnectionPool
-from core.llm.safeharness_mcp_guard import policy_guard_enabled
-from core.llm.middlewares import (
-    ActingToolCallIdMiddleware,
-    AgentRuntimeState,
-    DynamicModelMiddleware,
-    FileContextMiddleware,
-    FinishPinGuardMiddleware,
-    GoalAnchorReminderMiddleware,
-    IterBudgetReminderMiddleware,
-    StallInterventionMiddleware,
-    OntologyGateMiddleware,
-    WorkspacePinHintMiddleware,
-)
+from core.llm.middlewares import AgentRuntimeState
 from core.llm.providers.registry import get_spec, split_provider_extra
 from core.llm.tool_collector import ToolCollector
 from core.llm.tools import (
@@ -1733,28 +1721,21 @@ async def create_agent_executor(
         permission_context=PermissionContext(),
     )
 
-    _middlewares: list = [
-        DynamicModelMiddleware(),  # on_reply: switch models by chat_mode
-        FileContextMiddleware(),  # on_reply: inject file context
-        WorkspacePinHintMiddleware(),  # on_reasoning: remind to pin
-        IterBudgetReminderMiddleware(),  # on_reasoning: inject a wrap-up reminder near max_iters
-        # on_acting: the active profile's intervention rules, applied to *this*
-        # loop. Previously they only reached the autonomous loop, which left the
-        # orchestration profile with one field that governed nothing on the axis
-        # almost all traffic takes.
-        StallInterventionMiddleware(profile.intervention_rules),
-        OntologyGateMiddleware(_ontology_runtime),  # on_acting: zero-LLM L-a contract gate
-        ActingToolCallIdMiddleware(),  # on_acting: expose call_subagent's tool_call.id to tools (parent-child linkage)
-    ]
-    if not batch_mode:
-        _middlewares.append(GoalAnchorReminderMiddleware(chat_id=chat_id, batch_mode=False))
-    _middlewares.append(FinishPinGuardMiddleware(batch_mode=batch_mode))
-    if policy_guard_enabled():
-        from core.llm.safeharness_mcp_guard import SafeHarnessToolPolicyMiddleware
+    # Middleware assembly went through the declarative registry (P1.1): the
+    # default composition is identical to the previous hardcoding (same
+    # classes, order, kwargs, gates); operators may disable functional entries
+    # via the middleware_overrides config, security entries refuse to be
+    # disabled. First in the list is outermost (onion model).
+    from core.llm.middleware_registry import AssemblyContext, assemble_middlewares
 
-        _middlewares.append(
-            SafeHarnessToolPolicyMiddleware()
-        )  # on_acting: SafeHarness policy eval over every tool call (env-gated, default off)
+    _middlewares: list = assemble_middlewares(
+        AssemblyContext(
+            batch_mode=batch_mode,
+            chat_id=chat_id,
+            intervention_rules=profile.intervention_rules,
+            ontology_runtime=_ontology_runtime,
+        )
+    )
 
     # Collect all tool names (the collector still holds function_tools; tool_schemas covers Python+MCP)
     _all_tool_names = {ft.name for ft in toolkit.function_tools}
