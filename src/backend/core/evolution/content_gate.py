@@ -116,7 +116,14 @@ async def _inspect_semantic(content: str, *, context: dict[str, str]) -> GateDec
 
     from core.safeharness_audit import build_audit_sink
 
-    resolved = _resolve_judge()
+    from core.safeharness_registry import paranoid_judge, selected_judge_implementation
+
+    if selected_judge_implementation() == "paranoid":
+        # P1.2 registry: conservative semantic mode — zero model calls.
+        provider, model_name = paranoid_judge(), "paranoid"
+        resolved = (provider, model_name)
+    else:
+        resolved = _resolve_judge()
     if resolved is None:
         return GateDecision(
             allowed=False,

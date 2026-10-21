@@ -249,6 +249,12 @@ def _fsm_proposal_prompt(registry: List[AgentCardV1]) -> str:
 
 
 def _resolve_fsm_judge(model_provider_id: Optional[str]):
+    from core.safeharness_registry import paranoid_judge, selected_judge_implementation
+
+    if selected_judge_implementation() == "paranoid":
+        # P1.2 registry: conservative semantic mode — zero model calls.
+        return paranoid_judge()
+
     """Resolve an OpenAI-compatible judge; absence is a hard security failure."""
 
     try:

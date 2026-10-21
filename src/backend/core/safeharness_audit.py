@@ -323,9 +323,25 @@ def build_audit_sink() -> Any:
     Falls back to the in-memory sink (with a warning) instead of failing the
     runtime when no path is configured or the DB cannot be opened — the demo
     must stay runnable, and the fallback is visible in the log.
+
+    P1.2 implementation registry: the ``impl_registry`` config may pin the
+    sink to ``sqlite`` or ``memory`` explicitly; ``auto`` (default, and the
+    answer to any unknown name) keeps the historic resolution bit-identical.
     """
 
     from safeharness.backends import InMemoryAuditSink
+
+    try:
+        from core.safeharness_registry import (
+            AUDIT_MEMORY,
+            selected_audit_sink_implementation,
+        )
+
+        implementation = selected_audit_sink_implementation()
+    except Exception:  # noqa: BLE001 — registry trouble must not break the sink
+        implementation = "auto"
+    if implementation == AUDIT_MEMORY:
+        return InMemoryAuditSink()
 
     path = resolve_audit_db_path()
     if not path:

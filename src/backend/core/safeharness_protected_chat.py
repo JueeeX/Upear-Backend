@@ -194,6 +194,13 @@ def bootstrap_protected_chat() -> Any | None:
             return result
 
     def resolve_judge(provider_id: str) -> CountingJudge:
+        from core.safeharness_registry import paranoid_judge, selected_judge_implementation
+
+        if selected_judge_implementation() == "paranoid":
+            # P1.2 registry: semantic layer conservatively withholds approval,
+            # zero model calls — the site's own resolution never runs.
+            return CountingJudge(paranoid_judge(), "paranoid")
+
         from safeharness.backends.openai_judge import OpenAICompatibleJudge
 
         config = resolve_judge_config(provider_id)

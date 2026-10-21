@@ -287,3 +287,60 @@ async def put_middleware_config(body: Dict[str, list], _: str = Depends(require_
         row.config_value = json.dumps({"disabled": disabled}, ensure_ascii=False)
         db.commit()
     return success_response(data={"disabled": disabled})
+
+
+# ── Implementation registry (P1.2: judge / audit sink) ────────────────────
+
+
+@router.get("/impl-registry", summary="读取 Judge/审计账本实现选择（管理面）")
+async def get_impl_registry(_: str = Depends(require_system_settings)):
+    from core.safeharness_registry import (
+        AUDIT_SINK_IMPLEMENTATIONS,
+        JUDGE_IMPLEMENTATIONS,
+        load_selection,
+    )
+
+    selection = load_selection()
+    return success_response(
+        data={
+            "selection": selection,
+            "judge_provider": list(JUDGE_IMPLEMENTATIONS),
+            "audit_sink": list(AUDIT_SINK_IMPLEMENTATIONS),
+        }
+    )
+
+
+@router.put("/impl-registry", summary="写入 Judge/审计账本实现选择（管理面；未知名 400）")
+async def put_impl_registry(body: Dict[str, str], _: str = Depends(require_system_settings)):
+    from core.safeharness_registry import (
+        _known,
+        IMPL_REGISTRY_CONFIG_KEY,
+    )
+
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="body must be an object")
+    judge = str(body.get("judge_provider") or "").strip()
+    sink = str(body.get("audit_sink") or "").strip()
+    if judge and judge not in _known("judge"):
+        raise HTTPException(status_code=400, detail=f"未知 judge_provider: {judge}")
+    if sink and sink not in _known("audit"):
+        raise HTTPException(status_code=400, detail=f"未知 audit_sink: {sink}")
+
+    payload = {"judge_provider": judge or "openai_compatible", "audit_sink": sink or "auto"}
+    from core.db.engine import SessionLocal
+    from core.db.models import SystemConfig
+
+    with SessionLocal() as db:
+        row = db.get(SystemConfig, IMPL_REGISTRY_CONFIG_KEY)
+        if row is None:
+            row = SystemConfig(
+                config_key=IMPL_REGISTRY_CONFIG_KEY,
+                display_name="SafeHarness 实现注册表选择",
+                description="Judge 与审计账本实现选择（P1.2）",
+                group_key="safeharness",
+                is_secret=False,
+            )
+            db.add(row)
+        row.config_value = json.dumps(payload, ensure_ascii=False)
+        db.commit()
+    return success_response(data=payload)
