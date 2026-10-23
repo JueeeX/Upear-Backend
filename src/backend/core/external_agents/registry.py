@@ -186,6 +186,9 @@ async def run_external_agent(
 
         memory_config = load_memory_config(db)
     config["supervision"] = supervision
+    # Carried for the subprocess sandbox worker's gateway-bundle rebuild
+    # (inprocess runners never read it).
+    config["run_id"] = run_id
     # Session window: configurable, clamped at parse time.
     window = (history or [])[-memory_config.history_window:]
     config["history"] = window
@@ -230,7 +233,11 @@ async def run_external_agent(
         config["gateway_tool"]["on_denial"] = supervision.record_tool_denial
     started = time.monotonic()
     try:
-        result: RunnerResult = await card.runner(message, config)
+        from core.external_agents.runners import run_with_sandbox_policy
+
+        result: RunnerResult = await run_with_sandbox_policy(
+            card.runner, card.framework, message, config
+        )
     except RunnerUnavailable:
         raise
     duration_ms = int((time.monotonic() - started) * 1000)

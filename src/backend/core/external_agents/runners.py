@@ -202,6 +202,38 @@ def _step_text(step: Any) -> str:
     return output if isinstance(output, str) else ""
 
 
+def run_code_agent_sync(
+    task: str,
+    *,
+    base_url: str,
+    api_key: str,
+    model: str,
+    supervision: SupervisionState,
+    step_callbacks: list[Any],
+    gateway_bundle: dict[str, Any] | None = None,
+) -> str:
+    """The smolagents CodeAgent execution shared by the in-process runner and
+    the subprocess sandbox worker (identical caps: max_steps≤3, 2048 tokens)."""
+    from smolagents import CodeAgent, OpenAIServerModel
+
+    tools = []
+    if gateway_bundle:
+        tools.append(_smolagents_tool(gateway_bundle))
+    agent = CodeAgent(
+        tools=tools,
+        model=OpenAIServerModel(
+            model_id=model,
+            api_base=base_url,
+            api_key=api_key,
+            max_tokens=2048,
+        ),
+        max_steps=min(supervision.config.max_steps, 3),
+        step_callbacks=step_callbacks,
+        verbosity_level=0,
+    )
+    return str(agent.run(task))
+
+
 async def run_smolagents(message: str, config: dict[str, Any]) -> RunnerResult:
     base_url, api_key, model = _model_config(config)
     task = smolagents_task(
@@ -216,29 +248,18 @@ async def run_smolagents(message: str, config: dict[str, Any]) -> RunnerResult:
         if intervention is not None:
             raise SupervisionHalt(intervention)
 
-    def _run() -> str:
-        from smolagents import CodeAgent, OpenAIServerModel
+    gateway_bundle = config.get("gateway_tool")
 
-        tools = []
-        gateway_bundle = config.get("gateway_tool")
-        if gateway_bundle:
-            tools.append(_smolagents_tool(gateway_bundle))
-        agent = CodeAgent(
-            tools=tools,
-            model=OpenAIServerModel(
-                model_id=model,
-                api_base=base_url,
-                api_key=api_key,
-                max_tokens=2048,
-            ),
-            max_steps=min(supervision.config.max_steps, 3),
+    def _run() -> str:
+        return run_code_agent_sync(
+            task,
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            supervision=supervision,
             step_callbacks=[_on_step],
-            verbosity_level=0,
+            gateway_bundle=gateway_bundle,
         )
-        try:
-            return str(agent.run(task))
-        except SupervisionHalt:
-            raise
 
     started = time.monotonic()
     halted = False
@@ -449,3 +470,89 @@ RUNNERS = {
     "openai-agents": run_openai_agents,
     "autogen": run_autogen,
 }
+
+
+# ── Sandbox policies (P3.2) ──────────────────────────────────────────────────
+# Code-side, keyed by framework: a custom card is data and can never attach
+# code (or a weaker policy) to a whitelisted framework. Unknown frameworks
+# fall back to "inprocess" — fail-safe, matching the impl-registry direction.
+
+
+@dataclass(frozen=True)
+class RunnerSandboxPolicy:
+    mode: str  # "inprocess" | "subprocess"
+    timeout_seconds: float = 120.0
+    env_passthrough: tuple[str, ...] = ()
+
+
+def sandbox_runner_passthrough() -> tuple[str, ...]:
+    from core.external_agents.sandbox_runner import GATEWAY_ENV_PASSTHROUGH
+
+    return GATEWAY_ENV_PASSTHROUGH
+
+
+RUNNER_SANDBOX_POLICIES: dict[str, RunnerSandboxPolicy] = {
+    # smolagents executes LLM-generated Python in-process — the highest-risk
+    # surface, hence the only subprocess-mode runner in this pilot.
+    "smolagents": RunnerSandboxPolicy(
+        mode="subprocess",
+        timeout_seconds=120.0,
+        env_passthrough=sandbox_runner_passthrough(),
+    ),
+    "openai-agents": RunnerSandboxPolicy(mode="inprocess"),
+    "autogen": RunnerSandboxPolicy(mode="inprocess"),
+}
+
+
+async def run_with_sandbox_policy(
+    runner: Any,
+    framework: str,
+    message: str,
+    config: dict[str, Any],
+    *,
+    environ: dict[str, str] | None = None,
+) -> RunnerResult:
+    """Single dispatch choke point. Sandbox off (default) → the bare runner
+    call, bit-identical. On → declared policy + hard wall clock in both
+    modes; a breach degrades to an empty halted result (fail-closed) instead
+    of raising, so the downstream supervision/audit flow stays on its rails."""
+    from core.external_agents.sandbox_runner import (
+        run_subprocess_worker,
+        runner_timeout_seconds,
+        sandbox_enabled,
+    )
+
+    if not sandbox_enabled(environ):
+        return await runner(message, config)
+    policy = RUNNER_SANDBOX_POLICIES.get(framework) or RunnerSandboxPolicy(mode="inprocess")
+    timeout = runner_timeout_seconds(environ, default=policy.timeout_seconds)
+    if policy.mode == "subprocess":
+        return await run_subprocess_worker(
+            message,
+            config,
+            framework=framework,
+            env_passthrough=policy.env_passthrough,
+            timeout_seconds=timeout,
+        )
+
+    async def _invoke() -> RunnerResult:
+        return await runner(message, config)
+
+    started = time.monotonic()
+    try:
+        return await asyncio.wait_for(_invoke(), timeout=timeout)
+    except asyncio.TimeoutError:
+        return RunnerResult(
+            reply="",
+            framework=framework,
+            model=str(config.get("model") or ""),
+            duration_ms=int((time.monotonic() - started) * 1000),
+            halted=True,
+            interventions=[
+                {
+                    "trigger": "sandbox_timeout",
+                    "detail": f"运行超时 {timeout:.0f}s，已按沙箱策略终止",
+                    "step": 0,
+                }
+            ],
+        )
