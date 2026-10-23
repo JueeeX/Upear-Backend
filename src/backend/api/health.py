@@ -1,5 +1,7 @@
 """Health-check, readiness, and liveness endpoints."""
 
+import os
+import sqlite3
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
@@ -16,6 +18,58 @@ from core.storage import get_storage
 logger = get_logger(__name__)
 
 router = APIRouter(tags=["monitoring"])
+
+
+def _safeharness_health_detail() -> bool:
+    return (os.environ.get("SAFEHARNESS_HEALTH_DETAIL") or "").strip().lower() in ("1", "true", "yes")
+
+
+async def _safeharness_component_status() -> dict:
+    """Optional /ready addendum (P3.1, gated by SAFEHARNESS_HEALTH_DETAIL).
+
+    Informational only: these results never flip ``ready`` — the platform
+    readiness verdict stays the pre-P3.1 computation. No secret values and no
+    filesystem paths are reported, only set/unset and ok/not-ok.
+    """
+    from core.safeharness_audit import resolve_audit_db_path
+
+    status: dict = {"protected_chat_enabled": _env_truthy(os.environ.get("SAFEHARNESS_PROTECTED_CHAT_ENABLED"))}
+
+    audit_path = resolve_audit_db_path()
+    audit_info = {"path_set": bool(audit_path), "ok": False}
+    if audit_path:
+        try:
+            with sqlite3.connect(f"file:{audit_path}?mode=ro", uri=True) as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('safeharness_audit','audit_records')"
+                ).fetchone()
+            audit_info["ok"] = bool(row and row[0])
+        except sqlite3.Error as e:
+            logger.warning("safeharness_audit_db_check_failed", error=str(e))
+    status["audit_db"] = audit_info
+
+    gateway_url = (os.environ.get("SAFEHARNESS_TOOL_GATEWAY_URL") or "").strip()
+    gateway_key = (os.environ.get("SAFEHARNESS_TOOL_GATEWAY_API_KEY") or "").strip()
+    gateway_info = {"url_configured": bool(gateway_url and gateway_key), "ok": None}
+    if gateway_url and gateway_key:
+        try:
+            import httpx
+
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                resp = await client.get(
+                    gateway_url.rstrip("/") + "/health",
+                    headers={"Authorization": f"Bearer {gateway_key}"},
+                )
+            gateway_info["ok"] = resp.status_code == 200
+        except Exception as e:
+            logger.warning("safeharness_tool_gateway_probe_failed", error=str(e))
+            gateway_info["ok"] = False
+    status["tool_gateway"] = gateway_info
+    return status
+
+
+def _env_truthy(value) -> bool:
+    return (value or "").strip().lower() in ("1", "true", "yes")
 
 
 @router.get("/health", response_model=HealthResponse, summary="健康检查")
@@ -85,13 +139,17 @@ async def readiness_check(db: Session = Depends(get_db)):
     all_ready = all(checks.values())
     status_code = 200 if all_ready else 503
 
+    content = {
+        "ready": all_ready,
+        "checks": checks,
+        "timestamp": datetime.now().isoformat(),
+    }
+    if _safeharness_health_detail():
+        content["safeharness"] = await _safeharness_component_status()
+
     return JSONResponse(
         status_code=status_code,
-        content={
-            "ready": all_ready,
-            "checks": checks,
-            "timestamp": datetime.now().isoformat(),
-        },
+        content=content,
     )
 
 
