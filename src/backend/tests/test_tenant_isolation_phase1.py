@@ -90,6 +90,55 @@ def test_artifact_metadata_owner_mismatch_denied(db):
     assert not can_access_artifact_metadata(db, "u2", {"owner_id": "u1"})
 
 
+# ── 2b. ownerless artifact tightening (M14 phase 2) ──────────────────────
+
+
+def test_ownerless_artifact_denied_for_plain_user(db):
+    """The M14-era "any authenticated caller may read an ownerless item" hole
+    is closed: without a creator to compare against, a plain user is denied."""
+    from core.services.artifact_edition import can_access_artifact_metadata
+
+    _seed_user(db, "u-plain")
+    assert not can_access_artifact_metadata(db, "u-plain", {})
+    assert not can_access_artifact_metadata(db, "u-plain", {"source": "chart_mcp"})
+
+
+def test_ownerless_artifact_readable_by_super_admin(db):
+    from core.services.artifact_edition import can_access_artifact_metadata
+
+    db.add(
+        UserShadow(
+            user_id="u-root",
+            user_center_id="c-u-root",
+            username="root",
+            extra_data={"role": "super_admin"},
+        )
+    )
+    db.commit()
+    assert can_access_artifact_metadata(db, "u-root", {})
+
+
+def test_ownerless_artifact_readable_by_capability_admin(db):
+    from core.services.artifact_edition import can_access_artifact_metadata
+
+    db.add(
+        UserShadow(
+            user_id="u-admin",
+            user_center_id="c-u-admin",
+            username="admin",
+            extra_data={"can_content_manage": True},
+        )
+    )
+    db.commit()
+    assert can_access_artifact_metadata(db, "u-admin", {})
+
+
+def test_ownerless_artifact_fail_closed_without_db():
+    from core.services.artifact_edition import can_access_artifact_metadata
+
+    assert not can_access_artifact_metadata(None, "u1", {})
+
+
 # ── 3. memories ownership gate ───────────────────────────────────────────
 
 

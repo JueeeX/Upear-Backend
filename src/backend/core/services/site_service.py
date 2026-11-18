@@ -617,7 +617,14 @@ class SiteService:
             name=filename,
             mime_type="text/csv",
             extension="csv",
-            metadata={"source": "site_submissions_export", "site_id": site.site_id},
+            metadata={
+                "source": "site_submissions_export",
+                "site_id": site.site_id,
+                # Creator attribution (M14 phase 2): the DB artifacts row below
+                # is owner-scoped, but the store-index shadow must carry the
+                # same owner or it reads as ownerless (admin-only post-tightening).
+                "owner_id": user_id,
+            },
         )
         artifact = ArtifactService(self.db).create_artifact(
             user_id=user_id,
