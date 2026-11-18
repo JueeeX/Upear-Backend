@@ -24,12 +24,35 @@ def _safeharness_health_detail() -> bool:
     return (os.environ.get("SAFEHARNESS_HEALTH_DETAIL") or "").strip().lower() in ("1", "true", "yes")
 
 
+def _safeharness_ready_strict() -> bool:
+    return (os.environ.get("SAFEHARNESS_READY_STRICT") or "").strip().lower() in ("1", "true", "yes")
+
+
+def _safeharness_verdict_breach(status: dict) -> bool:
+    """True when a *configured* SafeHarness component is broken (strict only).
+
+    A component that is absent (no audit db path, no gateway URL) is a
+    deployment choice and never flips the verdict; a component that is
+    configured but failing does. ``protected_chat_enabled`` is a choice, not a
+    health state — it never flips anything.
+    """
+    audit_db = status.get("audit_db") or {}
+    if audit_db.get("path_set") and not audit_db.get("ok"):
+        return True
+    gateway = status.get("tool_gateway") or {}
+    if gateway.get("url_configured") and gateway.get("ok") is False:
+        return True
+    return False
+
+
 async def _safeharness_component_status() -> dict:
     """Optional /ready addendum (P3.1, gated by SAFEHARNESS_HEALTH_DETAIL).
 
-    Informational only: these results never flip ``ready`` — the platform
-    readiness verdict stays the pre-P3.1 computation. No secret values and no
-    filesystem paths are reported, only set/unset and ok/not-ok.
+    Informational by default: the ready verdict stays the pre-P3.1
+    computation. With SAFEHARNESS_READY_STRICT=1 (P3.3) a configured-but-
+    broken audit db or tool gateway flips ``ready`` to false (503) — gate off
+    keeps the verdict bit-identical. No secret values and no filesystem paths
+    are reported, only set/unset and ok/not-ok.
     """
     from core.safeharness_audit import resolve_audit_db_path
 
@@ -137,15 +160,24 @@ async def readiness_check(db: Session = Depends(get_db)):
         checks["user_center"] = True
 
     all_ready = all(checks.values())
-    status_code = 200 if all_ready else 503
+    strict = _safeharness_ready_strict()
 
     content = {
         "ready": all_ready,
         "checks": checks,
         "timestamp": datetime.now().isoformat(),
     }
-    if _safeharness_health_detail():
-        content["safeharness"] = await _safeharness_component_status()
+    if strict or _safeharness_health_detail():
+        safeharness = await _safeharness_component_status()
+        # Strict flip (default off): only a configured-but-broken component
+        # blocks readiness, and the section is always reported when strict is
+        # on so the reason for a 503 stays visible.
+        if strict and _safeharness_verdict_breach(safeharness):
+            all_ready = False
+        content["safeharness"] = safeharness
+
+    status_code = 200 if all_ready else 503
+    content["ready"] = all_ready
 
     return JSONResponse(
         status_code=status_code,
