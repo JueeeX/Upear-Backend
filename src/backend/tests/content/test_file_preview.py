@@ -66,7 +66,7 @@ def test_preview_file_returns_inline_pdf_for_powerpoint(monkeypatch, tmp_path):
         "name": "季度汇报.pptx",
         "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "size": 1024,
-        "metadata": {},
+        "metadata": {"owner_id": "u1"},  # M14 phase 2: attributed, or the owner gate fires before type validation
     })
     monkeypatch.setattr(file_routes, "_prepare_local_file", lambda **kwargs: str(tmp_path / "deck.pptx"))
     monkeypatch.setattr(file_routes, "_convert_office_to_pdf", lambda source_path, file_id: (str(pdf_path), str(temp_dir)))
@@ -91,7 +91,7 @@ def test_preview_file_rejects_non_powerpoint(monkeypatch):
         "name": "report.pdf",
         "mime_type": "application/pdf",
         "size": 1024,
-        "metadata": {},
+        "metadata": {"owner_id": "u1"},  # M14 phase 2: attributed, or the owner gate fires before type validation
     })
 
     with pytest.raises(HTTPException) as exc_info:
