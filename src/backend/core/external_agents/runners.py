@@ -492,15 +492,26 @@ def sandbox_runner_passthrough() -> tuple[str, ...]:
 
 
 RUNNER_SANDBOX_POLICIES: dict[str, RunnerSandboxPolicy] = {
-    # smolagents executes LLM-generated Python in-process — the highest-risk
-    # surface, hence the only subprocess-mode runner in this pilot.
+    # All three builtin frameworks run their loops in child processes when the
+    # sandbox gate is on (P3.2 pilot was smolagents-only because it executes
+    # LLM-generated Python — the highest-risk surface; P3.3 extended the same
+    # worker discipline to the other two). Unknown frameworks still fall back
+    # to inprocess — fail-safe, matching the impl-registry direction.
     "smolagents": RunnerSandboxPolicy(
         mode="subprocess",
         timeout_seconds=120.0,
         env_passthrough=sandbox_runner_passthrough(),
     ),
-    "openai-agents": RunnerSandboxPolicy(mode="inprocess"),
-    "autogen": RunnerSandboxPolicy(mode="inprocess"),
+    "openai-agents": RunnerSandboxPolicy(
+        mode="subprocess",
+        timeout_seconds=120.0,
+        env_passthrough=sandbox_runner_passthrough(),
+    ),
+    "autogen": RunnerSandboxPolicy(
+        mode="subprocess",
+        timeout_seconds=120.0,
+        env_passthrough=sandbox_runner_passthrough(),
+    ),
 }
 
 

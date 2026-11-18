@@ -135,7 +135,7 @@ async def run_subprocess_worker(
     framework: str,
     env_passthrough: tuple[str, ...] = (),
     timeout_seconds: float = 120.0,
-    worker_module: str = WORKER_MODULE,
+    worker_module: str | None = None,
 ) -> RunnerResult:
     """Run the framework worker in a child process with a hard wall clock.
 
@@ -145,8 +145,15 @@ async def run_subprocess_worker(
     The file holds the reply only — the api_key goes in via stdin and is never
     written anywhere.
     """
+    # Resolved at call time (not as a default argument) so tests can retarget
+    # the worker with a stub via monkeypatching the module constant.
+    worker_module = worker_module or WORKER_MODULE
     request = {
         "message": message,
+        # Which runner the child should execute (additive P3.3: the smolagents
+        # worker ignores it; the dispatching worker needs it). Absent ⇒ legacy
+        # smolagents path, so pre-existing workers keep working unchanged.
+        "framework": str(framework or ""),
         "history": list(config.get("history") or []),
         "long_term": str(config.get("long_term") or ""),
         "base_url": str(config.get("base_url") or ""),
