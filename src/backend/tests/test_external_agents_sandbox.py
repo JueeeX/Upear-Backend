@@ -28,8 +28,11 @@ from core.external_agents.runners import (
     run_with_sandbox_policy,
 )
 from core.external_agents.sandbox_runner import (
+    ENV_RUNNER_JOB_MAX_PROCESSES,
+    ENV_RUNNER_JOB_MEMORY_MB,
     ENV_RUNNER_SANDBOX,
     ENV_RUNNER_TIMEOUT,
+    job_limits_from_environ,
     run_subprocess_worker,
     runner_timeout_seconds,
     sandbox_enabled,
@@ -38,6 +41,7 @@ from core.external_agents.supervisor import DEFAULT_SUPERVISION, SupervisionStat
 
 STUB_WORKER = "tests.sandbox_stub_worker"
 STUB_AGENTS_WORKER = "tests.sandbox_stub_worker_agents"
+STUB_JOB_WORKER = "tests.sandbox_stub_worker_job"
 
 
 def _result(framework: str = "fake") -> RunnerResult:
@@ -322,3 +326,64 @@ def test_worker_agent_dispatch_unknown_runner_answers_protocol_error(monkeypatch
     assert payload["ok"] is False
     assert payload["error_type"] == "ProtocolError"
     assert "openai-agents" in payload["error"]
+
+
+# ── Windows Job Object caps (ticket #11) ─────────────────────────────────────
+
+
+def test_job_limits_env_parsing():
+    defaults = job_limits_from_environ({})
+    assert defaults["memory_bytes"] == 2048 * 1024 * 1024
+    assert defaults["max_processes"] == 64
+    assert job_limits_from_environ({ENV_RUNNER_JOB_MEMORY_MB: "512"})["memory_bytes"] == 512 * 1024 * 1024
+    assert job_limits_from_environ({ENV_RUNNER_JOB_MAX_PROCESSES: "16"})["max_processes"] == 16
+    # 0 disables an individual cap; invalid falls back to the default; <1 clamps.
+    assert job_limits_from_environ({ENV_RUNNER_JOB_MEMORY_MB: "0"})["memory_bytes"] is None
+    assert job_limits_from_environ({ENV_RUNNER_JOB_MAX_PROCESSES: "0"})["max_processes"] is None
+    assert job_limits_from_environ({ENV_RUNNER_JOB_MEMORY_MB: "bogus"})["memory_bytes"] == 2048 * 1024 * 1024
+    assert job_limits_from_environ({ENV_RUNNER_JOB_MAX_PROCESSES: "-3"})["max_processes"] == 1
+
+
+def _run_job_probe(message: str = "ping", timeout_seconds: float = 60.0):
+    return asyncio.run(
+        run_subprocess_worker(
+            message,
+            _config(),
+            framework="smolagents",
+            timeout_seconds=timeout_seconds,
+            worker_module=STUB_JOB_WORKER,
+        )
+    )
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object caps")
+def test_windows_child_is_in_job_with_default_caps():
+    result = _run_job_probe()
+    assert "IN_JOB:1" in result.reply
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object caps")
+def test_windows_memory_limit_enforced(monkeypatch):
+    # A 8 MB ProcessMemoryLimit must deny the child's 32 MB committed
+    # allocation (MemoryError → no/failed protocol payload → parent's
+    # fail-closed protocol error), never a silent pass-through.
+    monkeypatch.setenv(ENV_RUNNER_JOB_MEMORY_MB, "8")
+    with pytest.raises(Exception):
+        _run_job_probe("alloc:32")
+    # The default cap leaves a modest allocation untouched.
+    monkeypatch.delenv(ENV_RUNNER_JOB_MEMORY_MB)
+    assert "IN_JOB:1" in _run_job_probe("alloc:8").reply
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object caps")
+def test_windows_active_process_limit_blocks_grandchildren(monkeypatch):
+    # worker(1) + two grandchildren = 3 live processes > ActiveProcessLimit 2:
+    # the extra CreateProcess must be denied by the job, and the run still
+    # completes its protocol round-trip (fail-closed inside the child).
+    monkeypatch.setenv(ENV_RUNNER_JOB_MAX_PROCESSES, "2")
+    blocked = _run_job_probe("spawn:2")
+    assert "SPAWN_FAIL" in blocked.reply
+
+    monkeypatch.setenv(ENV_RUNNER_JOB_MAX_PROCESSES, "8")
+    allowed = _run_job_probe("spawn:2")
+    assert "SPAWN_OK" in allowed.reply
