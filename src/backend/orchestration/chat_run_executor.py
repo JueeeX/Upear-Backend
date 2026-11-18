@@ -224,7 +224,6 @@ async def _write_terminal_to_stream(
     Used when the worker isn't around to emit them itself (cross-process cancel,
     orphan recovery). Failure is logged but not raised.
     """
-    redis = get_redis()
     err_event: Dict[str, Any] = {
         "type": "error",
         "error": error_text,
@@ -236,6 +235,7 @@ async def _write_terminal_to_stream(
         err_event["_cancelled"] = True
         term_event["_cancelled"] = True
     try:
+        redis = get_redis()
         await redis.xadd(
             _stream_key(run_id),
             {"data": json.dumps(err_event, ensure_ascii=False)},
@@ -292,14 +292,108 @@ async def start_run(
     return run
 
 
+# ─── External-agent turn run (P3.3: /stream external branch run record) ──────
+
+
+async def start_external_run(
+    *,
+    chat_id: str,
+    user_id: str,
+    request_payload: Dict[str, Any],
+    run_turn: Callable[[], Awaitable[Any]],
+) -> ChatRun:
+    """Allocate and record a chat_run for an external-agent streaming turn.
+
+    The /stream external branch used to execute inline inside the SSE
+    generator — no chat_runs row, so a page refresh lost the turn and the run
+    ledger never saw it. This routes the turn through the same machinery as
+    the workflow path: a pending row, a background task that emits the
+    external branch's frame contract (text / end / error) into the run's
+    Redis stream, and a resumable follower on the caller side.
+    """
+    run = _create_run_record(chat_id=chat_id, user_id=user_id, request_payload=request_payload)
+    _register_run_task(
+        run.run_id,
+        _run_external_turn(run_id=run.run_id, chat_id=chat_id, run_turn=run_turn),
+        name=f"chat_run:{run.run_id}",
+    )
+    logger.info(
+        "chat_run_started", run_id=run.run_id, chat_id=chat_id, user_id=user_id, kind="external"
+    )
+    return run
+
+
+async def _run_external_turn(
+    *,
+    run_id: str,
+    chat_id: str,
+    run_turn: Callable[[], Awaitable[Any]],
+) -> None:
+    """Execute the external turn, emitting the same frame contract the inline
+    generator used to yield (``text`` / ``end`` / ``error``), then the run
+    machinery's terminal marker. Any failure degrades to a ``failed`` run with
+    an error frame — the follower stays on its rails."""
+    offset_counter = 0
+
+    async def _emit(event: Dict[str, Any]) -> None:
+        nonlocal offset_counter
+        offset_counter += 1
+        await _xadd_event(run_id, offset_counter, event)
+
+    try:
+        result = await run_turn()
+        response = str(getattr(result, "response", "") or "")
+        await _emit({"type": "text", "content": response, "chat_id": chat_id})
+        await _emit({"type": "end", "chat_id": chat_id})
+        _finalize_run(
+            run_id,
+            status="completed",
+            completed_at=_utcnow(),
+            last_event_offset=offset_counter,
+        )
+    except asyncio.CancelledError:
+        logger.info("chat_run_cancelled", run_id=run_id)
+        await _emit(
+            {
+                "type": "error",
+                "error": "任务已被用户取消",
+                "delta": "任务已被用户取消",
+                "chat_id": chat_id,
+                "_cancelled": True,
+            }
+        )
+        _finalize_run(run_id, status="cancelled", completed_at=_utcnow())
+        raise
+    except Exception as exc:  # noqa: BLE001 — the run must reach a terminal state
+        error_text = str(exc)[:1000] or type(exc).__name__
+        await _emit(
+            {
+                "type": "error",
+                "error": "流式响应中断",
+                "delta": "流式响应中断",
+                "chat_id": chat_id,
+            }
+        )
+        _finalize_run(
+            run_id,
+            status="failed",
+            error_message=error_text,
+            completed_at=_utcnow(),
+            last_event_offset=offset_counter,
+        )
+    finally:
+        await _emit({"type": _TERMINAL_TYPE, "chat_id": chat_id})
+        await _expire_stream(run_id)
+
+
 # ─── Redis Stream writes ───────────────────────────────────────────────
 
 
 async def _xadd_event(run_id: str, offset: int, event: Dict[str, Any]) -> None:
     """Serialize an SSE event and write it to the Redis Stream."""
     payload = {**event, "_offset": offset}
-    redis = get_redis()
     try:
+        redis = get_redis()
         await redis.xadd(
             _stream_key(run_id),
             {"data": json.dumps(payload, ensure_ascii=False)},
@@ -307,12 +401,14 @@ async def _xadd_event(run_id: str, offset: int, event: Dict[str, Any]) -> None:
             approximate=True,
         )
     except Exception as exc:
+        # Includes a missing/misconfigured Redis URL: a stream write failure
+        # must degrade the *delivery*, never strand the run in a live state.
         logger.warning("chat_run_xadd_failed", run_id=run_id, error=str(exc))
 
 
 async def _expire_stream(run_id: str) -> None:
-    redis = get_redis()
     try:
+        redis = get_redis()
         await redis.expire(_stream_key(run_id), _STREAM_TTL_SECONDS)
     except Exception as exc:
         logger.warning("chat_run_expire_failed", run_id=run_id, error=str(exc))

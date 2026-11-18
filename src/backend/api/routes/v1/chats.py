@@ -1314,20 +1314,27 @@ async def chat_stream(
     )
 
     if _external_agent_target(request, db) is not None:
-        async def _external_stream():
-            result = await _run_external_agent_turn(
+        # P3.3: the turn runs through the run machinery (chat_runs row + Redis
+        # stream + resumable follower) instead of executing inline in the SSE
+        # generator — a refresh now resumes via /stream/{run_id}, and the run
+        # ledger records the turn exactly like the workflow path.
+        from orchestration import chat_run_executor
+
+        async def _turn() -> Any:
+            return await _run_external_agent_turn(
                 request, chat_service, effective_user_message, actual_model_name,
                 db_user_id=db_user_id, db=db,
             )
-            text_frame = json.dumps(
-                {"type": "text", "content": result.response}, ensure_ascii=False
-            )
-            end_frame = json.dumps({"type": "end", "chat_id": request.chat_id}, ensure_ascii=False)
-            yield f"data: {text_frame}\n\n"
-            yield f"data: {end_frame}\n\n"
-            yield "data: [DONE]\n\n"
 
-        return sse_response(_external_stream())
+        run = await chat_run_executor.start_external_run(
+            chat_id=request.chat_id,
+            user_id=db_user_id,
+            request_payload=request.model_dump(exclude_none=True),
+            run_turn=_turn,
+        )
+        return sse_response(
+            chat_run_executor.follow_run_as_sse(run.run_id, chat_id=request.chat_id),
+        )
 
     context = _build_ctx(
         request,
