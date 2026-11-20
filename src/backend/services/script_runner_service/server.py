@@ -27,6 +27,19 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 try:
+    from services.script_runner_service._win_job import (
+        assign_windows_job,
+        close_job_handle,
+        job_limits_from_environ,
+    )
+except ImportError:  # pragma: no cover — standalone launch layouts
+    from _win_job import (  # type: ignore[no-redef]
+        assign_windows_job,
+        close_job_handle,
+        job_limits_from_environ,
+    )
+
+try:
     import resource
 except ImportError:  # Windows does not provide the POSIX resource module.
     resource = None  # type: ignore[assignment]
@@ -707,6 +720,9 @@ async def _execute_subprocess(cmd: list, stdin_data: str, timeout: int, cwd: str
         }
 
     proc: Optional[asyncio.subprocess.Process] = None
+    # Windows Job Object caps (ticket #11): assigned right after spawn, released
+    # when the process group is reaped. Best-effort; POSIX unaffected.
+    job: Any = None
     # Do not expose PIPE file descriptors to document-tool descendants.  Some
     # renderers briefly fan out or leave a helper behind; an inherited pipe then
     # keeps ``communicate()`` waiting for EOF even after the requested CLI has
@@ -729,12 +745,13 @@ async def _execute_subprocess(cmd: list, stdin_data: str, timeout: int, cwd: str
                 env=SAFE_ENV,
                 **spawn_options,
             )
+            job = assign_windows_job(proc, job_limits_from_environ())
             await asyncio.wait_for(_wait_for_process_exit(proc), timeout=timeout)
             exit_code = proc.returncode or 0
             # A script can exit after starting a background helper.  Clean the
             # execution group on successful completion as well as on failure so
             # the quick-install service cannot accumulate orphan processes.
-            await _terminate_process_group(proc)
+            await _terminate_process_group(proc, job)
             stdout_file.seek(0)
             stderr_file.seek(0)
             stdout_bytes = stdout_file.read(MAX_OUTPUT_BYTES)
@@ -745,15 +762,15 @@ async def _execute_subprocess(cmd: list, stdin_data: str, timeout: int, cwd: str
                 "exit_code": exit_code,
             }
         except asyncio.TimeoutError:
-            await _terminate_process_group(proc)
+            await _terminate_process_group(proc, job)
             return {"stdout": "", "stderr": f"执行超时（{timeout}秒）", "exit_code": -1}
         except asyncio.CancelledError:
             # Client disconnects and server shutdown cancellation need the same
             # descendant cleanup as an ordinary execution timeout.
-            await _terminate_process_group(proc)
+            await _terminate_process_group(proc, job)
             raise
         except Exception as e:
-            await _terminate_process_group(proc)
+            await _terminate_process_group(proc, job)
             logger.exception("subprocess execution failed")
             detail = str(e)
             if (
@@ -793,54 +810,58 @@ def _subprocess_nproc_limit(cmd: list) -> Optional[int]:
 
 async def _terminate_process_group(
     proc: Optional[asyncio.subprocess.Process],
+    job: Any = None,
 ) -> None:
-    """Kill and reap one execution process together with all descendants."""
-    if proc is None:
-        return
-    if os.name == "nt":
-        # Once the leader has exited Windows may immediately recycle its PID;
-        # taskkill on that stale PID could target an unrelated process. Timeout
-        # and cancellation reach this branch while the leader is still alive.
-        if proc.returncode is not None:
-            return
-        try:
-            await asyncio.to_thread(
-                subprocess.run,
-                ["taskkill.exe", "/PID", str(proc.pid), "/T", "/F"],
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except (FileNotFoundError, OSError):
+    """Kill and reap one execution process together with all descendants.
+
+    ``job`` (Windows Job Object handle, ticket #11 caps) is released last so
+    KILL_ON_JOB_CLOSE reaps any straggler the taskkill pass missed.
+    """
+    if proc is not None:
+        if os.name == "nt":
+            # Once the leader has exited Windows may immediately recycle its PID;
+            # taskkill on that stale PID could target an unrelated process. Timeout
+            # and cancellation reach this branch while the leader is still alive.
             if proc.returncode is None:
                 try:
-                    proc.kill()
-                except ProcessLookupError:
-                    pass
-        if proc.returncode is None:
+                    await asyncio.to_thread(
+                        subprocess.run,
+                        ["taskkill.exe", "/PID", str(proc.pid), "/T", "/F"],
+                        check=False,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                except (FileNotFoundError, OSError):
+                    if proc.returncode is None:
+                        try:
+                            proc.kill()
+                        except ProcessLookupError:
+                            pass
+                if proc.returncode is None:
+                    try:
+                        await asyncio.wait_for(proc.wait(), timeout=2)
+                    except asyncio.TimeoutError:
+                        try:
+                            proc.kill()
+                        except ProcessLookupError:
+                            pass
+                        await proc.wait()
+        else:
             try:
-                await asyncio.wait_for(proc.wait(), timeout=2)
-            except asyncio.TimeoutError:
-                try:
-                    proc.kill()
-                except ProcessLookupError:
-                    pass
-                await proc.wait()
-        return
-    try:
-        os.killpg(proc.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-    except (AttributeError, PermissionError):
-        # Defensive fallback for unusual POSIX runtimes where process-group
-        # signalling is unavailable even though this service uses ``resource``.
-        if proc.returncode is None:
-            try:
-                proc.kill()
+                os.killpg(proc.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
-    if proc.returncode is None:
-        await _wait_for_process_exit(proc)
+            except (AttributeError, PermissionError):
+                # Defensive fallback for unusual POSIX runtimes where process-group
+                # signalling is unavailable even though this service uses ``resource``.
+                if proc.returncode is None:
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass
+            if proc.returncode is None:
+                await _wait_for_process_exit(proc)
+    close_job_handle(job)
 
 
 async def _wait_for_process_exit(proc: asyncio.subprocess.Process) -> int:
